@@ -1,4 +1,4 @@
-package com.esoft
+package com.indas.partsnow
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

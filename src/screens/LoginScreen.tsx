@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import SVG icons
 import MailIcon from '../assets/icons/mail.svg';
@@ -26,6 +28,41 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+
+  // Debug: Fetch selected language on mount
+  useEffect(() => {
+    const fetchLanguage = async () => {
+      try {
+        const lang = await AsyncStorage.getItem('@app_selected_language');
+        setSelectedLanguage(lang);
+        console.log('📱 Current Language on Login:', lang);
+      } catch (error) {
+        console.error('Error fetching language:', error);
+      }
+    };
+    fetchLanguage();
+  }, []);
+
+  // Debug: Show language info (long press on logo)
+  const handleLogoLongPress = () => {
+    Alert.alert(
+      '🔧 Debug Info',
+      `Selected Language: ${selectedLanguage || 'None'}`,
+      [
+        {text: 'OK'},
+        {
+          text: 'Clear Language',
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.removeItem('@app_language_selected');
+            await AsyncStorage.removeItem('@app_selected_language');
+            Alert.alert('Cleared!', 'Restart app to see language screen');
+          },
+        },
+      ]
+    );
+  };
 
   const handleLogin = () => {
     // Navigate to main app (tabs)
@@ -50,9 +87,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
           keyboardShouldPersistTaps="handled">
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.logoContainer}>
+            <TouchableOpacity onLongPress={handleLogoLongPress} activeOpacity={1}>
               <EtnaLogo width={100} height={55} />
-            </View>
+            </TouchableOpacity>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to continue</Text>
           </View>

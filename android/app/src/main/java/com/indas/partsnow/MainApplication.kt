@@ -1,4 +1,4 @@
-package com.esoft
+package com.indas.partsnow
 
 import android.app.Application
 import com.facebook.react.PackageList
