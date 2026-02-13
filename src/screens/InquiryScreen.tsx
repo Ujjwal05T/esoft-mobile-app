@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  StatusBar,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
@@ -100,6 +101,7 @@ const InquiryScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f5f7fa" />
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Inquiries</Text>
