@@ -1,7 +1,8 @@
 import React from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {HomeScreen, VehicleScreen, InquiryScreen} from '../screens';
-import {CustomTabBar, UserRole} from '../components';
+import {HomeScreen, VehicleScreen, InquiryScreen, OwnerDashboardScreen} from '../screens';
+import {CustomTabBar} from '../components';
+import {useAuth} from '../context/AuthContext';
 
 export type MainTabParamList = {
   Home: undefined;
@@ -11,18 +12,17 @@ export type MainTabParamList = {
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-interface TabNavigatorProps {
-  role?: UserRole;
-}
+const TabNavigator: React.FC = () => {
+  const {userRole} = useAuth();
+  const HomeComponent = userRole === 'owner' ? OwnerDashboardScreen : HomeScreen;
 
-const TabNavigator: React.FC<TabNavigatorProps> = ({role = 'staff'}) => {
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
       }}
-      tabBar={props => <CustomTabBar {...props} role={role} />}>
-      <Tab.Screen name="Home" component={HomeScreen} />
+      tabBar={props => <CustomTabBar {...props} role={userRole} />}>
+      <Tab.Screen name="Home" component={HomeComponent} />
       <Tab.Screen name="Vehicle" component={VehicleScreen} />
       <Tab.Screen name="Inquiry" component={InquiryScreen} />
     </Tab.Navigator>

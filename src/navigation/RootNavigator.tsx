@@ -1,9 +1,9 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import AuthStack from './AuthStack';
 import TabNavigator from './TabNavigator';
-import type {UserRole} from '../components';
+import {useAuth} from '../context/AuthContext';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -12,15 +12,15 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-interface RootNavigatorProps {
-  isAuthenticated?: boolean;
-  userRole?: UserRole;
-}
+const RootNavigator: React.FC = () => {
+  const {isAuth, authChecked} = useAuth();
 
-const RootNavigator: React.FC<RootNavigatorProps> = ({
-  isAuthenticated = false,
-  userRole = 'staff',
-}) => {
+  // Wait for Keychain check to finish before rendering.
+  // The splash screen covers the UI during this time.
+  if (!authChecked) {
+    return null;
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator
@@ -28,11 +28,9 @@ const RootNavigator: React.FC<RootNavigatorProps> = ({
           headerShown: false,
           animation: 'fade',
         }}
-        initialRouteName={isAuthenticated ? 'MainTabs' : 'Auth'}>
+        initialRouteName={isAuth ? 'MainTabs' : 'Auth'}>
         <Stack.Screen name="Auth" component={AuthStack} />
-        <Stack.Screen name="MainTabs">
-          {props => <TabNavigator {...props} role={userRole} />}
-        </Stack.Screen>
+        <Stack.Screen name="MainTabs" component={TabNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
   );
