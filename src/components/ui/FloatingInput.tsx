@@ -5,6 +5,7 @@ import {
   View,
   StyleSheet,
   KeyboardTypeOptions,
+  ViewStyle,
 } from 'react-native';
 
 interface FloatingInputProps {
@@ -16,6 +17,9 @@ interface FloatingInputProps {
   maxLength?: number;
   autoFocus?: boolean;
   secureTextEntry?: boolean;
+  containerStyle?: ViewStyle;
+  wrapperStyle?: ViewStyle;
+  rightElement?: React.ReactNode;
 }
 
 const FloatingInput: React.FC<FloatingInputProps> = ({
@@ -27,6 +31,9 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
   maxLength,
   autoFocus,
   secureTextEntry,
+  containerStyle,
+  wrapperStyle,
+  rightElement,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const labelAnim = useRef(new Animated.Value(value.length > 0 ? 1 : 0)).current;
@@ -54,15 +61,15 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
   const borderColor = isActive ? '#e5383b' : '#9ca3af';
 
   return (
-    <View style={styles.wrapper}>
-      <View style={[styles.container, {borderColor}]}>
+    <View style={[styles.wrapper, wrapperStyle]}>
+      <View style={[styles.container, {borderColor}, containerStyle]}>
         <Animated.Text
           style={[styles.label, {top: labelTop, fontSize: labelFontSize}]}>
           {label}
           {required && value.length > 0 ? '*' : ''}
         </Animated.Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, rightElement ? styles.inputWithRight : null]}
           value={value}
           onChangeText={onChange}
           onFocus={() => setIsFocused(true)}
@@ -73,6 +80,9 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
           secureTextEntry={secureTextEntry}
           placeholder=""
         />
+        {rightElement && (
+          <View style={styles.rightElement}>{rightElement}</View>
+        )}
       </View>
     </View>
   );
@@ -105,6 +115,16 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     fontSize: 16,
     color: '#1a1a1a',
+  },
+  inputWithRight: {
+    paddingRight: 80,
+  },
+  rightElement: {
+    position: 'absolute',
+    right: 10,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
   },
 });
 

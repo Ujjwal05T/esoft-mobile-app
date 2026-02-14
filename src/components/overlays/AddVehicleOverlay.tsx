@@ -9,11 +9,16 @@ import {
   TextInput,
   TouchableWithoutFeedback,
   ActivityIndicator,
+  Image,
+  Dimensions,
 } from 'react-native';
+
+const SCREEN_H = Dimensions.get('screen').height;
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
 import VehicleCard from '../dashboard/VehicleCard';
 import {createVehicle, gateInVehicle} from '../../services/api';
+import CameraScannerOverlay, {ScanMode} from './CameraScannerOverlay';
 
 export interface VehicleRequestFormData {
   plateNumber: string;
@@ -71,6 +76,8 @@ function DropdownField({
   onSelect,
   disabled,
   error,
+  isOpen: externalOpen,
+  onToggle,
 }: {
   label: string;
   value: string;
@@ -78,13 +85,35 @@ function DropdownField({
   onSelect: (v: string) => void;
   disabled?: boolean;
   error?: boolean;
+  isOpen?: boolean;
+  onToggle?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+
+  const handleToggle = () => {
+    if (disabled) return;
+    if (onToggle) {
+      onToggle();
+    } else {
+      setInternalOpen(o => !o);
+    }
+  };
+
+  const handleSelect = (opt: string) => {
+    onSelect(opt);
+    if (onToggle) {
+      onToggle();
+    } else {
+      setInternalOpen(false);
+    }
+  };
+
   return (
     <View style={styles.dropdownWrap}>
       {!!value && <Text style={styles.dropdownFloatLabel}>{label}</Text>}
       <TouchableOpacity
-        onPress={() => !disabled && setOpen(o => !o)}
+        onPress={handleToggle}
         style={[
           styles.dropdown,
           value ? styles.dropdownActive : null,
@@ -110,18 +139,12 @@ function DropdownField({
           {options.map(opt => (
             <TouchableOpacity
               key={opt}
-              onPress={() => {
-                onSelect(opt);
-                setOpen(false);
-              }}
+              onPress={() => handleSelect(opt)}
               style={styles.dropdownItem}>
               <Text style={styles.dropdownItemText}>{opt}</Text>
             </TouchableOpacity>
           ))}
         </View>
-      )}
-      {error && !value && (
-        <Text style={styles.errorText}>Please select {label.toLowerCase()}</Text>
       )}
     </View>
   );
@@ -134,6 +157,14 @@ export default function AddVehicleOverlay({
 }: AddVehicleOverlayProps) {
   type ViewType = 'search' | 'manual' | 'form' | 'gatein' | 'success';
   const [currentView, setCurrentView] = useState<ViewType>('search');
+
+  // Camera scanner
+  const [scanMode, setScanMode] = useState<ScanMode | null>(null);
+
+  // Manual view — which dropdown is currently open
+  const [openManualDropdown, setOpenManualDropdown] = useState<string | null>(null);
+  const toggleManualDropdown = (id: string) =>
+    setOpenManualDropdown(prev => (prev === id ? null : id));
 
   // Search
   const [plateNumber, setPlateNumber] = useState('');
@@ -164,6 +195,7 @@ export default function AddVehicleOverlay({
   const [gateInDateTime, setGateInDateTime] = useState('');
   const [odometerReading, setOdometerReading] = useState('');
   const [fuelLevel, setFuelLevel] = useState(0);
+  const [fuelTrackWidth, setFuelTrackWidth] = useState(0);
   const [problemShared, setProblemShared] = useState('');
   const [vehicleImages, setVehicleImages] = useState<string[]>([]);
   const [hasAttemptedGateIn, setHasAttemptedGateIn] = useState(false);
@@ -205,6 +237,7 @@ export default function AddVehicleOverlay({
     setIsLoading(false);
     setApiError(null);
     setCreatedVehicleId(null);
+    setScanMode(null);
   };
 
   useEffect(() => {
@@ -364,6 +397,18 @@ export default function AddVehicleOverlay({
     </View>
   );
 
+  const handleFuelMove = (evt: any) => {
+    if (!fuelTrackWidth) return;
+    const x = Math.max(0, Math.min(evt.nativeEvent.locationX, fuelTrackWidth));
+    setFuelLevel(Math.round((x / fuelTrackWidth) * 100 / 5) * 5);
+  };
+
+  const handleScanCapture = (uri: string) => {
+    // uri: file path of captured photo — GPT integration goes here later
+    console.log('Captured image for', scanMode, ':', uri);
+    setScanMode(null);
+  };
+
   return (
     <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
@@ -403,7 +448,7 @@ export default function AddVehicleOverlay({
                   onChangeText={v => setPlateNumber(v.toUpperCase())}
                   placeholder="MP 09 GL 5656"
                   placeholderTextColor="#c4c4c4"
-                  style={styles.plateTextInput}
+                  style={[styles.plateTextInput, plateNumber ? styles.plateTextInputFilled : null]}
                   autoCapitalize="characters"
                 />
                 <TouchableOpacity
@@ -420,7 +465,7 @@ export default function AddVehicleOverlay({
                   </Svg>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.scanBtn}>
+              <TouchableOpacity style={styles.scanBtn} onPress={() => setScanMode('plate')}>
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                   <Path
                     d="M3 7V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H7M17 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V7M21 17V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H17M7 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V17"
@@ -433,12 +478,12 @@ export default function AddVehicleOverlay({
                   <Rect x="13" y="7" width="4" height="4" rx="1" fill="white" />
                   <Rect x="7" y="13" width="4" height="4" rx="1" fill="white" />
                 </Svg>
-                <Text style={styles.scanBtnText}>Scan</Text>
+                <Text style={styles.scanBtnText}>Scan Number</Text>
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.redCard} onPress={() => {}}>
-              <View>
+            <TouchableOpacity style={[styles.redCard, {overflow: 'hidden'}]} onPress={() => setScanMode('rc')}>
+              <View style={{zIndex: 1}}>
                 <Text style={styles.redCardTitle}>Scan RC{'\n'}Card</Text>
                 <View style={styles.diagonalArrow}>
                   <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
@@ -453,13 +498,17 @@ export default function AddVehicleOverlay({
                   </Svg>
                 </View>
               </View>
-              <Text style={styles.redCardEmoji}>🪪</Text>
+              <Image
+                source={require('../../assets/images/rc-card.png')}
+                style={styles.redCardImage}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.redCard, {marginTop: 16}]}
+              style={[styles.redCard, {marginTop: 16, overflow: 'hidden'}]}
               onPress={() => setCurrentView('manual')}>
-              <View>
+              <View style={{zIndex: 1}}>
                 <Text style={styles.redCardTitle}>Add Vehicle{'\n'}Manually</Text>
                 <View style={styles.diagonalArrow}>
                   <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
@@ -474,7 +523,11 @@ export default function AddVehicleOverlay({
                   </Svg>
                 </View>
               </View>
-              <Text style={styles.redCardEmoji}>🚗</Text>
+              <Image
+                source={require('../../assets/images/car-suv.png')}
+                style={styles.carSuvImage}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
           </ScrollView>
         )}
@@ -491,8 +544,11 @@ export default function AddVehicleOverlay({
                 onSelect={v => {
                   setSelectedBrand(v);
                   setSelectedModel('');
+                  setOpenManualDropdown(null);
                 }}
                 error={hasAttemptedManual}
+                isOpen={openManualDropdown === 'brand'}
+                onToggle={() => toggleManualDropdown('brand')}
               />
               <DropdownField
                 label="Model"
@@ -501,6 +557,8 @@ export default function AddVehicleOverlay({
                 onSelect={setSelectedModel}
                 disabled={!selectedBrand}
                 error={hasAttemptedManual}
+                isOpen={openManualDropdown === 'model'}
+                onToggle={() => toggleManualDropdown('model')}
               />
               <DropdownField
                 label="Year"
@@ -508,32 +566,38 @@ export default function AddVehicleOverlay({
                 options={yearOptions}
                 onSelect={setSelectedYear}
                 error={hasAttemptedManual}
+                isOpen={openManualDropdown === 'year'}
+                onToggle={() => toggleManualDropdown('year')}
               />
               <DropdownField
                 label="Select Variant"
                 value={selectedVariant}
                 options={variantOptions}
                 onSelect={setSelectedVariant}
+                isOpen={openManualDropdown === 'variant'}
+                onToggle={() => toggleManualDropdown('variant')}
               />
               <FloatingInput
                 label="Vehicle Number"
                 value={vehicleNumber}
                 onChange={v => setVehicleNumber(v.toUpperCase())}
                 required
+                containerStyle={{borderRadius: 8}}
+                wrapperStyle={{marginBottom:0}}
               />
-              {hasAttemptedManual && !vehicleNumber.trim() && (
-                <Text style={styles.errorText}>Please enter vehicle number</Text>
-              )}
               <FloatingInput
                 label="Chassis Number"
                 value={chassisNumber}
                 onChange={v => setChassisNumber(v.toUpperCase())}
+                containerStyle={{borderRadius: 8}}
+                wrapperStyle={{marginBottom: 8}}
               />
 
               <TouchableOpacity
                 onPress={handleManualNext}
                 style={[
                   styles.primaryBtn,
+                  {marginTop: 8},
                   !(selectedBrand && selectedModel && selectedYear && vehicleNumber.trim()) &&
                     styles.disabledBtn,
                 ]}>
@@ -571,6 +635,8 @@ export default function AddVehicleOverlay({
                 value={registrationName}
                 onChange={setRegistrationName}
                 required
+                containerStyle={{borderRadius:8}}
+                wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0,marginTop:0}}
               />
               {hasAttemptedSubmit && !registrationName.trim() && (
                 <Text style={styles.errorText}>Please enter registration name</Text>
@@ -581,6 +647,8 @@ export default function AddVehicleOverlay({
                 value={ownerName}
                 onChange={setOwnerName}
                 required
+                containerStyle={{borderRadius:8}}
+                 wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0,marginTop:0}} 
               />
               {hasAttemptedSubmit && !ownerName.trim() && (
                 <Text style={styles.errorText}>Please enter owner name</Text>
@@ -592,6 +660,8 @@ export default function AddVehicleOverlay({
                 onChange={setContactNumber}
                 keyboardType="phone-pad"
                 required
+                containerStyle={{borderRadius:8}}
+                wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0}}
               />
               {hasAttemptedSubmit && !contactNumber.trim() && (
                 <Text style={styles.errorText}>Please enter contact number</Text>
@@ -602,30 +672,32 @@ export default function AddVehicleOverlay({
                 value={email}
                 onChange={setEmail}
                 keyboardType="email-address"
+                  containerStyle={{borderRadius:8}}
+                  wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0}}
               />
 
               {/* GST with Verify */}
-              <View style={styles.gstRow}>
-                <View style={styles.gstInput}>
-                  <FloatingInput
-                    label="GST NO."
-                    value={gstNumber}
-                    onChange={v => {
-                      setGstNumber(v.toUpperCase());
-                      setIsGstVerified(false);
-                    }}
-                  />
-                </View>
-                {isGstVerified ? (
-                  <Text style={styles.verifiedText}>VERIFIED</Text>
-                ) : (
-                  <TouchableOpacity
-                    onPress={() => gstNumber.trim() && setIsGstVerified(true)}
-                    style={styles.verifyBtn}>
-                    <Text style={styles.verifyBtnText}>Verify</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+              <FloatingInput
+                label="GST NO."
+                value={gstNumber}
+                onChange={v => {
+                  setGstNumber(v.toUpperCase());
+                  setIsGstVerified(false);
+                }}
+                containerStyle={{borderRadius: 8}}
+                wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 8}}
+                rightElement={
+                  isGstVerified ? (
+                    <Text style={styles.verifiedText}>VERIFIED</Text>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => gstNumber.trim() && setIsGstVerified(true)}
+                      style={styles.verifyBtn}>
+                      <Text style={styles.verifyBtnText}>Verify</Text>
+                    </TouchableOpacity>
+                  )
+                }
+              />
 
               <DropdownField
                 label="Insurance Provider"
@@ -676,6 +748,7 @@ export default function AddVehicleOverlay({
                 value={driverName}
                 onChange={setDriverName}
                 required
+                containerStyle={{borderRadius: 8}}
               />
               {hasAttemptedGateIn && !driverName.trim() && (
                 <Text style={styles.errorText}>Please enter driver's name</Text>
@@ -687,6 +760,7 @@ export default function AddVehicleOverlay({
                 onChange={setDriverContact}
                 keyboardType="phone-pad"
                 required
+                containerStyle={{borderRadius: 8}}
               />
               {hasAttemptedGateIn && !driverContact.trim() && (
                 <Text style={styles.errorText}>Please enter driver's contact number</Text>
@@ -714,30 +788,32 @@ export default function AddVehicleOverlay({
                 value={odometerReading}
                 onChange={setOdometerReading}
                 keyboardType="numeric"
+                containerStyle={{borderRadius: 8}}
               />
 
               {/* Fuel Level */}
               <View style={styles.fuelContainer}>
-                <Text style={styles.fuelLabel}>Fuel Reading</Text>
-                <View style={styles.fuelGaugeRow}>
-                  <View style={styles.fuelGauge}>
-                    <View style={[styles.fuelFill, {flex: Math.max(1, fuelLevel)}]} />
-                    <View style={styles.fuelDivider} />
-                    <View style={[styles.fuelRemaining, {flex: Math.max(1, 100 - fuelLevel)}]} />
-                  </View>
+                <View style={styles.fuelHeader}>
+                  <Text style={styles.fuelLabel}>Fuel Reading</Text>
+                  <Text style={[styles.fuelPct, fuelLevel > 50 && {color: '#16a34a'}]}>
+                    {fuelLevel}%
+                  </Text>
                 </View>
-                <View style={styles.fuelControls}>
-                  <TouchableOpacity
-                    onPress={() => setFuelLevel(Math.max(0, fuelLevel - 10))}
-                    style={styles.fuelBtn}>
-                    <Text style={styles.fuelBtnText}>−</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.fuelPct}>{fuelLevel}%</Text>
-                  <TouchableOpacity
-                    onPress={() => setFuelLevel(Math.min(100, fuelLevel + 10))}
-                    style={styles.fuelBtn}>
-                    <Text style={styles.fuelBtnText}>+</Text>
-                  </TouchableOpacity>
+                <View
+                  style={styles.fuelTrack}
+                  onLayout={e => setFuelTrackWidth(e.nativeEvent.layout.width)}
+                  onStartShouldSetResponder={() => true}
+                  onResponderGrant={handleFuelMove}
+                  onResponderMove={handleFuelMove}>
+                  <View
+                    style={[
+                      styles.fuelFill,
+                      {
+                        width: fuelTrackWidth ? (fuelLevel / 100) * fuelTrackWidth : 0,
+                        backgroundColor: fuelLevel > 50 ? '#16a34a' : '#e5383b',
+                      },
+                    ]}
+                  />
                 </View>
               </View>
 
@@ -838,6 +914,16 @@ export default function AddVehicleOverlay({
           </ScrollView>
         )}
       </View>
+
+      {/* Camera scanner — rendered inside the Modal so it fills the screen */}
+      {scanMode !== null && (
+        <CameraScannerOverlay
+          visible={scanMode !== null}
+          mode={scanMode}
+          onCapture={handleScanCapture}
+          onClose={() => setScanMode(null)}
+        />
+      )}
     </Modal>
   );
 }
@@ -861,7 +947,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     paddingHorizontal: 18,
     paddingBottom: 32,
-    maxHeight: '90%',
+    maxHeight: SCREEN_H * 0.9,
   },
   handle: {
     width: 172,
@@ -903,9 +989,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '700',
-    color: '#e5383b',
+    color: '#000000',
     paddingVertical: 12,
   },
+  plateTextInputFilled: {color: '#e5383b'},
   arrowBtn: {
     width: 32,
     height: 32,
@@ -945,7 +1032,9 @@ const styles = StyleSheet.create({
   },
   diagonalArrow: {},
   redCardEmoji: {fontSize: 64, opacity: 0.9},
-  formGap: {gap: 14, paddingBottom: 16},
+  redCardImage: {position: 'absolute', right: -1, top: 30, width: 200, height: 140, opacity: 0.9},
+  carSuvImage: {position: 'absolute', right: -90, top: -1, width: 280, height: 200, opacity: 0.9},
+  formGap: {gap: 6, paddingBottom: 16},
   vehicleCardWrapper: {marginBottom: 16},
   dropdown: {
     borderWidth: 1,
@@ -986,8 +1075,6 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   errorBannerText: {color: '#e5383b', fontSize: 14},
-  gstRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  gstInput: {flex: 1},
   verifiedText: {fontSize: 14, fontWeight: '700', color: '#e5383b'},
   verifyBtn: {
     backgroundColor: '#e5383b',
@@ -1000,28 +1087,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#d3d3d3',
     borderRadius: 8,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 4,
   },
-  fuelLabel: {fontSize: 12, color: '#828282', marginBottom: 8},
-  fuelRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  fuelBtn: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#e5383b',
-    borderRadius: 4,
+  fuelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  fuelBtnText: {color: '#fff', fontSize: 20, fontWeight: '700'},
-  fuelBarOuter: {
-    flex: 1,
-    height: 20,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 4,
+  fuelLabel: {fontSize: 12, color: '#828282'},
+  fuelPct: {fontSize: 13, fontWeight: '600', color: '#e5383b'},
+  fuelTrack: {
+    height: 53,
+    borderRadius: 6,
     overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+    marginTop: 10,
   },
-  fuelBarInner: {height: '100%', backgroundColor: '#ffad2a', borderRadius: 4},
-  fuelPct: {fontSize: 14, fontWeight: '600', color: '#1a1a1a', width: 40, textAlign: 'right'},
+  fuelFill: {
+    height: 53,
+    borderRadius: 6,
+  },
   primaryBtn: {
     height: 52,
     borderRadius: 8,
@@ -1029,7 +1116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  disabledBtn: {backgroundColor: '#c3c3c3'},
+  disabledBtn: {backgroundColor: '#d3d3d3'},
   primaryBtnText: {color: '#fff', fontSize: 15, fontWeight: '600', letterSpacing: 1},
   successOverlay: {
     position: 'absolute',
@@ -1077,25 +1164,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#000000',
     padding: 0,
-  },
-  // Fuel gauge visual
-  fuelGaugeRow: {marginBottom: 8},
-  fuelGauge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 53,
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  fuelFill: {height: 53, backgroundColor: '#ffad2a'},
-  fuelDivider: {width: 6, height: 33, backgroundColor: '#000000', borderRadius: 3},
-  fuelRemaining: {height: 53, backgroundColor: '#f0f0f0'},
-  fuelControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    marginTop: 8,
   },
   // Problem Shared row
   problemRow: {
