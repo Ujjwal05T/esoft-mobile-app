@@ -9,7 +9,6 @@ import {
   TextInput,
   TouchableWithoutFeedback,
   ActivityIndicator,
-  Animated,
 } from 'react-native';
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
@@ -82,7 +81,8 @@ function DropdownField({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <View>
+    <View style={styles.dropdownWrap}>
+      {!!value && <Text style={styles.dropdownFloatLabel}>{label}</Text>}
       <TouchableOpacity
         onPress={() => !disabled && setOpen(o => !o)}
         style={[
@@ -161,9 +161,11 @@ export default function AddVehicleOverlay({
   // Gate In
   const [driverName, setDriverName] = useState('');
   const [driverContact, setDriverContact] = useState('');
+  const [gateInDateTime, setGateInDateTime] = useState('');
   const [odometerReading, setOdometerReading] = useState('');
   const [fuelLevel, setFuelLevel] = useState(0);
   const [problemShared, setProblemShared] = useState('');
+  const [vehicleImages, setVehicleImages] = useState<string[]>([]);
   const [hasAttemptedGateIn, setHasAttemptedGateIn] = useState(false);
 
   // API state
@@ -194,9 +196,11 @@ export default function AddVehicleOverlay({
     setHasAttemptedSubmit(false);
     setDriverName('');
     setDriverContact('');
+    setGateInDateTime('');
     setOdometerReading('');
     setFuelLevel(0);
     setProblemShared('');
+    setVehicleImages([]);
     setHasAttemptedGateIn(false);
     setIsLoading(false);
     setApiError(null);
@@ -688,6 +692,23 @@ export default function AddVehicleOverlay({
                 <Text style={styles.errorText}>Please enter driver's contact number</Text>
               )}
 
+              {/* Gate In Date and Time */}
+              <View style={[styles.dropdownWrap, styles.dropdown, !!gateInDateTime && styles.dropdownActive]}>
+                {!!gateInDateTime && (
+                  <Text style={styles.dropdownFloatLabel}>Gate In Date and time</Text>
+                )}
+                <TextInput
+                  value={gateInDateTime || new Date().toLocaleDateString('en-IN', {
+                    day: 'numeric', month: 'long', year: 'numeric',
+                    hour: 'numeric', minute: '2-digit', hour12: true,
+                  })}
+                  onChangeText={setGateInDateTime}
+                  placeholder="Gate In Date and time"
+                  placeholderTextColor="#828282"
+                  style={styles.gateInDateInput}
+                />
+              </View>
+
               <FloatingInput
                 label="Odometer Reading"
                 value={odometerReading}
@@ -698,31 +719,106 @@ export default function AddVehicleOverlay({
               {/* Fuel Level */}
               <View style={styles.fuelContainer}>
                 <Text style={styles.fuelLabel}>Fuel Reading</Text>
-                <View style={styles.fuelRow}>
+                <View style={styles.fuelGaugeRow}>
+                  <View style={styles.fuelGauge}>
+                    <View style={[styles.fuelFill, {flex: Math.max(1, fuelLevel)}]} />
+                    <View style={styles.fuelDivider} />
+                    <View style={[styles.fuelRemaining, {flex: Math.max(1, 100 - fuelLevel)}]} />
+                  </View>
+                </View>
+                <View style={styles.fuelControls}>
                   <TouchableOpacity
                     onPress={() => setFuelLevel(Math.max(0, fuelLevel - 10))}
                     style={styles.fuelBtn}>
-                    <Text style={styles.fuelBtnText}>-</Text>
+                    <Text style={styles.fuelBtnText}>−</Text>
                   </TouchableOpacity>
-                  <View style={styles.fuelBarOuter}>
-                    <View
-                      style={[styles.fuelBarInner, {width: `${fuelLevel}%` as any}]}
-                    />
-                  </View>
+                  <Text style={styles.fuelPct}>{fuelLevel}%</Text>
                   <TouchableOpacity
                     onPress={() => setFuelLevel(Math.min(100, fuelLevel + 10))}
                     style={styles.fuelBtn}>
                     <Text style={styles.fuelBtnText}>+</Text>
                   </TouchableOpacity>
-                  <Text style={styles.fuelPct}>{fuelLevel}%</Text>
                 </View>
               </View>
 
-              <FloatingInput
-                label="Problem Shared"
-                value={problemShared}
-                onChange={setProblemShared}
-              />
+              {/* Problem Shared with Record button */}
+              <View style={[styles.dropdown, !!problemShared && styles.dropdownActive, styles.problemRow]}>
+                <TextInput
+                  value={problemShared}
+                  onChangeText={setProblemShared}
+                  placeholder="Problem Shared"
+                  placeholderTextColor="#828282"
+                  style={styles.problemInput}
+                />
+                <TouchableOpacity style={styles.recordBtn} activeOpacity={0.8}>
+                  <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+                    <Path
+                      d="M10 12.5C11.38 12.5 12.5 11.38 12.5 10V5C12.5 3.62 11.38 2.5 10 2.5C8.62 2.5 7.5 3.62 7.5 5V10C7.5 11.38 8.62 12.5 10 12.5Z"
+                      stroke="#e5383b"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <Path
+                      d="M4.167 8.333V10C4.167 13.222 6.778 15.833 10 15.833C13.222 15.833 15.833 13.222 15.833 10V8.333"
+                      stroke="#e5383b"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <Path
+                      d="M10 15.833V17.5"
+                      stroke="#e5383b"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                  <Text style={styles.recordBtnText}>Record</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Vehicle Images */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imagesRow}>
+                {vehicleImages.map((_, idx) => (
+                  <View key={idx} style={styles.imageThumb}>
+                    <View style={styles.imageThumbPlaceholder} />
+                    <TouchableOpacity
+                      onPress={() =>
+                        setVehicleImages(prev => prev.filter((__, i) => i !== idx))
+                      }
+                      style={styles.imageDeleteBtn}
+                      activeOpacity={0.8}>
+                      <Svg width={12} height={14} viewBox="0 0 12 14" fill="none">
+                        <Path
+                          d="M1 3.5H11M4.5 6V10.5M7.5 6V10.5M2 3.5L2.5 11.5C2.5 12.052 2.948 12.5 3.5 12.5H8.5C9.052 12.5 9.5 12.052 9.5 11.5L10 3.5M4 3.5V2C4 1.448 4.448 1 5 1H7C7.552 1 8 1.448 8 2V3.5"
+                          stroke="white"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </Svg>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                <TouchableOpacity
+                  style={styles.imageAddBtn}
+                  onPress={() => setVehicleImages(prev => [...prev, `img${prev.length}`])}
+                  activeOpacity={0.8}>
+                  <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
+                    <Path
+                      d="M16 8V24M8 16H24"
+                      stroke="#E5383B"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </TouchableOpacity>
+              </ScrollView>
 
               <TouchableOpacity
                 onPress={handleGateIn}
@@ -963,4 +1059,100 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   successText: {color: '#fff', fontSize: 20, fontWeight: '500', letterSpacing: 1},
+  // Dropdown floating label
+  dropdownWrap: {position: 'relative'},
+  dropdownFloatLabel: {
+    position: 'absolute',
+    top: -8,
+    left: 12,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 4,
+    fontSize: 10,
+    color: '#828282',
+    zIndex: 1,
+  },
+  // Gate In Date input
+  gateInDateInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#000000',
+    padding: 0,
+  },
+  // Fuel gauge visual
+  fuelGaugeRow: {marginBottom: 8},
+  fuelGauge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 53,
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  fuelFill: {height: 53, backgroundColor: '#ffad2a'},
+  fuelDivider: {width: 6, height: 33, backgroundColor: '#000000', borderRadius: 3},
+  fuelRemaining: {height: 53, backgroundColor: '#f0f0f0'},
+  fuelControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 8,
+  },
+  // Problem Shared row
+  problemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  problemInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#000000',
+    padding: 0,
+  },
+  recordBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#e5383b',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  recordBtnText: {fontSize: 14, fontWeight: '500', color: '#e5383b'},
+  // Vehicle images
+  imagesRow: {flexDirection: 'row', gap: 12, paddingBottom: 4},
+  imageThumb: {
+    width: 100,
+    height: 80,
+    borderRadius: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  imageThumbPlaceholder: {
+    width: 100,
+    height: 80,
+    backgroundColor: '#d3d3d3',
+  },
+  imageDeleteBtn: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 24,
+    height: 24,
+    backgroundColor: '#e5383b',
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageAddBtn: {
+    width: 100,
+    height: 80,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#d3d3d3',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

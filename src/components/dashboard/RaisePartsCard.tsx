@@ -1,6 +1,12 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
-import Svg, {Path} from 'react-native-svg';
+import TataMotors from '../../assets/logos/tata-motors.svg';
+import Toyota from '../../assets/logos/toyota.svg';
+import Mahindra from '../../assets/logos/mahindra.svg';
+import Lumax from '../../assets/logos/lumax.svg';
+import VLogo from '../../assets/logos/v-logo.svg';
+import TwoLogo from '../../assets/logos/two-logo.svg';
+import ArrowPartsIcon from '../../assets/icons/arrow-parts.svg';
 
 interface RaisePartsCardProps {
   text1?: string;
@@ -8,28 +14,7 @@ interface RaisePartsCardProps {
   onPress?: () => void;
 }
 
-const brandColors = [
-  '#1a1a1a',
-  '#eb0a1e',
-  '#e31837',
-  '#ffd700',
-  '#0000ff',
-  '#006400',
-];
-
-const brandInitials = ['T', 'T', 'M', 'L', 'V', 'T'];
-
-const ArrowIcon = () => (
-  <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
-    <Path
-      d="M8 24L24 8M24 8H12M24 8V20"
-      stroke="white"
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
+const brandLogos = [TataMotors, Toyota, Mahindra, Lumax, VLogo, TwoLogo];
 
 export default function RaisePartsCard({
   text1 = 'Raise Parts',
@@ -50,16 +35,14 @@ export default function RaisePartsCard({
 
       {/* Arrow Icon */}
       <View style={styles.arrowContainer}>
-        <ArrowIcon />
+        <ArrowPartsIcon width={32} height={32} />
       </View>
 
-      {/* Brand Logo Placeholders */}
+      {/* Brand Logos */}
       <View style={styles.logosRow}>
-        {brandColors.map((color, i) => (
+        {brandLogos.map((Logo, i) => (
           <View key={i} style={styles.logoBox}>
-            <View style={[styles.logoInner, {backgroundColor: color}]}>
-              <Text style={styles.logoText}>{brandInitials[i]}</Text>
-            </View>
+            <Logo width={49} height={49} />
           </View>
         ))}
       </View>
@@ -91,6 +74,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 12,
     top: 11,
+    width: 32,
+    height: 32,
     zIndex: 1,
   },
   logosRow: {
@@ -109,17 +94,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 8,
-  },
-  logoInner: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
   },
 });

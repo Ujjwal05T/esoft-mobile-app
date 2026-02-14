@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     right: 16,
-    bottom: 100,
+    bottom: 130,
     alignItems: 'flex-end',
     zIndex: 40,
   },

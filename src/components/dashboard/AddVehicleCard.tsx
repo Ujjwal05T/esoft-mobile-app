@@ -1,43 +1,36 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
-import Svg, {Path} from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
+import ArrowDiagonalIcon from '../../assets/icons/arrow-diagonal.svg';
 
 interface AddVehicleCardProps {
   onPress?: () => void;
 }
 
-const ArrowDiagonalIcon = () => (
-  <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
-    <Path
-      d="M8 24L24 8M24 8H12M24 8V20"
-      stroke="white"
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 export default function AddVehicleCard({onPress}: AddVehicleCardProps) {
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.85}
-      style={styles.card}>
-      {/* Background car silhouette */}
-      <Image
-        source={require('../../assets/images/car-silhouette.png')}
-        style={styles.carSilhouette}
-        resizeMode="contain"
-      />
+    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
+      <LinearGradient
+        colors={['#e5383b', '#bb282b']}
+        start={{x: 0, y: 0}}
+        end={{x: 0, y: 1}}
+        style={styles.gradient}>
+        {/* Background car silhouette */}
+        <Image
+          source={require('../../assets/images/car-silhouette.png')}
+          style={styles.carSilhouette}
+          resizeMode="contain"
+        />
 
-      {/* Title */}
-      <Text style={styles.title}>Add a New{'\n'}Vehicle</Text>
+        {/* Title */}
+        <Text style={styles.title}>Add a New{'\n'}Vehicle</Text>
 
-      {/* Arrow Icon */}
-      <View style={styles.arrowContainer}>
-        <ArrowDiagonalIcon />
-      </View>
+        {/* Arrow Icon */}
+        <View style={styles.arrowContainer}>
+          <ArrowDiagonalIcon width={32} height={32} />
+        </View>
+      </LinearGradient>
     </TouchableOpacity>
   );
 }
@@ -48,15 +41,17 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     width: '100%',
     overflow: 'hidden',
-    backgroundColor: '#e5383b',
+  },
+  gradient: {
+    flex: 1,
     position: 'relative',
   },
   carSilhouette: {
     position: 'absolute',
-    right: -20,
-    top: -10,
-    width: 280,
-    height: 185,
+    right: -410,
+    top: -165,
+    width: 680,
+    height: 395,
   },
   title: {
     position: 'absolute',
@@ -73,5 +68,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 11,
     top: 103,
+    width: 32,
+    height: 32,
   },
 });

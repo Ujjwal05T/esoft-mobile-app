@@ -9,6 +9,14 @@ import {
 } from 'react-native';
 import Svg, {Path, Circle, Rect} from 'react-native-svg';
 import StatusBadge, {StatusType, normalizeStatus} from '../ui/StatusBadge';
+const EyeIcon = () => (
+  <Svg width={20} height={13} viewBox="0 0 20 13" fill="none">
+      <Path
+        d="M10 0.5C5.45 0.5 1.57 3.23 0 7.125c1.57 3.895 5.45 6.625 10 6.625s8.43-2.73 10-6.625C18.43 3.23 14.55 0.5 10 0.5zm0 11.042c-2.485 0-4.5-2.015-4.5-4.5S7.515 2.542 10 2.542s4.5 2.015 4.5 4.5-2.015 4.5-4.5 4.5zm0-7.2c-1.49 0-2.7 1.21-2.7 2.7s1.21 2.7 2.7 2.7 2.7-1.21 2.7-2.7-1.21-2.7-2.7-2.7z"
+        fill="#E5383B"
+      />
+    </Svg>
+);
 
 export type OrderStatus = 'in-process' | 'shipped' | 'delivered';
 
@@ -49,17 +57,7 @@ const mapStatus = (status: OrderStatus): StatusType => {
   return mapping[status];
 };
 
-const TrackIcon = () => (
-  <Svg width={20} height={13} viewBox="0 0 20 13" fill="none">
-    <Path
-      d="M1 6.5H19M19 6.5L14 1.5M19 6.5L14 11.5"
-      stroke="#e5383b"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
+
 
 const ImagePlaceholderComp = () => (
   <View style={styles.imgPlaceholder}>
@@ -169,7 +167,7 @@ export default function OrderCard({
                 <TouchableOpacity
                   onPress={() => onTrackOrder?.(order.id)}
                   style={styles.trackIconBtn}>
-                  <TrackIcon />
+                  <EyeIcon />
                 </TouchableOpacity>
               </>
             )}

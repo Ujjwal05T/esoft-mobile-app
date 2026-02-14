@@ -1,313 +1,442 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  ActivityIndicator,
   TouchableOpacity,
-  StatusBar,
 } from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import Svg, {Path} from 'react-native-svg';
+import Header from '../components/dashboard/Header';
+import InquiryCard, {
+  Inquiry,
+} from '../components/dashboard/InquiryCard';
+import QuoteCard, {Quote} from '../components/dashboard/QuoteCard';
+import FiltersOverlay from '../components/overlays/FiltersOverlay';
+import {
+  getStoredUser,
+  getInquiriesByWorkshopOwnerId,
+  getQuotesByWorkshopOwnerId,
+  type InquiryResponse,
+  type QuoteApiResponse,
+} from '../services/api';
 
-// Import SVG icons
-import InquiryIcon from '../assets/icons/inquiry.svg';
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-interface Inquiry {
-  id: string;
-  title: string;
-  description: string;
-  status: 'pending' | 'in-progress' | 'resolved';
-  date: string;
-  priority: 'low' | 'medium' | 'high';
+type ActiveTab = 'inquiries' | 'quotes' | 'disputes';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
-const dummyInquiries: Inquiry[] = [
-  {
-    id: '1',
-    title: 'Oil Change Request',
-    description: 'Need oil change for Toyota Camry',
-    status: 'pending',
-    date: '2 hours ago',
-    priority: 'medium',
-  },
-  {
-    id: '2',
-    title: 'Brake Inspection',
-    description: 'Unusual noise from brakes',
-    status: 'in-progress',
-    date: '1 day ago',
-    priority: 'high',
-  },
-  {
-    id: '3',
-    title: 'Tire Replacement',
-    description: 'All four tires need replacement',
-    status: 'resolved',
-    date: '3 days ago',
-    priority: 'low',
-  },
-  {
-    id: '4',
-    title: 'AC Repair',
-    description: 'AC not cooling properly',
-    status: 'pending',
-    date: '5 hours ago',
-    priority: 'medium',
-  },
-];
+function mapApiInquiry(api: InquiryResponse): Inquiry {
+  return {
+    id: api.inquiryNumber,
+    vehicleName: api.vehicleName ?? '',
+    numberPlate: api.numberPlate ?? '',
+    placedDate: formatDate(api.placedDate),
+    closedDate: api.closedDate ? formatDate(api.closedDate) : undefined,
+    declinedDate: api.declinedDate ? formatDate(api.declinedDate) : undefined,
+    status: api.status.toLowerCase() as Inquiry['status'],
+    inquiryBy: api.requestedByName ?? 'Owner',
+    jobCategory: api.jobCategory,
+    items: api.items.map(item => ({
+      id: item.id.toString(),
+      itemName: item.partName,
+      preferredBrand: item.preferredBrand,
+      notes: item.remark,
+      quantity: item.quantity,
+      imageUrl: item.image1Url ?? undefined,
+    })),
+    media: [],
+  };
+}
 
-type TabType = 'all' | 'pending' | 'in-progress' | 'resolved';
+function mapApiQuote(api: QuoteApiResponse): Quote {
+  return {
+    id: api.id.toString(),
+    vehicleName: api.vehicleName ?? '',
+    plateNumber: api.plateNumber ?? '',
+    quoteId: api.quoteNumber,
+    submittedDate: formatDate(api.createdAt),
+    status: api.status === 'approved' ? 'accepted' : 'pending_review',
+    estimatedTotal: api.totalAmount,
+    items: api.items.map(item => ({
+      id: item.id.toString(),
+      itemName: item.partName,
+      brand: item.brand || undefined,
+      mrp: item.mrp || undefined,
+      price: item.unitPrice,
+      quantity: item.quantity,
+      isAvailable: item.availability === 'in_stock',
+    })),
+  };
+}
 
-const InquiryScreen: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('all');
+// ── Filter Icon ───────────────────────────────────────────────────────────────
 
-  const getStatusColor = (status: Inquiry['status']) => {
-    switch (status) {
-      case 'pending':
-        return '#f59e0b';
-      case 'in-progress':
-        return '#3b82f6';
-      case 'resolved':
-        return '#10b981';
-      default:
-        return '#6b7280';
+const FilterIcon = () => (
+  <Svg width={16} height={16} viewBox="0 0 16 16" fill="none">
+    <Path
+      d="M4 11L4 5"
+      stroke="#E5383B"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M12 11L12 5"
+      stroke="#E5383B"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M6 5L4 3L2 5"
+      stroke="#E5383B"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M14 11L12 13L10 11"
+      stroke="#E5383B"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+// ── Main Screen ───────────────────────────────────────────────────────────────
+
+export default function InquiryScreen() {
+  const insets = useSafeAreaInsets();
+
+  const [activeTab, setActiveTab] = useState<ActiveTab>('inquiries');
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loadingInquiries, setLoadingInquiries] = useState(false);
+  const [loadingQuotes, setLoadingQuotes] = useState(false);
+  const [expandedInquiryId, setExpandedInquiryId] = useState<string | null>(null);
+  const [expandedQuoteId, setExpandedQuoteId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // ── Data Fetching ───────────────────────────────────────────────────────────
+
+  const fetchInquiries = useCallback(async () => {
+    setLoadingInquiries(true);
+    try {
+      const user = await getStoredUser();
+      if (!user) return;
+      const res = await getInquiriesByWorkshopOwnerId(user.id);
+      if (res.success && res.data) {
+        setInquiries(res.data.inquiries.map(mapApiInquiry));
+      }
+    } catch (e) {
+      console.error('Failed to fetch inquiries:', e);
+    } finally {
+      setLoadingInquiries(false);
+    }
+  }, []);
+
+  const fetchQuotes = useCallback(async () => {
+    setLoadingQuotes(true);
+    try {
+      const user = await getStoredUser();
+      if (!user) return;
+      const res = await getQuotesByWorkshopOwnerId(user.id);
+      if (res.success && res.data) {
+        setQuotes(res.data.quotes.map(mapApiQuote));
+      }
+    } catch (e) {
+      console.error('Failed to fetch quotes:', e);
+    } finally {
+      setLoadingQuotes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchInquiries();
+    fetchQuotes();
+  }, [fetchInquiries, fetchQuotes]);
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
+
+  const getTitle = () => {
+    switch (activeTab) {
+      case 'quotes':    return 'Quotes';
+      case 'disputes':  return 'Disputes';
+      default:          return 'Inquiries';
     }
   };
 
-  const getPriorityColor = (priority: Inquiry['priority']) => {
-    switch (priority) {
-      case 'high':
-        return '#ef4444';
-      case 'medium':
-        return '#f59e0b';
-      case 'low':
-        return '#10b981';
-      default:
-        return '#6b7280';
+  const getSubtitle = () => {
+    switch (activeTab) {
+      case 'quotes':    return 'Review and accept quotes from vendors';
+      case 'disputes':  return 'Handle and resolve your disputes';
+      default:          return 'Manage and review all your inquiries';
     }
   };
 
-  const filteredInquiries =
-    activeTab === 'all'
-      ? dummyInquiries
-      : dummyInquiries.filter(inquiry => inquiry.status === activeTab);
-
-  const tabs: {key: TabType; label: string}[] = [
-    {key: 'all', label: 'All'},
-    {key: 'pending', label: 'Pending'},
-    {key: 'in-progress', label: 'In Progress'},
-    {key: 'resolved', label: 'Resolved'},
-  ];
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f5f7fa" />
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Inquiries</Text>
-        <TouchableOpacity style={styles.addButton}>
-          <Text style={styles.addButtonText}>+ New</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, {paddingTop: insets.top}]}>
+      {/* ── Header ───────────────────────────────────────────────────── */}
+      {/* <Header /> */}
 
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsContent}>
-          {tabs.map(tab => (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {paddingBottom: insets.bottom + 120},
+        ]}>
+
+        {/* ── Page Title ───────────────────────────────────────────────── */}
+        <View style={styles.titleSection}>
+          <Text style={styles.title}>{getTitle()}</Text>
+          {/* <Text style={styles.subtitle}>{getSubtitle()}</Text> */}
+        </View>
+
+        {/* ── Tab Toggle + Filter ───────────────────────────────────────── */}
+        <View style={styles.filterRow}>
+          <View style={styles.tabToggle}>
             <TouchableOpacity
-              key={tab.key}
-              style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-              onPress={() => setActiveTab(tab.key)}>
+              style={[
+                styles.tabBtn,
+                activeTab === 'inquiries' && styles.tabBtnActive,
+              ]}
+              onPress={() => setActiveTab('inquiries')}
+              activeOpacity={0.8}>
               <Text
                 style={[
-                  styles.tabText,
-                  activeTab === tab.key && styles.tabTextActive,
+                  styles.tabBtnText,
+                  activeTab === 'inquiries' && styles.tabBtnTextActive,
                 ]}>
-                {tab.label}
+                Inquiries
               </Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Inquiry List */}
-      <ScrollView
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}>
-        {filteredInquiries.map(inquiry => (
-          <TouchableOpacity key={inquiry.id} style={styles.inquiryCard}>
-            <View style={styles.inquiryHeader}>
-              <View
+            <TouchableOpacity
+              style={[
+                styles.tabBtn,
+                activeTab === 'quotes' && styles.tabBtnActive,
+              ]}
+              onPress={() => setActiveTab('quotes')}
+              activeOpacity={0.8}>
+              <Text
                 style={[
-                  styles.priorityIndicator,
-                  {backgroundColor: getPriorityColor(inquiry.priority)},
-                ]}
-              />
-              <Text style={styles.inquiryTitle}>{inquiry.title}</Text>
-            </View>
-            <Text style={styles.inquiryDescription}>{inquiry.description}</Text>
-            <View style={styles.inquiryFooter}>
-              <View
-                style={[
-                  styles.statusBadge,
-                  {backgroundColor: `${getStatusColor(inquiry.status)}15`},
+                  styles.tabBtnText,
+                  activeTab === 'quotes' && styles.tabBtnTextActive,
                 ]}>
-                <Text
-                  style={[
-                    styles.statusText,
-                    {color: getStatusColor(inquiry.status)},
-                  ]}>
-                  {inquiry.status.charAt(0).toUpperCase() +
-                    inquiry.status.slice(1).replace('-', ' ')}
+                Quotes
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tabBtn,
+                activeTab === 'disputes' && styles.tabBtnActive,
+              ]}
+              onPress={() => setActiveTab('disputes')}
+              activeOpacity={0.8}>
+              <Text
+                style={[
+                  styles.tabBtnText,
+                  activeTab === 'disputes' && styles.tabBtnTextActive,
+                ]}>
+                Disputes
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={styles.filterBtn}
+            onPress={() => setShowFilters(true)}
+            activeOpacity={0.8}>
+            <FilterIcon />
+            <Text style={styles.filterBtnText}>Filter</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Inquiries Tab ─────────────────────────────────────────────── */}
+        {activeTab === 'inquiries' && (
+          <View style={styles.cardList}>
+            {loadingInquiries ? (
+              <View style={styles.stateCard}>
+                <ActivityIndicator size="small" color="#e5383b" />
+                <Text style={styles.loadingText}>Loading inquiries...</Text>
+              </View>
+            ) : inquiries.length === 0 ? (
+              <View style={styles.stateCard}>
+                <Text style={styles.emptyTitle}>No Inquiries Found</Text>
+                <Text style={styles.emptySubtitle}>
+                  Your inquiries will appear here
                 </Text>
               </View>
-              <Text style={styles.inquiryDate}>{inquiry.date}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+            ) : (
+              inquiries.map(inquiry => (
+                <InquiryCard
+                  key={inquiry.id}
+                  inquiry={inquiry}
+                  isExpanded={expandedInquiryId === inquiry.id}
+                  onToggle={() =>
+                    setExpandedInquiryId(
+                      expandedInquiryId === inquiry.id ? null : inquiry.id,
+                    )
+                  }
+                  onEdit={id => console.log('Edit inquiry:', id)}
+                  onView={id => console.log('View inquiry:', id)}
+                  onApprove={id => console.log('Approve inquiry:', id)}
+                  onReRequest={id => console.log('Re-request inquiry:', id)}
+                  showNumberPlate={true}
+                  action="approve"
+                />
+              ))
+            )}
+          </View>
+        )}
 
-        {filteredInquiries.length === 0 && (
-          <View style={styles.emptyState}>
-            <InquiryIcon width={48} height={48} fill="#9ca3af" />
-            <Text style={styles.emptyTitle}>No inquiries found</Text>
-            <Text style={styles.emptySubtitle}>
-              There are no inquiries in this category
-            </Text>
+        {/* ── Quotes Tab ────────────────────────────────────────────────── */}
+        {activeTab === 'quotes' && (
+          <View style={styles.cardList}>
+            {loadingQuotes ? (
+              <View style={styles.stateCard}>
+                <ActivityIndicator size="small" color="#e5383b" />
+                <Text style={styles.loadingText}>Loading quotes...</Text>
+              </View>
+            ) : quotes.length === 0 ? (
+              <View style={styles.stateCard}>
+                <Text style={styles.emptyTitle}>No Quotes Found</Text>
+                <Text style={styles.emptySubtitle}>
+                  Your quotes will appear here
+                </Text>
+              </View>
+            ) : (
+              quotes.map(quote => (
+                <QuoteCard
+                  key={quote.id}
+                  quote={quote}
+                  isExpanded={expandedQuoteId === quote.id}
+                  onToggle={() =>
+                    setExpandedQuoteId(
+                      expandedQuoteId === quote.id ? null : quote.id,
+                    )
+                  }
+                  showNumberPlate={true}
+                  onAccept={id => console.log('Accept quote:', id)}
+                  onView={id => console.log('View quote:', id)}
+                />
+              ))
+            )}
+          </View>
+        )}
+
+        {/* ── Disputes Tab ──────────────────────────────────────────────── */}
+        {activeTab === 'disputes' && (
+          <View style={styles.cardList}>
+            <View style={styles.stateCard}>
+              <Text style={styles.emptyTitle}>No Disputes Found</Text>
+              <Text style={styles.emptySubtitle}>
+                Your disputes will appear here
+              </Text>
+            </View>
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+
+      {/* ── Filters Overlay ───────────────────────────────────────────── */}
+      <FiltersOverlay
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+        onApply={filters => {
+          console.log('Filters applied:', filters);
+          setShowFilters(false);
+        }}
+      />
+    </View>
   );
-};
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f7fa',
+  container: {flex: 1, backgroundColor: '#ffffff'},
+
+  scrollContent: {
+    paddingHorizontal: 16,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+
+  // Title section
+  titleSection: {
+    marginBottom: 24,
+    marginTop: 16,
   },
-  headerTitle: {
-    fontSize: 28,
+  title: {
+    fontSize: 24,
     fontWeight: '700',
-    color: '#1f2937',
+    color: '#1a1a1a',
   },
-  addButton: {
-    backgroundColor: '#e5383b',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  addButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
+  subtitle: {
     fontSize: 14,
+    color: '#828282',
+    marginTop: 4,
   },
-  tabsContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    marginBottom: 16,
-  },
-  tabsContent: {
-    paddingHorizontal: 20,
-  },
-  tab: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginRight: 8,
-  },
-  tabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#e5383b',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6b7280',
-  },
-  tabTextActive: {
-    color: '#e5383b',
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 120,
-  },
-  inquiryCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  inquiryHeader: {
+
+  // Tab toggle row
+  filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  priorityIndicator: {
-    width: 4,
-    height: 20,
-    borderRadius: 2,
-    marginRight: 12,
-  },
-  inquiryTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-    flex: 1,
-  },
-  inquiryDescription: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 12,
-    marginLeft: 16,
-  },
-  inquiryFooter: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginLeft: 16,
+    marginBottom: 24,
   },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  tabToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#e5e5e5',
+    borderRadius: 12,
+    padding: 3,
+  },
+  tabBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 9,
+  },
+  tabBtnActive: {backgroundColor: '#e5383b'},
+  tabBtnText: {fontSize: 13, fontWeight: '500', color: '#4c4c4c'},
+  tabBtnTextActive: {color: '#ffffff'},
+
+  // Filter button
+  filterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#e5383b',
     borderRadius: 8,
   },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  inquiryDate: {
-    fontSize: 12,
-    color: '#9ca3af',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-});
+  filterBtnText: {fontSize: 13, fontWeight: '500', color: '#e5383b'},
 
-export default InquiryScreen;
+  // Card list
+  cardList: {gap: 16},
+
+  // State cards (loading / empty)
+  stateCard: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    padding: 32,
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingText: {fontSize: 14, color: '#99a2b6'},
+  emptyTitle: {fontSize: 16, fontWeight: '500', color: '#2b2b2b'},
+  emptySubtitle: {fontSize: 14, color: '#99a2b6', textAlign: 'center'},
+});

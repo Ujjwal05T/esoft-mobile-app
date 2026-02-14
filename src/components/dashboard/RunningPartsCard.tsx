@@ -1,4 +1,5 @@
 import React from 'react';
+import LinearGradient from 'react-native-linear-gradient';
 import {
   View,
   Text,
@@ -7,6 +8,18 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import Svg, {Circle} from 'react-native-svg';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const OIL_FILTER_IMG = require('../../assets/images/oil-filter.png') as number;
+
+const DotsIcon = () => (
+  <Svg width={16} height={16} viewBox="0 0 16 16" fill="none">
+    <Circle cx={8} cy={3} r={1.5} fill="#828282" />
+    <Circle cx={8} cy={8} r={1.5} fill="#828282" />
+    <Circle cx={8} cy={13} r={1.5} fill="#828282" />
+  </Svg>
+);
 
 interface ProductItem {
   id: string;
@@ -14,6 +27,7 @@ interface ProductItem {
   brand: string;
   partNo: string;
   compatibility: string;
+  image?: number;
   imageUri?: string;
 }
 
@@ -30,6 +44,7 @@ const defaultProducts: ProductItem[] = [
     brand: 'Toyota Genuine Parts',
     partNo: '14325354',
     compatibility: 'Compatible Cars: Fortuner, Hilux',
+    image: OIL_FILTER_IMG,
   },
   {
     id: '2',
@@ -37,6 +52,7 @@ const defaultProducts: ProductItem[] = [
     brand: 'Toyota Genuine Parts',
     partNo: '14325355',
     compatibility: 'Compatible Cars: Fortuner, Hilux',
+    image: OIL_FILTER_IMG,
   },
   {
     id: '3',
@@ -44,6 +60,7 @@ const defaultProducts: ProductItem[] = [
     brand: 'Toyota Genuine Parts',
     partNo: '14325356',
     compatibility: 'Compatible Cars: Fortuner, Hilux',
+    image: OIL_FILTER_IMG,
   },
 ];
 
@@ -57,7 +74,11 @@ export default function RunningPartsCard({
   const secondLine = words.slice(3).join(' ');
 
   return (
-    <View style={styles.card}>
+    <LinearGradient
+      colors={['#e5383b', '#bb282b']}
+      start={{x: 0, y: 0}}
+      end={{x: 0, y: 1}}
+      style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>
@@ -72,13 +93,19 @@ export default function RunningPartsCard({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        snapToInterval={312}
+        snapToInterval={340}
         decelerationRate="fast">
         {products.map(product => (
           <View key={product.id} style={styles.productCard}>
             {/* Product Image */}
             <View style={styles.imageBox}>
-              {product.imageUri ? (
+              {product.image ? (
+                <Image
+                  source={product.image}
+                  style={styles.productImage}
+                  resizeMode="contain"
+                />
+              ) : product.imageUri ? (
                 <Image
                   source={{uri: product.imageUri}}
                   style={styles.productImage}
@@ -93,6 +120,9 @@ export default function RunningPartsCard({
             <View style={styles.productInfo}>
               <View style={styles.nameRow}>
                 <Text style={styles.productName}>{product.name}</Text>
+                <TouchableOpacity style={styles.dotsBtn}>
+                  <DotsIcon />
+                </TouchableOpacity>
               </View>
               <Text style={styles.brand}>{product.brand}</Text>
               <Text style={styles.partNo}>Part No - {product.partNo}</Text>
@@ -106,14 +136,13 @@ export default function RunningPartsCard({
           </View>
         ))}
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: '#e5383b',
     borderRadius: 16,
     overflow: 'hidden',
     paddingBottom: 16,
@@ -136,7 +165,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   productCard: {
-    width: 300,
+    width: 330,
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 12,
@@ -168,6 +197,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginBottom: 2,
+  },
+  dotsBtn: {
+    padding: 4,
   },
   productName: {
     fontSize: 18,

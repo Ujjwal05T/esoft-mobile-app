@@ -1,6 +1,10 @@
 import React from 'react';
-import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const TOYOTA_CRYSTA = require('../../assets/images/toyota-crysta.png') as number;
 
 interface VehicleCardProps {
   plateNumber: string;
@@ -60,10 +64,29 @@ export default function VehicleCard({
 }: VehicleCardProps) {
   const vehicleName = [year, make, model].filter(Boolean).join(' ');
 
+  const ServiceTags = () => (
+    <View style={styles.tagsRow}>
+      {services.slice(0, 2).map((s, i) => (
+        <View key={i} style={styles.serviceTag}>
+          <Text style={styles.serviceTagText}>{s}</Text>
+        </View>
+      ))}
+      {additionalServices > 0 && (
+        <View style={styles.serviceTagMore}>
+          <Text style={styles.serviceTagText}>+{additionalServices}</Text>
+        </View>
+      )}
+    </View>
+  );
+
   // Compact variant
   if (variant === 'compact') {
     return (
-      <View style={styles.compactCard}>
+      <LinearGradient
+        colors={['#ffffff', '#d4d9e3']}
+        start={{x: 0.1, y: 1}}
+        end={{x: 0.9, y: 0}}
+        style={styles.compactCard}>
         <View style={styles.compactTop}>
           <View style={styles.flex1}>
             <Text style={styles.vehicleNameRed}>{vehicleName}</Text>
@@ -73,48 +96,43 @@ export default function VehicleCard({
             <Text style={styles.plateTextRed}>{plateNumber}</Text>
           </View>
         </View>
-        {services.length > 0 && (
-          <View style={styles.tagsRow}>
-            {services.slice(0, 2).map((s, i) => (
-              <View key={i} style={styles.serviceTag}>
-                <Text style={styles.serviceTagText}>{s}</Text>
-              </View>
-            ))}
-            {additionalServices > 0 && (
-              <View style={styles.serviceTagMore}>
-                <Text style={styles.serviceTagText}>+{additionalServices}</Text>
-              </View>
-            )}
-          </View>
-        )}
-      </View>
+        {services.length > 0 && <ServiceTags />}
+      </LinearGradient>
     );
   }
 
-  // Scan variant (with approve/view buttons)
+  // Scan variant
   if (variant === 'scan') {
     return (
       <View style={styles.scanCard}>
-        <View style={styles.scanHeader}>
-          {addedBy && (
-            <Text style={styles.addedBy}>Added by {addedBy}</Text>
-          )}
-          <Text style={styles.vehicleNameDark}>{vehicleName}</Text>
-          <Text style={styles.specs}>{specs}</Text>
+        {/* Vehicle Image */}
+        <View style={styles.imageSection}>
+          <Image
+            source={TOYOTA_CRYSTA}
+            style={styles.vehicleImage}
+            resizeMode="cover"
+          />
           <View style={styles.plateBadgeGray}>
             <Text style={styles.plateTextDark}>{plateNumber}</Text>
           </View>
         </View>
+
+        <View style={styles.scanInfo}>
+          {addedBy && <Text style={styles.addedBy}>Added by {addedBy}</Text>}
+          <Text style={styles.vehicleNameDark}>{vehicleName}</Text>
+          <Text style={styles.specs}>{specs}</Text>
+        </View>
+
         <View style={styles.actionRow}>
           <TouchableOpacity
             onPress={onApprove}
-            style={styles.approveBtn}
+            style={[styles.approveBtn, styles.roundedBL]}
             activeOpacity={0.8}>
             <CheckIcon />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onView}
-            style={styles.viewBtnLight}
+            style={[styles.viewBtnLight, styles.roundedBR]}
             activeOpacity={0.8}>
             <EyeIcon />
           </TouchableOpacity>
@@ -126,12 +144,20 @@ export default function VehicleCard({
   // Approve-big variant
   if (variant === 'approve-big') {
     return (
-      <View style={styles.approveBigCard}>
+      <LinearGradient
+        colors={['#ffffff', '#b2b9c8']}
+        start={{x: 0.1, y: 1}}
+        end={{x: 0.9, y: 0}}
+        locations={[0.45, 0.96]}
+        style={styles.approveBigCard}>
         <View style={styles.approveBigTop}>
+          <Image
+            source={TOYOTA_CRYSTA}
+            style={styles.approveBigImage}
+            resizeMode="contain"
+          />
           <View style={styles.flex1}>
-            {addedBy && (
-              <Text style={styles.addedBy}>Added by {addedBy}</Text>
-            )}
+            {addedBy && <Text style={styles.addedBy}>Added by {addedBy}</Text>}
             <Text style={styles.vehicleNameDark}>{vehicleName}</Text>
             <Text style={styles.specsSmall}>{specs}</Text>
           </View>
@@ -142,75 +168,72 @@ export default function VehicleCard({
         <View style={styles.approveBigActions}>
           <TouchableOpacity
             onPress={onApprove}
-            style={[styles.approveBtn, styles.flex1]}
+            style={[styles.approveBtn, styles.flex1, styles.rounded7]}
             activeOpacity={0.8}>
             <CheckIcon />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onView}
-            style={[styles.viewBtnLight, styles.flex1]}
+            style={[styles.viewBtnLight, styles.flex1, styles.rounded7]}
             activeOpacity={0.8}>
             <EyeIcon />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
     );
   }
 
   // Default variant
   return (
-    <View style={styles.defaultCard}>
-      {/* Vehicle Image Placeholder */}
-      <View style={styles.imagePlaceholder}>
-        <Text style={styles.imagePlaceholderText}>🚗</Text>
-      </View>
-
-      {/* Plate Number */}
-      <View style={styles.plateBadgeWhiteAbs}>
-        <Text style={styles.plateTextRed}>{plateNumber}</Text>
+    <LinearGradient
+      colors={['#ffffff', '#d4d9e3']}
+      start={{x: 0.1, y: 1}}
+      end={{x: 0.9, y: 0}}
+      style={styles.defaultCard}>
+      {/* Vehicle Image Section */}
+      <View style={styles.imageSection}>
+        <Image
+          source={TOYOTA_CRYSTA}
+          style={styles.vehicleImage}
+          resizeMode="cover"
+        />
+        <View style={styles.plateBadgeWhiteAbs}>
+          <Text style={styles.plateTextRed}>{plateNumber}</Text>
+        </View>
       </View>
 
       {/* Info */}
       <View style={styles.defaultInfo}>
         <Text style={styles.vehicleNameRed}>{vehicleName}</Text>
         <Text style={styles.specs}>{specs}</Text>
-        {services.length > 0 && (
-          <View style={styles.tagsRow}>
-            {services.slice(0, 2).map((s, i) => (
-              <View key={i} style={styles.serviceTag}>
-                <Text style={styles.serviceTagText}>{s}</Text>
-              </View>
-            ))}
-            {additionalServices > 0 && (
-              <View style={styles.serviceTagMore}>
-                <Text style={styles.serviceTagText}>+{additionalServices}</Text>
-              </View>
-            )}
-          </View>
-        )}
+        {services.length > 0 && <ServiceTags />}
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   flex1: {flex: 1},
+  rounded7: {borderRadius: 7},
 
   // Default
   defaultCard: {
     borderRadius: 17,
     width: '100%',
     overflow: 'hidden',
-    backgroundColor: '#d4d9e3',
   },
-  imagePlaceholder: {
+  imageSection: {
     height: 140,
-    backgroundColor: '#e8eaf0',
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: 'relative',
   },
-  imagePlaceholderText: {
-    fontSize: 60,
+  vehicleImage: {
+    position: 'absolute',
+    top: 20,
+    left: 10,
+    right: 10,
+    bottom: 10,
+    height: 100,
+    width: '60%',
   },
   plateBadgeWhiteAbs: {
     position: 'absolute',
@@ -232,7 +255,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     paddingTop: 8,
-    backgroundColor: '#ffffff',
   },
   vehicleNameRed: {
     fontWeight: '600',
@@ -277,7 +299,6 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     width: '100%',
     overflow: 'hidden',
-    backgroundColor: '#d4d9e3',
     padding: 12,
     gap: 8,
   },
@@ -307,8 +328,10 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  scanHeader: {
-    padding: 16,
+  scanInfo: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   addedBy: {
     fontSize: 12,
@@ -326,13 +349,14 @@ const styles = StyleSheet.create({
     color: '#161a1d',
   },
   plateBadgeGray: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
     backgroundColor: '#d4d9e3',
     height: 33,
     paddingHorizontal: 10,
     borderRadius: 7,
     justifyContent: 'center',
-    alignSelf: 'flex-start',
-    marginTop: 8,
   },
   plateTextDark: {
     fontWeight: '700',
@@ -357,13 +381,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  roundedBL: {
+    borderBottomLeftRadius: 7,
+  },
+  roundedBR: {
+    borderBottomRightRadius: 7,
+  },
 
   // Approve-big
   approveBigCard: {
     borderRadius: 17,
     width: '100%',
     overflow: 'hidden',
-    backgroundColor: '#d4d9e3',
     padding: 12,
   },
   approveBigTop: {
@@ -371,6 +400,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 8,
     gap: 12,
+  },
+  approveBigImage: {
+    width: 10,
+    height: 40,
+    flexShrink: 0,
   },
   approveBigActions: {
     flexDirection: 'row',

@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import {getVehicles, type VehicleResponse} from '../../services/api';
 import VehicleCard from './VehicleCard';
 
@@ -56,7 +57,11 @@ export default function JobsCard() {
   const jobCount = vehicles.length;
 
   return (
-    <View style={styles.card}>
+    <LinearGradient
+      colors={['#e5383b', '#8C2424']}
+      start={{x: 0.8, y: 0}}
+      end={{x: 1, y: 0.9}}
+      style={styles.card}>
       {/* Large Number Background */}
       <Text style={styles.bigNumber}>{jobCount}</Text>
 
@@ -95,7 +100,7 @@ export default function JobsCard() {
           </View>
         )}
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -110,11 +115,12 @@ const styles = StyleSheet.create({
   },
   bigNumber: {
     position: 'absolute',
-    top: 47,
+    top: 37,
     left: 0,
-    right: 0,
+    right: 210,
     textAlign: 'center',
     fontSize: 180,
+    lineHeight: 135,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.8)',
     letterSpacing: -1,
@@ -122,7 +128,8 @@ const styles = StyleSheet.create({
   label: {
     position: 'absolute',
     top: 77,
-    left: '50%',
+    left: 0,
+    right: 0,
     fontSize: 28,
     fontWeight: '900',
     color: '#f0f0f0',

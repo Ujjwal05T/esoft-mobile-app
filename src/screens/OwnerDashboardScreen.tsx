@@ -146,7 +146,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
       </ScrollView>
 
       {/* Floating Action Button */}
-      <FloatingActionButton navigationOptions={fabOptions} />
+      {/* <FloatingActionButton navigationOptions={fabOptions} /> */}
 
       {/* ── Overlays ── */}
       <AddVehicleOverlay

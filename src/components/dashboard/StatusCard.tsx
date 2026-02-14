@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
-import Svg, {Path} from 'react-native-svg';
+import ArrowDiagonalIcon from '../../assets/icons/arrow-diagonal.svg';
 
 interface StatusCardProps {
   title: string;
@@ -14,17 +14,7 @@ interface StatusCardProps {
   vectorOpacity?: number;
 }
 
-const ArrowRightIcon = () => (
-  <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
-    <Path
-      d="M6 16H26M26 16L18 8M26 16L18 24"
-      stroke="white"
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
+
 
 export default function StatusCard({
   title,
@@ -56,7 +46,7 @@ export default function StatusCard({
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.value}>{value}</Text>
       <View style={styles.arrowContainer}>
-        <ArrowRightIcon />
+        <ArrowDiagonalIcon width={32} height={32} />
       </View>
     </Wrapper>
   );

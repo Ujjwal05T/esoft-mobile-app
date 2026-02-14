@@ -4,10 +4,14 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import AuthStack from './AuthStack';
 import TabNavigator from './TabNavigator';
 import {useAuth} from '../context/AuthContext';
+import {AIAssistantScreen} from '../screens';
+import VehicleDetailScreen from '../screens/VehicleDetailScreen';
 
 export type RootStackParamList = {
   Auth: undefined;
   MainTabs: undefined;
+  AIAssistant: undefined;
+  VehicleDetail: {vehicleId: number};
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -31,6 +35,20 @@ const RootNavigator: React.FC = () => {
         initialRouteName={isAuth ? 'MainTabs' : 'Auth'}>
         <Stack.Screen name="Auth" component={AuthStack} />
         <Stack.Screen name="MainTabs" component={TabNavigator} />
+        <Stack.Screen
+          name="AIAssistant"
+          component={AIAssistantScreen}
+          options={{
+            presentation: 'fullScreenModal',
+            animation: 'slide_from_bottom',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="VehicleDetail"
+          component={VehicleDetailScreen}
+          options={{animation: 'slide_from_right', headerShown: false}}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
