@@ -607,7 +607,10 @@ export default function EstimationOverlay({
                 variant="default"
               />
 
-              <View style={styles.inputBox}>
+              <View style={[styles.inputBox, !!customerName && {borderColor: '#e5383b'}]}>
+                {!!customerName && (
+                  <Text style={styles.floatLabel}>Customer/Company Name</Text>
+                )}
                 <TextInput
                   value={customerName}
                   onChangeText={setCustomerName}
@@ -617,26 +620,31 @@ export default function EstimationOverlay({
                 />
               </View>
 
-              <View style={styles.gstBox}>
-                <TextInput
-                  value={gstNumber}
-                  onChangeText={v => {
-                    setGstNumber(v);
-                    setIsGstVerified(false);
-                  }}
-                  placeholder="GST NO."
-                  placeholderTextColor="#828282"
-                  style={[styles.inputBoxText, {flex: 1}]}
-                />
-                {isGstVerified ? (
-                  <Text style={styles.verifiedText}>VERIFIED</Text>
-                ) : (
-                  <TouchableOpacity
-                    onPress={() => gstNumber.trim() && setIsGstVerified(true)}
-                    style={styles.verifyBtn}>
-                    <Text style={styles.verifyBtnText}>Verify</Text>
-                  </TouchableOpacity>
+              <View style={styles.gstWrapper}>
+                {!!gstNumber && (
+                  <Text style={styles.floatLabel}>GST NO.</Text>
                 )}
+                <View style={[styles.gstBox, !!gstNumber && {borderColor: '#e5383b'}]}>
+                  <TextInput
+                    value={gstNumber}
+                    onChangeText={v => {
+                      setGstNumber(v);
+                      setIsGstVerified(false);
+                    }}
+                    placeholder="GST NO."
+                    placeholderTextColor="#828282"
+                    style={[styles.inputBoxText, {flex: 1}]}
+                  />
+                  {isGstVerified ? (
+                    <Text style={styles.verifiedText}>VERIFIED</Text>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => gstNumber.trim() && setIsGstVerified(true)}
+                      style={styles.verifyBtn}>
+                      <Text style={styles.verifyBtnText}>Verify</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
 
               <View style={styles.breakdownSection}>
@@ -898,9 +906,23 @@ const styles = StyleSheet.create({
     borderColor: '#d3d3d3',
     borderRadius: 8,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 10,
+    position: 'relative',
+  },
+  floatLabel: {
+    position: 'absolute',
+    top: -8,
+    left: 12,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 4,
+    fontSize: 11,
+    color: '#828282',
+    zIndex: 1,
   },
   inputBoxText: {fontSize: 15, color: '#000'},
+  gstWrapper: {
+    position: 'relative',
+  },
   gstBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -908,7 +930,7 @@ const styles = StyleSheet.create({
     borderColor: '#d3d3d3',
     borderRadius: 8,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 8,
   },
   verifiedText: {fontSize: 14, fontWeight: '700', color: '#e5383b'},

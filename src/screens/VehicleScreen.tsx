@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import Svg, {Path as SvgPath} from 'react-native-svg';
 import VehicleCard from '../components/dashboard/VehicleCard';
@@ -127,9 +127,11 @@ export default function VehicleScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchVehicles();
-  }, [fetchVehicles]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchVehicles();
+    }, [fetchVehicles]),
+  );
 
   const displayVehicles = activeTab === 'all' ? vehicles : requestedVehicles;
 

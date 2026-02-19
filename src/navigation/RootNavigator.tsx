@@ -6,12 +6,16 @@ import TabNavigator from './TabNavigator';
 import {useAuth} from '../context/AuthContext';
 import {AIAssistantScreen} from '../screens';
 import VehicleDetailScreen from '../screens/VehicleDetailScreen';
+import QuoteDetailScreen from '../screens/QuoteDetailScreen';
+import PaymentScreen from '../screens/PaymentScreen';
 
 export type RootStackParamList = {
   Auth: undefined;
   MainTabs: undefined;
   AIAssistant: undefined;
   VehicleDetail: {vehicleId: number};
+  QuoteDetail: {quoteId: number};
+  Payment: {quoteId: number};
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -47,6 +51,16 @@ const RootNavigator: React.FC = () => {
         <Stack.Screen
           name="VehicleDetail"
           component={VehicleDetailScreen}
+          options={{animation: 'slide_from_right', headerShown: false}}
+        />
+        <Stack.Screen
+          name="QuoteDetail"
+          component={QuoteDetailScreen}
+          options={{animation: 'slide_from_right', headerShown: false}}
+        />
+        <Stack.Screen
+          name="Payment"
+          component={PaymentScreen}
           options={{animation: 'slide_from_right', headerShown: false}}
         />
       </Stack.Navigator>

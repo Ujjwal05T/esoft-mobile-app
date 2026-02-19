@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,19 @@ import {
   ActivityIndicator,
   Image,
   Dimensions,
+  Platform,
+  PermissionsAndroid,
+  Animated,
+  Easing,
 } from 'react-native';
+import {launchImageLibrary} from 'react-native-image-picker';
+import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 
 const SCREEN_H = Dimensions.get('screen').height;
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
 import VehicleCard from '../dashboard/VehicleCard';
-import {createVehicle, gateInVehicle} from '../../services/api';
+import {createVehicle, gateInVehicle, gateInVehicleWithMedia} from '../../services/api';
 import CameraScannerOverlay, {ScanMode} from './CameraScannerOverlay';
 
 export interface VehicleRequestFormData {
@@ -197,7 +203,13 @@ export default function AddVehicleOverlay({
   const [fuelLevel, setFuelLevel] = useState(0);
   const [fuelTrackWidth, setFuelTrackWidth] = useState(0);
   const [problemShared, setProblemShared] = useState('');
-  const [vehicleImages, setVehicleImages] = useState<string[]>([]);
+  const [vehicleImages, setVehicleImages] = useState<{uri: string; name: string; type: string}[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedAudioPath, setRecordedAudioPath] = useState<string | null>(null);
+  const audioRecorderPlayer = useRef(AudioRecorderPlayer);
+  const successFade = useRef(new Animated.Value(0)).current;
+  const checkScale = useRef(new Animated.Value(0)).current;
+  const textFade = useRef(new Animated.Value(0)).current;
   const [hasAttemptedGateIn, setHasAttemptedGateIn] = useState(false);
 
   // API state
@@ -233,6 +245,9 @@ export default function AddVehicleOverlay({
     setFuelLevel(0);
     setProblemShared('');
     setVehicleImages([]);
+    setIsRecording(false);
+    setRecordedAudioPath(null);
+    audioRecorderPlayer.current.stopRecorder().catch(() => {});
     setHasAttemptedGateIn(false);
     setIsLoading(false);
     setApiError(null);
@@ -243,6 +258,31 @@ export default function AddVehicleOverlay({
   useEffect(() => {
     if (!isOpen) resetAll();
   }, [isOpen]);
+
+  useEffect(() => {
+    if (currentView === 'success') {
+      successFade.setValue(0);
+      checkScale.setValue(0);
+      textFade.setValue(0);
+      Animated.parallel([
+        Animated.timing(successFade, {
+          toValue: 1, duration: 300, easing: Easing.out(Easing.ease), useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.delay(100),
+          Animated.spring(checkScale, {
+            toValue: 1, friction: 4, tension: 40, useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.delay(200),
+          Animated.timing(textFade, {
+            toValue: 1, duration: 300, easing: Easing.out(Easing.ease), useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    }
+  }, [currentView]);
 
   useEffect(() => {
     if (currentView === 'success') {
@@ -358,7 +398,7 @@ export default function AddVehicleOverlay({
 
     setIsLoading(true);
     try {
-      const result = await gateInVehicle({
+      const visitData = {
         vehicleId: createdVehicleId,
         gateInDateTime: new Date().toISOString(),
         gateInDriverName: driverName,
@@ -366,7 +406,16 @@ export default function AddVehicleOverlay({
         gateInOdometerReading: odometerReading || undefined,
         gateInFuelLevel: fuelLevel > 0 ? fuelLevel : undefined,
         gateInProblemShared: problemShared || undefined,
-      });
+      };
+
+      const audioFile = recordedAudioPath
+        ? {uri: recordedAudioPath, name: `problem_audio_${Date.now()}.mp4`, type: 'audio/mp4'}
+        : undefined;
+
+      const result =
+        audioFile || vehicleImages.length > 0
+          ? await gateInVehicleWithMedia(visitData, audioFile, vehicleImages.length > 0 ? vehicleImages : undefined)
+          : await gateInVehicle(visitData);
 
       if (!result.success) {
         setApiError(result.error || 'Failed to gate in vehicle');
@@ -403,6 +452,40 @@ export default function AddVehicleOverlay({
     setFuelLevel(Math.round((x / fuelTrackWidth) * 100 / 5) * 5);
   };
 
+  const handlePickImage = () => {
+    launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 10}, response => {
+      if (!response.didCancel && !response.errorCode && response.assets?.length) {
+        const newImages = response.assets
+          .filter(a => a.uri)
+          .map(a => ({
+            uri: a.uri!,
+            name: a.fileName || `photo_${Date.now()}.jpg`,
+            type: a.type || 'image/jpeg',
+          }));
+        setVehicleImages(prev => [...prev, ...newImages]);
+      }
+    });
+  };
+
+  const handleRecord = async () => {
+    if (isRecording) {
+      const path = await audioRecorderPlayer.current.stopRecorder();
+      audioRecorderPlayer.current.removeRecordBackListener();
+      setRecordedAudioPath(path);
+      setIsRecording(false);
+    } else {
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
+      }
+      setRecordedAudioPath(null);
+      await audioRecorderPlayer.current.startRecorder();
+      setIsRecording(true);
+    }
+  };
+
   const handleScanCapture = (uri: string) => {
     // uri: file path of captured photo — GPT integration goes here later
     console.log('Captured image for', scanMode, ':', uri);
@@ -417,24 +500,6 @@ export default function AddVehicleOverlay({
 
       <View style={styles.sheet}>
         <View style={styles.handle} />
-
-        {/* SUCCESS VIEW */}
-        {currentView === 'success' && (
-          <View style={styles.successOverlay}>
-            <View style={styles.successCheck}>
-              <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
-                <Path
-                  d="M8 16L14 22L24 10"
-                  stroke="#e5383b"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </View>
-            <Text style={styles.successText}>REQUEST SENT</Text>
-          </View>
-        )}
 
         {/* SEARCH VIEW */}
         {currentView === 'search' && (
@@ -793,27 +858,33 @@ export default function AddVehicleOverlay({
 
               {/* Fuel Level */}
               <View style={styles.fuelContainer}>
-                <View style={styles.fuelHeader}>
-                  <Text style={styles.fuelLabel}>Fuel Reading</Text>
-                  <Text style={[styles.fuelPct, fuelLevel > 50 && {color: '#16a34a'}]}>
-                    {fuelLevel}%
-                  </Text>
-                </View>
+                <Text style={styles.fuelFloatLabel}>Fuel Reading</Text>
                 <View
                   style={styles.fuelTrack}
                   onLayout={e => setFuelTrackWidth(e.nativeEvent.layout.width)}
                   onStartShouldSetResponder={() => true}
                   onResponderGrant={handleFuelMove}
                   onResponderMove={handleFuelMove}>
-                  <View
-                    style={[
-                      styles.fuelFill,
-                      {
-                        width: fuelTrackWidth ? (fuelLevel / 100) * fuelTrackWidth : 0,
-                        backgroundColor: fuelLevel > 50 ? '#16a34a' : '#e5383b',
-                      },
-                    ]}
-                  />
+                  {/* Gray background always full width */}
+                  <View style={styles.fuelBg} />
+                  {/* Orange fill — absolute, no flex reflow */}
+                  {fuelTrackWidth > 0 && fuelLevel > 0 && (
+                    <View
+                      style={[
+                        styles.fuelFill,
+                        {width: (fuelLevel / 100) * fuelTrackWidth},
+                      ]}
+                    />
+                  )}
+                  {/* Black divider at right edge of orange */}
+                  {fuelTrackWidth > 0 && fuelLevel > 0 && fuelLevel < 100 && (
+                    <View
+                      style={[
+                        styles.fuelDivider,
+                        {left: (fuelLevel / 100) * fuelTrackWidth - 3},
+                      ]}
+                    />
+                  )}
                 </View>
               </View>
 
@@ -826,45 +897,82 @@ export default function AddVehicleOverlay({
                   placeholderTextColor="#828282"
                   style={styles.problemInput}
                 />
-                <TouchableOpacity style={styles.recordBtn} activeOpacity={0.8}>
-                  <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+                <TouchableOpacity
+                  onPress={handleRecord}
+                  style={[styles.recordBtn, isRecording && styles.recordBtnActive]}
+                  activeOpacity={0.8}>
+                  {isRecording ? (
+                    <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+                      <Rect x="5" y="5" width="10" height="10" rx="2" fill="white" />
+                    </Svg>
+                  ) : (
+                    <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+                      <Path
+                        d="M10 12.5C11.38 12.5 12.5 11.38 12.5 10V5C12.5 3.62 11.38 2.5 10 2.5C8.62 2.5 7.5 3.62 7.5 5V10C7.5 11.38 8.62 12.5 10 12.5Z"
+                        stroke="#e5383b"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <Path
+                        d="M4.167 8.333V10C4.167 13.222 6.778 15.833 10 15.833C13.222 15.833 15.833 13.222 15.833 10V8.333"
+                        stroke="#e5383b"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <Path
+                        d="M10 15.833V17.5"
+                        stroke="#e5383b"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  )}
+                  <Text style={[styles.recordBtnText, isRecording && styles.recordBtnTextActive]}>
+                    {isRecording ? 'Stop' : recordedAudioPath ? 'Re-record' : 'Record'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Recorded audio chip */}
+              {recordedAudioPath && !isRecording && (
+                <View style={styles.audioChip}>
+                  <Svg width={14} height={14} viewBox="0 0 20 20" fill="none">
                     <Path
                       d="M10 12.5C11.38 12.5 12.5 11.38 12.5 10V5C12.5 3.62 11.38 2.5 10 2.5C8.62 2.5 7.5 3.62 7.5 5V10C7.5 11.38 8.62 12.5 10 12.5Z"
-                      stroke="#e5383b"
+                      stroke="#16a34a"
                       strokeWidth="1.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                     <Path
                       d="M4.167 8.333V10C4.167 13.222 6.778 15.833 10 15.833C13.222 15.833 15.833 13.222 15.833 10V8.333"
-                      stroke="#e5383b"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <Path
-                      d="M10 15.833V17.5"
-                      stroke="#e5383b"
+                      stroke="#16a34a"
                       strokeWidth="1.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                   </Svg>
-                  <Text style={styles.recordBtnText}>Record</Text>
-                </TouchableOpacity>
-              </View>
+                  <Text style={styles.audioChipText}>Problem audio recorded</Text>
+                  <TouchableOpacity onPress={() => setRecordedAudioPath(null)} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                    <Text style={styles.audioChipRemove}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {/* Vehicle Images */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.imagesRow}>
-                {vehicleImages.map((_, idx) => (
+                {vehicleImages.map((img, idx) => (
                   <View key={idx} style={styles.imageThumb}>
-                    <View style={styles.imageThumbPlaceholder} />
+                    <Image source={{uri: img.uri}} style={styles.imageThumbFill} resizeMode="cover" />
                     <TouchableOpacity
                       onPress={() =>
-                        setVehicleImages(prev => prev.filter((__, i) => i !== idx))
+                        setVehicleImages(prev => prev.filter((_, i) => i !== idx))
                       }
                       style={styles.imageDeleteBtn}
                       activeOpacity={0.8}>
@@ -882,7 +990,7 @@ export default function AddVehicleOverlay({
                 ))}
                 <TouchableOpacity
                   style={styles.imageAddBtn}
-                  onPress={() => setVehicleImages(prev => [...prev, `img${prev.length}`])}
+                  onPress={handlePickImage}
                   activeOpacity={0.8}>
                   <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
                     <Path
@@ -914,6 +1022,30 @@ export default function AddVehicleOverlay({
           </ScrollView>
         )}
       </View>
+
+      {/* SUCCESS VIEW — sibling of sheet so it isn't constrained by sheet's collapsed height */}
+      {currentView === 'success' && (
+        <Animated.View style={[styles.successOverlay, {opacity: successFade}]}>
+          <Animated.View
+            style={[
+              styles.successCheck,
+              {opacity: checkScale, transform: [{scale: checkScale}]},
+            ]}>
+            <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
+              <Path
+                d="M8 16L14 22L24 10"
+                stroke="#e5383b"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </Animated.View>
+          <Animated.Text style={[styles.successText, {opacity: textFade}]}>
+            REQUEST SENT
+          </Animated.Text>
+        </Animated.View>
+      )}
 
       {/* Camera scanner — rendered inside the Modal so it fills the screen */}
       {scanMode !== null && (
@@ -1088,25 +1220,48 @@ const styles = StyleSheet.create({
     borderColor: '#d3d3d3',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 4,
+    paddingTop: 20,
+    paddingBottom: 20,
+    position: 'relative',
   },
-  fuelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  fuelFloatLabel: {
+    position: 'absolute',
+    top: -8,
+    left: 12,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 4,
+    fontSize: 10,
+    color: '#828282',
+    zIndex: 1,
   },
-  fuelLabel: {fontSize: 12, color: '#828282'},
-  fuelPct: {fontSize: 13, fontWeight: '600', color: '#e5383b'},
   fuelTrack: {
     height: 53,
     borderRadius: 6,
-    overflow: 'hidden',
+    position: 'relative',
+  },
+  fuelBg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: '#f0f0f0',
-    marginTop: 10,
+    borderRadius: 6,
   },
   fuelFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
     height: 53,
+    backgroundColor: '#ffad2a',
+    borderRadius: 6,
+  },
+  fuelDivider: {
+    position: 'absolute',
+    top: 10,
+    width: 6,
+    height: 33,
+    backgroundColor: '#000000',
     borderRadius: 6,
   },
   primaryBtn: {
@@ -1120,16 +1275,16 @@ const styles = StyleSheet.create({
   primaryBtnText: {color: '#fff', fontSize: 15, fontWeight: '600', letterSpacing: 1},
   successOverlay: {
     position: 'absolute',
-    top: 0,
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
+    height: SCREEN_H * 0.9,
     backgroundColor: '#e5383b',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 10,
+    zIndex: 20,
   },
   successCheck: {
     width: 61,
@@ -1223,4 +1378,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  imageThumbFill: {
+    width: 100,
+    height: 80,
+  },
+  recordBtnActive: {
+    backgroundColor: '#e5383b',
+    borderColor: '#e5383b',
+  },
+  recordBtnTextActive: {
+    color: '#fff',
+  },
+  audioChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: '#dcfce7',
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: -2,
+  },
+  audioChipText: {fontSize: 12, color: '#16a34a', fontWeight: '500'},
+  audioChipRemove: {fontSize: 12, color: '#16a34a', fontWeight: '700'},
 });

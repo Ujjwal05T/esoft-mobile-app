@@ -28,11 +28,6 @@ interface OwnerDashboardScreenProps {
   navigation?: any;
 }
 
-const dummyStaffList = [
-  {id: '1', name: 'Amit Kumar'},
-  {id: '2', name: 'Ravi Singh'},
-  {id: '3', name: 'Suresh Patel'},
-];
 
 export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenProps) {
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
@@ -157,11 +152,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
       <NewJobCardOverlay
         isOpen={newJobOpen}
         onClose={() => setNewJobOpen(false)}
-        staffList={dummyStaffList}
-        onSubmit={data => {
-          console.log('New job submitted:', data);
-          setNewJobOpen(false);
-        }}
+        vehicleId={0}
       />
 
       <FiltersOverlay

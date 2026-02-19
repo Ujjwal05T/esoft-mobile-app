@@ -2,7 +2,7 @@
 
 import { getAuthToken, setAuthToken, setStoredUser, removeAuthToken } from './api';
 
-const API_BASE_URL = 'http://10.131.218.139:5196/api';
+const API_BASE_URL = 'http://192.168.29.156:5196/api';
 
 export interface LoginResponse {
   success: boolean;

@@ -7,3 +7,5 @@ export {default as LanguageSelectionScreen} from './LanguageSelectionScreen';
 export {default as OwnerDashboardScreen} from './OwnerDashboardScreen';
 export {default as AIAssistantScreen} from './AIAssistantScreen';
 export {default as OrdersScreen} from './OrdersScreen';
+export {default as QuoteDetailScreen} from './QuoteDetailScreen';
+export {default as PaymentScreen} from './PaymentScreen';

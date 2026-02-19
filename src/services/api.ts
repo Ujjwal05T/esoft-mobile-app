@@ -1,7 +1,8 @@
 import * as Keychain from 'react-native-keychain';
 
 // API Base URL
-const API_BASE_URL = 'http://10.131.218.139:5196/api';
+const API_BASE_URL = 'http://192.168.29.156:5196/api';
+export const SERVER_ORIGIN = 'http://192.168.29.156:5196';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -785,8 +786,15 @@ export async function gateInVehicleWithMedia(
   }
 
   try {
+    const token = await getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/vehiclevisit/gate-in/with-media`, {
       method: 'POST',
+      headers,
       body: formData,
     });
 

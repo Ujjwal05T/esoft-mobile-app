@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {
   View,
   Text,
@@ -235,6 +235,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
 
   // Overlay visibility
   const [showGateOut, setShowGateOut] = useState(false);
+  const gateOutCompleted = useRef(false);
   const [showEstimation, setShowEstimation] = useState(false);
   const [showNewJob, setShowNewJob] = useState(false);
   const [showRaiseDispute, setShowRaiseDispute] = useState(false);
@@ -602,7 +603,9 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
                     }
                     showNumberPlate={false}
                     onAccept={id => console.log('Accept quote:', id)}
-                    onView={id => console.log('View quote:', id)}
+                    onView={id =>
+                      navigation.navigate('QuoteDetail', {quoteId: parseInt(id)})
+                    }
                   />
                 ))}
               </View>
@@ -713,14 +716,24 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
       {/* ── Overlays ─────────────────────────────────────────────────── */}
       <GateOutOverlay
         isOpen={showGateOut}
-        onClose={() => setShowGateOut(false)}
-        onComplete={() => {
+        onClose={() => {
           setShowGateOut(false);
-          navigation.goBack();
+          if (gateOutCompleted.current) {
+            gateOutCompleted.current = false;
+            navigation.goBack();
+          }
         }}
-        vehicleInfo={{
-          plateNumber: vehicle?.plateNumber ?? '',
-          vehicleName: [vehicle?.brand, vehicle?.model].filter(Boolean).join(' '),
+        onComplete={() => {
+          gateOutCompleted.current = true;
+        }}
+        vehicleId={vehicleId}
+        visitId={activeVisit?.id}
+        vehicleData={{
+          plateNumber: vehicle.plateNumber,
+          year: vehicle.year ?? 0,
+          make: vehicle.brand ?? '',
+          model: vehicle.model ?? '',
+          specs: vehicle.specs ?? vehicle.variant ?? '',
         }}
       />
 
@@ -739,18 +752,24 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
       <NewJobCardOverlay
         isOpen={showNewJob}
         onClose={() => setShowNewJob(false)}
-        onSubmit={_job => {
-          setShowNewJob(false);
-          fetchJobsAndVisit();
-        }}
+        vehicleId={vehicleId}
+        onAddJob={() => fetchJobsAndVisit()}
       />
 
       <RaiseDisputeOverlay
         isOpen={showRaiseDispute}
         onClose={() => setShowRaiseDispute(false)}
+        onConfirm={() => {}}
+        buttonText="SEND REQUEST"
         vehicleInfo={{
           plateNumber: vehicle?.plateNumber ?? '',
-          vehicleName: [vehicle?.brand, vehicle?.model].filter(Boolean).join(' '),
+          year: vehicle?.year ?? 0,
+          make: vehicle?.brand ?? '',
+          model: vehicle?.model ?? '',
+          specs: vehicle?.specs ?? vehicle?.variant ?? '',
+        }}
+        onChatWithUs={()=>{
+          console.log("Chat with us clicked")
         }}
       />
 

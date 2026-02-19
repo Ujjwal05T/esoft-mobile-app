@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {RootStackParamList} from '../navigation/RootNavigator';
 import Svg, {Path} from 'react-native-svg';
 import Header from '../components/dashboard/Header';
 import InquiryCard, {
@@ -120,6 +123,8 @@ const FilterIcon = () => (
 
 export default function InquiryScreen() {
   const insets = useSafeAreaInsets();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('inquiries');
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -332,7 +337,9 @@ export default function InquiryScreen() {
                   }
                   showNumberPlate={true}
                   onAccept={id => console.log('Accept quote:', id)}
-                  onView={id => console.log('View quote:', id)}
+                  onView={id =>
+                    navigation.navigate('QuoteDetail', {quoteId: parseInt(id)})
+                  }
                 />
               ))
             )}

@@ -1,6 +1,8 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
-import Svg, {Path} from 'react-native-svg';
+import Svg, {Path, Rect} from 'react-native-svg';
+import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+import {SERVER_ORIGIN} from '../../services/api';
 
 export interface JobCardProps {
   id: number;
@@ -21,7 +23,14 @@ const PlayIcon = () => (
   </Svg>
 );
 
-const API_BASE = 'http://localhost:5196';
+const PauseIcon = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Rect x="6" y="5" width="4" height="14" rx="1" fill="white" />
+    <Rect x="14" y="5" width="4" height="14" rx="1" fill="white" />
+  </Svg>
+);
+
+const audioRecorderPlayer = AudioRecorderPlayer;
 
 export default function JobCard({
   jobCategory,
@@ -29,20 +38,58 @@ export default function JobCard({
   remark,
   audioUrl,
   images,
-  videos,
   createdAt,
   onClick,
 }: JobCardProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
+
   const formattedDate = new Date(createdAt).toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   });
 
+  const fullAudioUrl = audioUrl
+    ? audioUrl.startsWith('http')
+      ? audioUrl
+      : `${SERVER_ORIGIN}${audioUrl}`
+    : null;
+
   const maxVisibleImages = 2;
   const visibleImages = images?.slice(0, maxVisibleImages) || [];
   const overflowCount = (images?.length || 0) - maxVisibleImages;
-  const hasAudioOrVideo = audioUrl || (videos && videos.length > 0);
+  const hasAudio = !!fullAudioUrl;
+  const hasMedia = visibleImages.length > 0 || overflowCount > 0 || hasAudio;
+
+  // Stop player when component unmounts
+  useEffect(() => {
+    return () => {
+      if (isPlaying) {
+        audioRecorderPlayer.stopPlayer().catch(() => {});
+        audioRecorderPlayer.removePlayBackListener();
+      }
+    };
+  }, [isPlaying]);
+
+  const handlePlayPause = async () => {
+    if (!fullAudioUrl) return;
+
+    if (isPlaying) {
+      await audioRecorderPlayer.stopPlayer();
+      audioRecorderPlayer.removePlayBackListener();
+      setIsPlaying(false);
+    } else {
+      await audioRecorderPlayer.startPlayer(fullAudioUrl);
+      audioRecorderPlayer.addPlayBackListener(e => {
+        if (e.duration > 0 && e.currentPosition >= e.duration) {
+          audioRecorderPlayer.stopPlayer();
+          audioRecorderPlayer.removePlayBackListener();
+          setIsPlaying(false);
+        }
+      });
+      setIsPlaying(true);
+    }
+  };
 
   return (
     <TouchableOpacity
@@ -65,12 +112,12 @@ export default function JobCard({
       {!!remark && <Text style={styles.remark}>{remark}</Text>}
 
       {/* Media */}
-      {(visibleImages.length > 0 || overflowCount > 0 || hasAudioOrVideo) && (
+      {hasMedia && (
         <View style={styles.mediaRow}>
           {visibleImages.map((url, idx) => (
             <View key={idx} style={styles.mediaThumb}>
               <Image
-                source={{uri: `${API_BASE}${url}`}}
+                source={{uri: `${SERVER_ORIGIN}${url}`}}
                 style={styles.mediaImage}
                 resizeMode="cover"
               />
@@ -81,10 +128,13 @@ export default function JobCard({
               <Text style={styles.overflowText}>+{overflowCount}</Text>
             </View>
           )}
-          {hasAudioOrVideo && (
-            <View style={styles.playBtn}>
-              <PlayIcon />
-            </View>
+          {hasAudio && (
+            <TouchableOpacity
+              onPress={handlePlayPause}
+              style={[styles.playBtn, isPlaying && styles.playBtnPaused]}
+              activeOpacity={0.8}>
+              {isPlaying ? <PauseIcon /> : <PlayIcon />}
+            </TouchableOpacity>
           )}
         </View>
       )}
@@ -178,5 +228,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+  },
+  playBtnPaused: {
+    backgroundColor: '#c82d30',
   },
 });
