@@ -1,4 +1,4 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
 import Svg, {Path, Circle} from 'react-native-svg';
 import {useNavigation} from '@react-navigation/native';
 import {useAuth} from '../../context/AuthContext';
+import ContactETNAOverlay from '../overlays/ContactETNAOverlay';
+import DeleteAccountOverlay from '../overlays/DeleteAccountOverlay';
 
 const SIDEBAR_WIDTH = 280;
 
@@ -79,6 +81,8 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
   const {user} = useAuth();
   const translateX = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const [showContactOverlay, setShowContactOverlay] = useState(false);
+  const [showDeleteOverlay, setShowDeleteOverlay] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -115,17 +119,25 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
     onClose();
   };
 
+  const handleContactETNA = () => {
+    setShowContactOverlay(true);
+  };
+
+  const handleDeleteAccount = () => {
+    setShowDeleteOverlay(true);
+  };
+
   const displayName = user?.name ?? 'User';
   const displayEmail = user?.email ?? '';
   const displayAvatar = user?.avatar;
 
   const menuItems = [
-    {icon: <PersonIcon />, label: 'My account', screen: 'Profile'},
-    {icon: <StaffIcon />, label: 'My staff', screen: 'Staff'},
-    {icon: <ReportIcon />, label: 'Generate reports', screen: 'Reports'},
-    {icon: <PhoneIcon />, label: 'Contact ETNA', screen: 'ContactETNA'},
-    {icon: <FAQIcon />, label: 'FAQs', screen: 'FAQs'},
-    {icon: <DeleteIcon />, label: 'Delete account', screen: 'DeleteAccount'},
+    {icon: <PersonIcon />, label: 'My account', action: () => navigate('Profile')},
+    {icon: <StaffIcon />, label: 'My staff', action: () => navigate('Staff')},
+    {icon: <ReportIcon />, label: 'Generate reports', action: () => navigate('Reports')},
+    {icon: <PhoneIcon />, label: 'Contact ETNA', action: handleContactETNA},
+    {icon: <FAQIcon />, label: 'FAQs', action: () => navigate('FAQs')},
+    {icon: <DeleteIcon />, label: 'Delete account', action: handleDeleteAccount},
   ];
 
   return (
@@ -154,7 +166,7 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
           </TouchableOpacity>
 
           {/* Avatar */}
-          <View style={styles.avatarBox}>
+          {/* <View style={styles.avatarBox}>
             {displayAvatar ? (
               <Image
                 source={{uri: displayAvatar}}
@@ -168,7 +180,7 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
                 </Text>
               </View>
             )}
-          </View>
+          </View> */}
 
           {/* User Info */}
           <View style={styles.userInfo}>
@@ -182,7 +194,7 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
           {menuItems.map((item, i) => (
             <TouchableOpacity
               key={i}
-              onPress={() => navigate(item.screen)}
+              onPress={item.action}
               style={styles.menuItem}
               activeOpacity={0.8}>
               <View style={styles.menuIcon}>{item.icon}</View>
@@ -191,6 +203,23 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
           ))}
         </View>
       </Animated.View>
+
+      {/* Contact ETNA Overlay */}
+      <ContactETNAOverlay
+        isOpen={showContactOverlay}
+        onClose={() => setShowContactOverlay(false)}
+      />
+
+      {/* Delete Account Overlay */}
+      <DeleteAccountOverlay
+        isOpen={showDeleteOverlay}
+        onClose={() => setShowDeleteOverlay(false)}
+        onConfirm={() => {
+          setShowDeleteOverlay(false);
+          onClose();
+          // TODO: Handle account deletion
+        }}
+      />
     </Modal>
   );
 }

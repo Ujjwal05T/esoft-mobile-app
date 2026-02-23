@@ -1,8 +1,8 @@
 import * as Keychain from 'react-native-keychain';
 
 // API Base URL
-const API_BASE_URL = 'http://192.168.29.156:5196/api';
-export const SERVER_ORIGIN = 'http://192.168.29.156:5196';
+const API_BASE_URL = 'http://192.168.1.60:5196/api';
+export const SERVER_ORIGIN = 'http://192.168.1.60:5196';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -1577,4 +1577,169 @@ export async function getOrderById(id: number) {
   return apiRequest<OrderDetailApiResponse>(`/order/${id}`, {
     method: 'GET',
   });
+}
+
+// ==========================================
+// DISPUTES
+// ==========================================
+
+export interface DisputeListItemResponse {
+  id: number;
+  disputeNumber: string;
+  orderNumber: string;
+  workshopName: string;
+  contactPerson: string;
+  issue: string;
+  category: string;
+  priority: string;
+  status: string;
+  date: string;
+  assignedTo: string | null;
+}
+
+export interface DisputeCommentResponse {
+  id: number;
+  disputeId: number;
+  senderName: string;
+  senderRole: string;
+  message: string;
+  isInternal: boolean;
+  createdAt: string;
+}
+
+export interface DisputeAttachmentResponse {
+  id: number;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  uploadedAt: string;
+}
+
+export interface DisputeDetailResponse {
+  id: number;
+  disputeNumber: string;
+  orderNumber: string;
+  workshopId: number;
+  workshopName: string;
+  contactPerson: string;
+  phoneNumber: string;
+  category: string;
+  subject: string;
+  description: string;
+  priority: string;
+  status: string;
+  assignedTo: string | null;
+  assignedToId: number | null;
+  raisedOn: string;
+  resolvedOn: string | null;
+  resolvedBy: string | null;
+  resolutionDetails: string | null;
+  attachments: DisputeAttachmentResponse[];
+}
+
+// Get disputes by workshop owner
+export async function getDisputesByWorkshopOwner(workshopOwnerId: number) {
+  return apiRequest<DisputeListItemResponse[]>(
+    `/disputes/workshop-owner/${workshopOwnerId}`,
+    {method: 'GET'}
+  );
+}
+
+// Get dispute by ID
+export async function getDisputeById(id: number) {
+  return apiRequest<DisputeDetailResponse>(`/disputes/${id}`, {
+    method: 'GET',
+  });
+}
+
+// Get dispute comments
+export async function getDisputeComments(id: number) {
+  return apiRequest<DisputeCommentResponse[]>(`/disputes/${id}/comments`, {
+    method: 'GET',
+  });
+}
+
+// Create dispute with files (multipart/form-data)
+export async function createDisputeWithFiles(
+  orderId: number,
+  workshopOwnerId: number,
+  partName: string,
+  reason: string,
+  remark: string,
+  partId?: number,
+  audioFile?: RNFile,
+  image1?: RNFile,
+  image2?: RNFile,
+  image3?: RNFile
+) {
+  try {
+    const token = await getAuthToken();
+    const formData = new FormData();
+
+    // Append text fields
+    formData.append('orderId', orderId.toString());
+    formData.append('workshopOwnerId', workshopOwnerId.toString());
+    formData.append('partName', partName);
+    formData.append('reason', reason);
+    formData.append('remark', remark);
+    if (partId) {
+      formData.append('partId', partId.toString());
+    }
+
+    // Append files
+    if (audioFile) {
+      formData.append('audioFile', {
+        uri: audioFile.uri,
+        name: audioFile.name,
+        type: audioFile.type,
+      } as any);
+    }
+
+    if (image1) {
+      formData.append('image1', {
+        uri: image1.uri,
+        name: image1.name,
+        type: image1.type,
+      } as any);
+    }
+
+    if (image2) {
+      formData.append('image2', {
+        uri: image2.uri,
+        name: image2.name,
+        type: image2.type,
+      } as any);
+    }
+
+    if (image3) {
+      formData.append('image3', {
+        uri: image3.uri,
+        name: image3.name,
+        type: image3.type,
+      } as any);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/disputes/with-files`, {
+      method: 'POST',
+      headers: {
+        ...(token ? {Authorization: `Bearer ${token}`} : {}),
+        // Don't set Content-Type for FormData - let the browser set it with boundary
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.message || data.errors?.[0] || 'Failed to create dispute',
+      };
+    }
+
+    return {success: true, data};
+  } catch (error) {
+    console.error('API Error (createDisputeWithFiles):', error);
+    return {success: false, error: 'Network error. Please try again.'};
+  }
 }

@@ -8,6 +8,8 @@ import {AIAssistantScreen} from '../screens';
 import VehicleDetailScreen from '../screens/VehicleDetailScreen';
 import QuoteDetailScreen from '../screens/QuoteDetailScreen';
 import PaymentScreen from '../screens/PaymentScreen';
+import StaffScreen from '../screens/StaffScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -16,6 +18,8 @@ export type RootStackParamList = {
   VehicleDetail: {vehicleId: number};
   QuoteDetail: {quoteId: number};
   Payment: {quoteId: number};
+  Staff: undefined;
+  Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -61,6 +65,16 @@ const RootNavigator: React.FC = () => {
         <Stack.Screen
           name="Payment"
           component={PaymentScreen}
+          options={{animation: 'slide_from_right', headerShown: false}}
+        />
+        <Stack.Screen
+          name="Staff"
+          component={StaffScreen}
+          options={{animation: 'slide_from_right', headerShown: false}}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={ProfileScreen}
           options={{animation: 'slide_from_right', headerShown: false}}
         />
       </Stack.Navigator>

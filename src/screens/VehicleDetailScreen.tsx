@@ -15,6 +15,7 @@ import VehicleCard from '../components/dashboard/VehicleCard';
 import InquiryCard, {Inquiry} from '../components/dashboard/InquiryCard';
 import QuoteCard, {Quote} from '../components/dashboard/QuoteCard';
 import OrderCard, {Order} from '../components/dashboard/OrderCard';
+import DisputeCard, {Dispute} from '../components/dashboard/DisputeCard';
 import JobCard from '../components/dashboard/JobCard';
 import FloatingActionButton from '../components/dashboard/FloatingActionButton';
 import GateOutOverlay from '../components/overlays/GateOutOverlay';
@@ -30,13 +31,18 @@ import {
   getQuotesByVehicleId,
   getOrdersByVehicleId,
   getOrderById,
+  createDisputeWithFiles,
+  getDisputesByWorkshopOwner,
+  getStoredUser,
   type VehicleResponse,
   type VehicleVisitResponse,
   type JobCardResponse,
   type InquiryResponse,
   type QuoteApiResponse,
   type WorkshopOrderListItem,
+  type DisputeListItemResponse,
 } from '../services/api';
+import type {DisputeFormData} from '../components/overlays/RaiseDisputeOverlay';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -103,6 +109,38 @@ function mapApiQuote(api: QuoteApiResponse): Quote {
       quantity: item.quantity,
       isAvailable: item.availability === 'in_stock',
     })),
+  };
+}
+
+function mapApiDispute(api: DisputeListItemResponse): Dispute {
+  // Map backend status to frontend status
+  const mapStatus = (backendStatus: string): Dispute['status'] => {
+    switch (backendStatus) {
+      case 'Resolved':
+        return 'closed';
+      case 'Pending':
+      case 'Acknowledged':
+      case 'Investigating':
+      default:
+        return 'open';
+    }
+  };
+
+  return {
+    id: api.disputeNumber,
+    vehicleName: '', // Not shown when showVehicleInfo is false
+    plateNumber: '', // Not shown when showVehicleInfo is false
+    receivedDate: formatDate(api.date),
+    status: mapStatus(api.status),
+    disputeRaised: api.issue,
+    resolutionStatus:
+      api.status === 'Resolved'
+        ? 'Resolved'
+        : api.status === 'Investigating'
+        ? 'Under Investigation'
+        : undefined,
+    showVehicleInfo: false,
+    action: api.status === 'Pending' ? 'accept' : 'chat',
   };
 }
 
@@ -248,6 +286,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
 
   // Loading / error
   const [loadingVehicle, setLoadingVehicle] = useState(true);
@@ -255,6 +294,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   const [loadingInquiries, setLoadingInquiries] = useState(false);
   const [loadingQuotes, setLoadingQuotes] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [loadingDisputes, setLoadingDisputes] = useState(false);
   const [vehicleError, setVehicleError] = useState(false);
 
   // ── Fetch Helpers ───────────────────────────────────────────────────────────
@@ -368,6 +408,28 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     }
   }, [vehicleId]);
 
+  const fetchDisputes = useCallback(async () => {
+    setLoadingDisputes(true);
+    try {
+      const user = await getStoredUser();
+      if (!user) return;
+
+      const res = await getDisputesByWorkshopOwner(user.id);
+      if (res.success && res.data) {
+        // Filter disputes to only show those related to this vehicle's orders
+        const vehicleOrderNumbers = orders.map(o => o.orderId);
+        const vehicleDisputes = res.data.filter(dispute =>
+          vehicleOrderNumbers.includes(dispute.orderNumber)
+        );
+        setDisputes(vehicleDisputes.map(mapApiDispute));
+      }
+    } catch (e) {
+      console.error('Failed to fetch disputes:', e);
+    } finally {
+      setLoadingDisputes(false);
+    }
+  }, [orders]);
+
   useEffect(() => {
     fetchVehicle();
   }, [fetchVehicle]);
@@ -381,8 +443,89 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     }
   }, [vehicle, fetchJobsAndVisit, fetchInquiries, fetchQuotes, fetchOrders]);
 
+  // Fetch disputes after orders are loaded (since we filter by order numbers)
+  useEffect(() => {
+    if (orders.length > 0) {
+      fetchDisputes();
+    }
+  }, [orders, fetchDisputes]);
+
   const toggleSection = (key: SectionKey) => {
     setExpandedSections(prev => ({...prev, [key]: !prev[key]}));
+  };
+
+  // Transform orders to OrderWithParts format for dispute overlay
+  const ordersWithParts = orders.map(order => ({
+    id: order.id,
+    orderId: order.orderId,
+    date: order.placedDate,
+    parts: order.orderedParts.map(part => ({
+      id: part.id,
+      name: part.name,
+    })),
+  }));
+
+  // Handle dispute form submission
+  const handleDisputeConfirm = async (formData: DisputeFormData) => {
+    try {
+      // Get workshopOwnerId from stored user
+      const user = await getStoredUser();
+      if (!user) {
+        console.error('User not found');
+        return;
+      }
+
+      // Find the actual order by matching the order number
+      const selectedOrder = ordersWithParts.find(
+        o => o.orderId === formData.orderId
+      );
+
+      if (!selectedOrder) {
+        console.error('Order not found:', formData.orderId);
+        return;
+      }
+
+      // Get the numeric order ID
+      const numericOrderId = parseInt(selectedOrder.id, 10);
+
+      // Convert image URIs to file objects for FormData
+      const imageFiles = formData.images.map((img, idx) => ({
+        uri: img.uri,
+        type: 'image/jpeg',
+        name: img.name || `image_${idx}.jpg`,
+      }));
+
+      const audioFile = formData.audioPath
+        ? {
+            uri: formData.audioPath,
+            type: 'audio/mp4',
+            name: `audio_${Date.now()}.mp4`,
+          }
+        : undefined;
+
+      const result = await createDisputeWithFiles(
+        numericOrderId,
+        user.id,
+        formData.partName,
+        formData.reason,
+        formData.remark,
+        formData.partId ? parseInt(formData.partId, 10) : undefined,
+        audioFile,
+        imageFiles[0],
+        imageFiles[1],
+        imageFiles[2],
+      );
+
+      if (result.success) {
+        console.log('Dispute created successfully:', result.data);
+        // Refresh disputes list
+        fetchDisputes();
+      } else {
+        console.error('Failed to create dispute:', result.error);
+      }
+    } catch (error) {
+      console.error('Error creating dispute:', error);
+    }
   };
 
   // ── Loading / Error States ─────────────────────────────────────────────────
@@ -691,12 +834,32 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         {/* ── Disputes Tab ─────────────────────────────────────────────── */}
         {activeTab === 'disputes' && (
           <View style={styles.tabContent}>
-            <View style={styles.stateCard}>
-              <Text style={styles.emptyTitle}>No Disputes Found</Text>
-              <Text style={styles.emptySubtitle}>
-                No disputes found for this vehicle
-              </Text>
-            </View>
+            {loadingDisputes ? (
+              <View style={styles.stateCard}>
+                <ActivityIndicator size="small" color="#e5383b" />
+                <Text style={styles.loadingText}>Loading disputes...</Text>
+              </View>
+            ) : disputes.length === 0 ? (
+              <View style={styles.stateCard}>
+                <Text style={styles.emptyTitle}>No Disputes Found</Text>
+                <Text style={styles.emptySubtitle}>
+                  No disputes found for this vehicle
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.cardList}>
+                {disputes.map(dispute => (
+                  <DisputeCard
+                    key={dispute.id}
+                    dispute={dispute}
+                    onEdit={id => console.log('Edit dispute:', id)}
+                    onAccept={id => console.log('Accept dispute:', id)}
+                    onView={id => console.log('View dispute:', id)}
+                    onChat={id => console.log('Chat dispute:', id)}
+                  />
+                ))}
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -759,7 +922,8 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
       <RaiseDisputeOverlay
         isOpen={showRaiseDispute}
         onClose={() => setShowRaiseDispute(false)}
-        onConfirm={() => {}}
+        onConfirm={handleDisputeConfirm}
+        orders={ordersWithParts}
         buttonText="SEND REQUEST"
         vehicleInfo={{
           plateNumber: vehicle?.plateNumber ?? '',
@@ -768,8 +932,8 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
           model: vehicle?.model ?? '',
           specs: vehicle?.specs ?? vehicle?.variant ?? '',
         }}
-        onChatWithUs={()=>{
-          console.log("Chat with us clicked")
+        onChatWithUs={() => {
+          console.log('Chat with us clicked');
         }}
       />
 

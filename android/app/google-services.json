@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "8475830343",
+    "project_id": "esoft-6275d",
+    "storage_bucket": "esoft-6275d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:8475830343:android:772077cfc79aee950c2962",
+        "android_client_info": {
+          "package_name": "com.esoft.partsnow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAcAICEfRdLuu9Af0nYmv0qEeMsyTJsmQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

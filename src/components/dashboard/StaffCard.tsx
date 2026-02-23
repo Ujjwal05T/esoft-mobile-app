@@ -40,7 +40,7 @@ const EyeIcon = () => (
   </Svg>
 );
 
-const API_BASE = 'http://localhost:5196';
+const API_BASE = 'http://192.168.29.155:5196';
 
 export default function StaffCard({
   staff,
@@ -50,7 +50,7 @@ export default function StaffCard({
   onView,
   showActions = true,
 }: StaffCardProps) {
-  const avatarUri = staff.avatar.startsWith('http')
+  const avatarUri = staff.avatar?.startsWith('http')
     ? staff.avatar
     : `${API_BASE}${staff.avatar}`;
 

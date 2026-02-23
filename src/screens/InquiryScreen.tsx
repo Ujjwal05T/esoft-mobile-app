@@ -17,13 +17,16 @@ import InquiryCard, {
   Inquiry,
 } from '../components/dashboard/InquiryCard';
 import QuoteCard, {Quote} from '../components/dashboard/QuoteCard';
+import DisputeCard, {Dispute} from '../components/dashboard/DisputeCard';
 import FiltersOverlay from '../components/overlays/FiltersOverlay';
 import {
   getStoredUser,
   getInquiriesByWorkshopOwnerId,
   getQuotesByWorkshopOwnerId,
+  getDisputesByWorkshopOwner,
   type InquiryResponse,
   type QuoteApiResponse,
+  type DisputeListItemResponse,
 } from '../services/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -84,6 +87,33 @@ function mapApiQuote(api: QuoteApiResponse): Quote {
   };
 }
 
+function mapApiDispute(api: DisputeListItemResponse): Dispute {
+  // Map backend status to frontend status
+  const mapStatus = (backendStatus: string): Dispute['status'] => {
+    switch (backendStatus) {
+      case 'Resolved':
+        return 'closed';
+      case 'Pending':
+      case 'Acknowledged':
+      case 'Investigating':
+      default:
+        return 'open';
+    }
+  };
+
+  return {
+    id: api.disputeNumber,
+    vehicleName: '', // Not shown when showVehicleInfo is false
+    plateNumber: '', // Not shown when showVehicleInfo is false
+    receivedDate: formatDate(api.date),
+    status: mapStatus(api.status),
+    disputeRaised: api.issue,
+    resolutionStatus: api.status === 'Resolved' ? 'Resolved' : api.status === 'Investigating' ? 'Under Investigation' : undefined,
+    showVehicleInfo: false,
+    action: api.status === 'Pending' ? 'accept' : 'chat',
+  };
+}
+
 // ── Filter Icon ───────────────────────────────────────────────────────────────
 
 const FilterIcon = () => (
@@ -129,8 +159,10 @@ export default function InquiryScreen() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('inquiries');
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loadingInquiries, setLoadingInquiries] = useState(false);
   const [loadingQuotes, setLoadingQuotes] = useState(false);
+  const [loadingDisputes, setLoadingDisputes] = useState(false);
   const [expandedInquiryId, setExpandedInquiryId] = useState<string | null>(null);
   const [expandedQuoteId, setExpandedQuoteId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -169,10 +201,27 @@ export default function InquiryScreen() {
     }
   }, []);
 
+  const fetchDisputes = useCallback(async () => {
+    setLoadingDisputes(true);
+    try {
+      const user = await getStoredUser();
+      if (!user) return;
+      const res = await getDisputesByWorkshopOwner(user.id);
+      if (res.success && res.data) {
+        setDisputes(res.data.map(mapApiDispute));
+      }
+    } catch (e) {
+      console.error('Failed to fetch disputes:', e);
+    } finally {
+      setLoadingDisputes(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchInquiries();
     fetchQuotes();
-  }, [fetchInquiries, fetchQuotes]);
+    fetchDisputes();
+  }, [fetchInquiries, fetchQuotes, fetchDisputes]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -349,12 +398,30 @@ export default function InquiryScreen() {
         {/* ── Disputes Tab ──────────────────────────────────────────────── */}
         {activeTab === 'disputes' && (
           <View style={styles.cardList}>
-            <View style={styles.stateCard}>
-              <Text style={styles.emptyTitle}>No Disputes Found</Text>
-              <Text style={styles.emptySubtitle}>
-                Your disputes will appear here
-              </Text>
-            </View>
+            {loadingDisputes ? (
+              <View style={styles.stateCard}>
+                <ActivityIndicator size="small" color="#e5383b" />
+                <Text style={styles.loadingText}>Loading disputes...</Text>
+              </View>
+            ) : disputes.length === 0 ? (
+              <View style={styles.stateCard}>
+                <Text style={styles.emptyTitle}>No Disputes Found</Text>
+                <Text style={styles.emptySubtitle}>
+                  Your disputes will appear here
+                </Text>
+              </View>
+            ) : (
+              disputes.map(dispute => (
+                <DisputeCard
+                  key={dispute.id}
+                  dispute={dispute}
+                  onEdit={id => console.log('Edit dispute:', id)}
+                  onAccept={id => console.log('Accept dispute:', id)}
+                  onView={id => console.log('View dispute:', id)}
+                  onChat={id => console.log('Chat dispute:', id)}
+                />
+              ))
+            )}
           </View>
         )}
       </ScrollView>

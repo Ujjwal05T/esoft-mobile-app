@@ -15,15 +15,17 @@ import {
   PermissionsAndroid,
   Animated,
   Easing,
+  Alert,
 } from 'react-native';
 import {launchImageLibrary} from 'react-native-image-picker';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+import RNFS from 'react-native-fs';
 
 const SCREEN_H = Dimensions.get('screen').height;
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
 import VehicleCard from '../dashboard/VehicleCard';
-import {createVehicle, gateInVehicle, gateInVehicleWithMedia} from '../../services/api';
+import {createVehicle, gateInVehicle, gateInVehicleWithMedia, scanRcCard, scanVehiclePlate} from '../../services/api';
 import CameraScannerOverlay, {ScanMode} from './CameraScannerOverlay';
 
 export interface VehicleRequestFormData {
@@ -486,10 +488,94 @@ export default function AddVehicleOverlay({
     }
   };
 
-  const handleScanCapture = (uri: string) => {
-    // uri: file path of captured photo — GPT integration goes here later
-    console.log('Captured image for', scanMode, ':', uri);
-    setScanMode(null);
+  const handleScanCapture = async (uri: string) => {
+    try {
+      const currentScanMode = scanMode;
+      setScanMode(null); // Close scanner
+
+      // Show loading indicator
+      setIsLoading(true);
+
+      // Convert image URI to base64
+      const base64Image = await RNFS.readFile(uri, 'base64');
+
+      // Call OCR API based on scan mode
+      const ocrResult = currentScanMode === 'rc'
+        ? await scanRcCard(base64Image)
+        : await scanVehiclePlate(base64Image);
+
+      setIsLoading(false);
+
+      if (ocrResult.success) {
+        // Auto-populate form fields with OCR results
+        if (ocrResult?.data?.plateNumber) {
+          setPlateNumber(ocrResult?.data?.plateNumber);
+          setVehicleNumber(ocrResult?.data?.plateNumber);
+        }
+        if (ocrResult?.data?.vehicleBrand) {
+          setSelectedBrand(ocrResult?.data?.vehicleBrand);
+        }
+        if (ocrResult?.data?.vehicleModel) {
+          setSelectedModel(ocrResult?.data?.vehicleModel);
+        }
+        if (ocrResult?.data?.year) {
+          setSelectedYear(ocrResult?.data?.year?.toString());
+        }
+        if (ocrResult?.data?.variant) {
+          setSelectedVariant(ocrResult?.data?.variant);
+        }
+        if (ocrResult?.data?.chassisNumber) {
+          setChassisNumber(ocrResult?.data?.chassisNumber);
+        }
+        if (ocrResult?.data?.ownerName) {
+          setOwnerName(ocrResult?.data?.ownerName);
+          setRegistrationName(ocrResult?.data?.ownerName);
+        }
+
+        // Show success message
+        Alert.alert(
+          'Success',
+          currentScanMode === 'rc'
+            ? 'RC card scanned successfully! Fields have been auto-filled.'
+            : 'Number plate scanned successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Switch to appropriate view based on what was scanned
+                if (currentScanMode === 'rc') {
+                  setCurrentView('manual'); // Show manual view to review/edit details
+                } else {
+                  // For plate scan, stay in search view so user can proceed
+                  setCurrentView('search');
+                }
+              },
+            },
+          ]
+        );
+      } else {
+        // Show error message
+        Alert.alert(
+          'Scan Failed',
+          ocrResult?.error || 'Could not read the document. Please try again with a clearer image.',
+          [
+            {text: 'Retry', onPress: () => setScanMode(currentScanMode)},
+            {text: 'Cancel', style: 'cancel'},
+          ]
+        );
+      }
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Error processing scanned image:', error);
+      Alert.alert(
+        'Error',
+        'Failed to process the image. Please try again.',
+        [
+          {text: 'Retry', onPress: () => setScanMode(scanMode)},
+          {text: 'Cancel', style: 'cancel'},
+        ]
+      );
+    }
   };
 
   return (

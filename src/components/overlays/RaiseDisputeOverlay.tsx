@@ -39,8 +39,16 @@ interface Reason {
   name: string;
 }
 
+interface OrderWithParts {
+  id: string;
+  orderId: string;
+  date: string;
+  parts: Part[];
+}
+
 export interface DisputeFormData {
   orderId: string;
+  partId: string;
   partName: string;
   reason: string;
   remark: string;
@@ -53,7 +61,7 @@ interface RaiseDisputeOverlayProps {
   onClose: () => void;
   onConfirm: (data: DisputeFormData) => void;
   vehicleInfo?: VehicleInfo;
-  parts?: Part[];
+  orders?: OrderWithParts[];
   reasons?: Reason[];
   buttonText?: 'CONFIRM' | 'SEND REQUEST';
   onChatWithUs?: () => void;
@@ -123,15 +131,6 @@ const PlusIcon = () => (
   </Svg>
 );
 
-const defaultParts: Part[] = [
-  {id: '1', name: 'Brake Disk'},
-  {id: '2', name: 'Oil Filter'},
-  {id: '3', name: 'Air Filter'},
-  {id: '4', name: 'Spark Plug'},
-  {id: '5', name: 'Battery'},
-  {id: '6', name: 'Tyre'},
-];
-
 const defaultReasons: Reason[] = [
   {id: '1', name: 'Wrong Part Delivered'},
   {id: '2', name: 'Damaged Part'},
@@ -146,18 +145,30 @@ export default function RaiseDisputeOverlay({
   onClose,
   onConfirm,
   vehicleInfo,
-  parts = defaultParts,
+  orders = [],
   reasons = defaultReasons,
   buttonText = 'CONFIRM',
   onChatWithUs,
 }: RaiseDisputeOverlayProps) {
   // Form state
   const [orderId, setOrderId] = useState('');
+  const [selectedOrderId, setSelectedOrderId] = useState('');
+  const [selectedPartId, setSelectedPartId] = useState('');
   const [selectedPart, setSelectedPart] = useState('');
   const [selectedReason, setSelectedReason] = useState('');
   const [remark, setRemark] = useState('');
 
+  // Get selected order and its parts
+  const selectedOrder = orders.find(o => o.id === selectedOrderId);
+  const availableParts = selectedOrder?.parts || [];
+
+  // Filter order suggestions based on input
+  const filteredSuggestions = orders.filter(order =>
+    order.orderId.toLowerCase().includes(orderId.toLowerCase())
+  );
+
   // Dropdown state
+  const [showOrderDropdown, setShowOrderDropdown] = useState(false);
   const [showPartDropdown, setShowPartDropdown] = useState(false);
   const [showReasonDropdown, setShowReasonDropdown] = useState(false);
 
@@ -201,9 +212,12 @@ export default function RaiseDisputeOverlay({
   useEffect(() => {
     if (!isOpen) {
       setOrderId('');
+      setSelectedOrderId('');
+      setSelectedPartId('');
       setSelectedPart('');
       setSelectedReason('');
       setRemark('');
+      setShowOrderDropdown(false);
       setShowPartDropdown(false);
       setShowReasonDropdown(false);
       setHasAttemptedSubmit(false);
@@ -265,14 +279,20 @@ export default function RaiseDisputeOverlay({
   const handleConfirm = () => {
     setHasAttemptedSubmit(true);
     if (!orderId.trim() || !selectedPart || !selectedReason || !remark.trim()) return;
+
+    // Call parent callback with form data
     onConfirm({
       orderId,
+      partId: selectedPartId,
       partName: selectedPart,
       reason: selectedReason,
       remark,
       audioPath: recordedAudioPath || undefined,
-      images: images.filter((img): img is {uri: string; name: string} => img !== null),
+      images: images.filter(
+        (img): img is {uri: string; name: string} => img !== null
+      ),
     });
+
     setShowSuccess(true);
   };
 
@@ -313,7 +333,7 @@ export default function RaiseDisputeOverlay({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled">
           <View style={styles.form}>
-            {/* Order ID */}
+            {/* Order ID with Autocomplete */}
             <View style={styles.fieldWrapper}>
               <View
                 style={[
@@ -324,12 +344,37 @@ export default function RaiseDisputeOverlay({
                 {!!orderId && <Text style={styles.floatLabel}>Order ID</Text>}
                 <TextInput
                   value={orderId}
-                  onChangeText={setOrderId}
+                  onChangeText={(text) => {
+                    setOrderId(text);
+                    setShowOrderDropdown(text.length > 0);
+                  }}
+                  onFocus={() => orderId.length > 0 && setShowOrderDropdown(true)}
                   placeholder="Order ID"
                   placeholderTextColor="#828282"
                   style={styles.inputText}
                 />
               </View>
+              {showOrderDropdown && filteredSuggestions.length > 0 && (
+                <View style={styles.dropdownList}>
+                  {filteredSuggestions.map(order => (
+                    <TouchableOpacity
+                      key={order.id}
+                      onPress={() => {
+                        setOrderId(order.orderId);
+                        setSelectedOrderId(order.id);
+                        setShowOrderDropdown(false);
+                        // Reset part selection when order changes
+                        setSelectedPart('');
+                        setSelectedPartId('');
+                      }}
+                      style={styles.dropdownItem}>
+                      <Text style={styles.dropdownItemText}>
+                        {order.orderId} - {order.date}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
               {hasAttemptedSubmit && !orderId.trim() && (
                 <Text style={styles.errorMsg}>Please enter order ID</Text>
               )}
@@ -340,6 +385,7 @@ export default function RaiseDisputeOverlay({
               <TouchableOpacity
                 onPress={() => {
                   setShowPartDropdown(v => !v);
+                  setShowOrderDropdown(false);
                   setShowReasonDropdown(false);
                 }}
                 style={[
@@ -354,12 +400,13 @@ export default function RaiseDisputeOverlay({
                 </Text>
                 <ChevronDownIcon rotated={showPartDropdown} />
               </TouchableOpacity>
-              {showPartDropdown && parts.length > 0 && (
+              {showPartDropdown && availableParts.length > 0 && (
                 <View style={styles.dropdownList}>
-                  {parts.map(p => (
+                  {availableParts.map(p => (
                     <TouchableOpacity
                       key={p.id}
                       onPress={() => {
+                        setSelectedPartId(p.id);
                         setSelectedPart(p.name);
                         setShowPartDropdown(false);
                       }}
@@ -367,6 +414,24 @@ export default function RaiseDisputeOverlay({
                       <Text style={styles.dropdownItemText}>{p.name}</Text>
                     </TouchableOpacity>
                   ))}
+                </View>
+              )}
+              {showPartDropdown && !selectedOrderId && (
+                <View style={styles.dropdownList}>
+                  <View style={styles.dropdownItem}>
+                    <Text style={[styles.dropdownItemText, {color: '#828282'}]}>
+                      Please select an order first
+                    </Text>
+                  </View>
+                </View>
+              )}
+              {showPartDropdown && selectedOrderId && availableParts.length === 0 && (
+                <View style={styles.dropdownList}>
+                  <View style={styles.dropdownItem}>
+                    <Text style={[styles.dropdownItemText, {color: '#828282'}]}>
+                      No parts available for this order
+                    </Text>
+                  </View>
                 </View>
               )}
               {hasAttemptedSubmit && !selectedPart && (
@@ -379,6 +444,7 @@ export default function RaiseDisputeOverlay({
               <TouchableOpacity
                 onPress={() => {
                   setShowReasonDropdown(v => !v);
+                  setShowOrderDropdown(false);
                   setShowPartDropdown(false);
                 }}
                 style={[
