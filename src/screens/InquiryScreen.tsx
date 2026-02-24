@@ -18,7 +18,7 @@ import InquiryCard, {
 } from '../components/dashboard/InquiryCard';
 import QuoteCard, {Quote} from '../components/dashboard/QuoteCard';
 import DisputeCard, {Dispute} from '../components/dashboard/DisputeCard';
-import FiltersOverlay from '../components/overlays/FiltersOverlay';
+import FiltersOverlay, {FilterData} from '../components/overlays/FiltersOverlay';
 import {
   getStoredUser,
   getInquiriesByWorkshopOwnerId,
@@ -33,6 +33,11 @@ import {
 
 type ActiveTab = 'inquiries' | 'quotes' | 'disputes';
 
+// Extended types with rawDate for filtering
+type InquiryWithDate = Inquiry & {rawDate?: string};
+type QuoteWithDate = Quote & {rawDate?: string};
+type DisputeWithDate = Dispute & {rawDate?: string};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string): string {
@@ -43,7 +48,7 @@ function formatDate(iso: string): string {
   });
 }
 
-function mapApiInquiry(api: InquiryResponse): Inquiry {
+function mapApiInquiry(api: InquiryResponse): InquiryWithDate {
   return {
     id: api.inquiryNumber,
     vehicleName: api.vehicleName ?? '',
@@ -63,10 +68,11 @@ function mapApiInquiry(api: InquiryResponse): Inquiry {
       imageUrl: item.image1Url ?? undefined,
     })),
     media: [],
+    rawDate: api.placedDate,
   };
 }
 
-function mapApiQuote(api: QuoteApiResponse): Quote {
+function mapApiQuote(api: QuoteApiResponse): QuoteWithDate {
   return {
     id: api.id.toString(),
     vehicleName: api.vehicleName ?? '',
@@ -84,10 +90,11 @@ function mapApiQuote(api: QuoteApiResponse): Quote {
       quantity: item.quantity,
       isAvailable: item.availability === 'in_stock',
     })),
+    rawDate: api.createdAt,
   };
 }
 
-function mapApiDispute(api: DisputeListItemResponse): Dispute {
+function mapApiDispute(api: DisputeListItemResponse): DisputeWithDate {
   // Map backend status to frontend status
   const mapStatus = (backendStatus: string): Dispute['status'] => {
     switch (backendStatus) {
@@ -111,7 +118,48 @@ function mapApiDispute(api: DisputeListItemResponse): Dispute {
     resolutionStatus: api.status === 'Resolved' ? 'Resolved' : api.status === 'Investigating' ? 'Under Investigation' : undefined,
     showVehicleInfo: false,
     action: api.status === 'Pending' ? 'accept' : 'chat',
+    rawDate: api.date,
   };
+}
+
+// Parse date from DD/MM/YY format to Date object
+function parseFilterDate(dateStr: string): Date | null {
+  if (!dateStr) return null;
+  const [day, month, year] = dateStr.split('/');
+  const fullYear = parseInt('20' + year);
+  return new Date(fullYear, parseInt(month) - 1, parseInt(day));
+}
+
+// Check if a date is within range
+function isDateInRange(
+  dateStr: string | undefined,
+  startDate: string,
+  endDate: string,
+): boolean {
+  if (!dateStr || (!startDate && !endDate)) return true;
+
+  const date = new Date(dateStr);
+  const start = parseFilterDate(startDate);
+  const end = parseFilterDate(endDate);
+
+  if (start && date < start) return false;
+  if (end && date > end) return false;
+
+  return true;
+}
+
+// Count active filters
+function countActiveFilters(filters: FilterData): number {
+  let count = 0;
+  if (filters.startDate || filters.endDate) count++;
+  if (filters.brand) count++;
+  if (filters.model) count++;
+  if (filters.year) count++;
+  if (filters.vehicleNumber) count++;
+  if (filters.assignedTo) count++;
+  if (filters.addedBy) count++;
+  if (filters.sortBy) count++;
+  return count;
 }
 
 // ── Filter Icon ───────────────────────────────────────────────────────────────
@@ -157,15 +205,108 @@ export default function InquiryScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('inquiries');
-  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [inquiries, setInquiries] = useState<InquiryWithDate[]>([]);
+  const [quotes, setQuotes] = useState<QuoteWithDate[]>([]);
+  const [disputes, setDisputes] = useState<DisputeWithDate[]>([]);
+  const [filteredInquiries, setFilteredInquiries] = useState<InquiryWithDate[]>([]);
+  const [filteredQuotes, setFilteredQuotes] = useState<QuoteWithDate[]>([]);
+  const [filteredDisputes, setFilteredDisputes] = useState<DisputeWithDate[]>([]);
   const [loadingInquiries, setLoadingInquiries] = useState(false);
   const [loadingQuotes, setLoadingQuotes] = useState(false);
   const [loadingDisputes, setLoadingDisputes] = useState(false);
   const [expandedInquiryId, setExpandedInquiryId] = useState<string | null>(null);
   const [expandedQuoteId, setExpandedQuoteId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<FilterData>({
+    startDate: '',
+    endDate: '',
+    brand: '',
+    model: '',
+    year: '',
+    vehicleNumber: '',
+    assignedTo: '',
+    addedBy: '',
+    sortBy: null,
+  });
+
+  // ── Filter Functions ────────────────────────────────────────────────────────
+
+  const applyInquiryFilters = useCallback((inquiryList: InquiryWithDate[], filters: FilterData) => {
+    let filtered = [...inquiryList];
+
+    // Filter by date range
+    if (filters.startDate || filters.endDate) {
+      filtered = filtered.filter(i =>
+        isDateInRange(i.rawDate, filters.startDate, filters.endDate),
+      );
+    }
+
+    // Filter by vehicle number
+    if (filters.vehicleNumber) {
+      filtered = filtered.filter(i =>
+        i.numberPlate?.toUpperCase().includes(filters.vehicleNumber.toUpperCase()),
+      );
+    }
+
+    // Filter by added by (inquiryBy)
+    if (filters.addedBy) {
+      filtered = filtered.filter(i =>
+        i.inquiryBy?.toUpperCase().includes(filters.addedBy.toUpperCase()),
+      );
+    }
+
+    // Sort
+    if (filters.sortBy === 'relevance') {
+      filtered.sort((a, b) => a.id.localeCompare(b.id));
+    }
+
+    return filtered;
+  }, []);
+
+  const applyQuoteFilters = useCallback((quoteList: QuoteWithDate[], filters: FilterData) => {
+    let filtered = [...quoteList];
+
+    // Filter by date range
+    if (filters.startDate || filters.endDate) {
+      filtered = filtered.filter(q =>
+        isDateInRange(q.rawDate, filters.startDate, filters.endDate),
+      );
+    }
+
+    // Filter by vehicle number
+    if (filters.vehicleNumber) {
+      filtered = filtered.filter(q =>
+        q.plateNumber.toUpperCase().includes(filters.vehicleNumber.toUpperCase()),
+      );
+    }
+
+    // Sort by amount
+    if (filters.sortBy === 'amount_low_high') {
+      filtered.sort((a, b) => a.estimatedTotal - b.estimatedTotal);
+    } else if (filters.sortBy === 'amount_high_low') {
+      filtered.sort((a, b) => b.estimatedTotal - a.estimatedTotal);
+    }
+
+    return filtered;
+  }, []);
+
+  const applyDisputeFilters = useCallback((disputeList: DisputeWithDate[], filters: FilterData) => {
+    let filtered = [...disputeList];
+
+    // Filter by date range
+    if (filters.startDate || filters.endDate) {
+      filtered = filtered.filter(d =>
+        isDateInRange(d.rawDate, filters.startDate, filters.endDate),
+      );
+    }
+
+    // Sort
+    if (filters.sortBy === 'relevance') {
+      filtered.sort((a, b) => a.id.localeCompare(b.id));
+    }
+
+    return filtered;
+  }, []);
 
   // ── Data Fetching ───────────────────────────────────────────────────────────
 
@@ -176,14 +317,16 @@ export default function InquiryScreen() {
       if (!user) return;
       const res = await getInquiriesByWorkshopOwnerId(user.id);
       if (res.success && res.data) {
-        setInquiries(res.data.inquiries.map(mapApiInquiry));
+        const mapped = res.data.inquiries.map(mapApiInquiry);
+        setInquiries(mapped);
+        setFilteredInquiries(applyInquiryFilters(mapped, activeFilters));
       }
     } catch (e) {
       console.error('Failed to fetch inquiries:', e);
     } finally {
       setLoadingInquiries(false);
     }
-  }, []);
+  }, [activeFilters, applyInquiryFilters]);
 
   const fetchQuotes = useCallback(async () => {
     setLoadingQuotes(true);
@@ -192,14 +335,16 @@ export default function InquiryScreen() {
       if (!user) return;
       const res = await getQuotesByWorkshopOwnerId(user.id);
       if (res.success && res.data) {
-        setQuotes(res.data.quotes.map(mapApiQuote));
+        const mapped = res.data.quotes.map(mapApiQuote);
+        setQuotes(mapped);
+        setFilteredQuotes(applyQuoteFilters(mapped, activeFilters));
       }
     } catch (e) {
       console.error('Failed to fetch quotes:', e);
     } finally {
       setLoadingQuotes(false);
     }
-  }, []);
+  }, [activeFilters, applyQuoteFilters]);
 
   const fetchDisputes = useCallback(async () => {
     setLoadingDisputes(true);
@@ -208,14 +353,16 @@ export default function InquiryScreen() {
       if (!user) return;
       const res = await getDisputesByWorkshopOwner(user.id);
       if (res.success && res.data) {
-        setDisputes(res.data.map(mapApiDispute));
+        const mapped = res.data.map(mapApiDispute);
+        setDisputes(mapped);
+        setFilteredDisputes(applyDisputeFilters(mapped, activeFilters));
       }
     } catch (e) {
       console.error('Failed to fetch disputes:', e);
     } finally {
       setLoadingDisputes(false);
     }
-  }, []);
+  }, [activeFilters, applyDisputeFilters]);
 
   useEffect(() => {
     fetchInquiries();
@@ -224,6 +371,14 @@ export default function InquiryScreen() {
   }, [fetchInquiries, fetchQuotes, fetchDisputes]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
+
+  const handleApplyFilters = (filters: FilterData) => {
+    setActiveFilters(filters);
+    setFilteredInquiries(applyInquiryFilters(inquiries, filters));
+    setFilteredQuotes(applyQuoteFilters(quotes, filters));
+    setFilteredDisputes(applyDisputeFilters(disputes, filters));
+    setShowFilters(false);
+  };
 
   const getTitle = () => {
     switch (activeTab) {
@@ -240,6 +395,8 @@ export default function InquiryScreen() {
       default:          return 'Manage and review all your inquiries';
     }
   };
+
+  const filterCount = countActiveFilters(activeFilters);
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -317,6 +474,11 @@ export default function InquiryScreen() {
             activeOpacity={0.8}>
             <FilterIcon />
             <Text style={styles.filterBtnText}>Filter</Text>
+            {filterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{filterCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -328,15 +490,37 @@ export default function InquiryScreen() {
                 <ActivityIndicator size="small" color="#e5383b" />
                 <Text style={styles.loadingText}>Loading inquiries...</Text>
               </View>
-            ) : inquiries.length === 0 ? (
+            ) : filteredInquiries.length === 0 ? (
               <View style={styles.stateCard}>
-                <Text style={styles.emptyTitle}>No Inquiries Found</Text>
-                <Text style={styles.emptySubtitle}>
-                  Your inquiries will appear here
+                <Text style={styles.emptyTitle}>
+                  {filterCount > 0 ? 'No inquiries match your filters' : 'No Inquiries Found'}
                 </Text>
+                <Text style={styles.emptySubtitle}>
+                  {filterCount > 0
+                    ? 'Try adjusting your filter criteria'
+                    : 'Your inquiries will appear here'}
+                </Text>
+                {filterCount > 0 && (
+                  <TouchableOpacity
+                    style={styles.clearFiltersBtn}
+                    onPress={() => handleApplyFilters({
+                      startDate: '',
+                      endDate: '',
+                      brand: '',
+                      model: '',
+                      year: '',
+                      vehicleNumber: '',
+                      assignedTo: '',
+                      addedBy: '',
+                      sortBy: null,
+                    })}
+                    activeOpacity={0.8}>
+                    <Text style={styles.clearFiltersBtnText}>Clear Filters</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
-              inquiries.map(inquiry => (
+              filteredInquiries.map(inquiry => (
                 <InquiryCard
                   key={inquiry.id}
                   inquiry={inquiry}
@@ -366,15 +550,37 @@ export default function InquiryScreen() {
                 <ActivityIndicator size="small" color="#e5383b" />
                 <Text style={styles.loadingText}>Loading quotes...</Text>
               </View>
-            ) : quotes.length === 0 ? (
+            ) : filteredQuotes.length === 0 ? (
               <View style={styles.stateCard}>
-                <Text style={styles.emptyTitle}>No Quotes Found</Text>
-                <Text style={styles.emptySubtitle}>
-                  Your quotes will appear here
+                <Text style={styles.emptyTitle}>
+                  {filterCount > 0 ? 'No quotes match your filters' : 'No Quotes Found'}
                 </Text>
+                <Text style={styles.emptySubtitle}>
+                  {filterCount > 0
+                    ? 'Try adjusting your filter criteria'
+                    : 'Your quotes will appear here'}
+                </Text>
+                {filterCount > 0 && (
+                  <TouchableOpacity
+                    style={styles.clearFiltersBtn}
+                    onPress={() => handleApplyFilters({
+                      startDate: '',
+                      endDate: '',
+                      brand: '',
+                      model: '',
+                      year: '',
+                      vehicleNumber: '',
+                      assignedTo: '',
+                      addedBy: '',
+                      sortBy: null,
+                    })}
+                    activeOpacity={0.8}>
+                    <Text style={styles.clearFiltersBtnText}>Clear Filters</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
-              quotes.map(quote => (
+              filteredQuotes.map(quote => (
                 <QuoteCard
                   key={quote.id}
                   quote={quote}
@@ -403,15 +609,37 @@ export default function InquiryScreen() {
                 <ActivityIndicator size="small" color="#e5383b" />
                 <Text style={styles.loadingText}>Loading disputes...</Text>
               </View>
-            ) : disputes.length === 0 ? (
+            ) : filteredDisputes.length === 0 ? (
               <View style={styles.stateCard}>
-                <Text style={styles.emptyTitle}>No Disputes Found</Text>
-                <Text style={styles.emptySubtitle}>
-                  Your disputes will appear here
+                <Text style={styles.emptyTitle}>
+                  {filterCount > 0 ? 'No disputes match your filters' : 'No Disputes Found'}
                 </Text>
+                <Text style={styles.emptySubtitle}>
+                  {filterCount > 0
+                    ? 'Try adjusting your filter criteria'
+                    : 'Your disputes will appear here'}
+                </Text>
+                {filterCount > 0 && (
+                  <TouchableOpacity
+                    style={styles.clearFiltersBtn}
+                    onPress={() => handleApplyFilters({
+                      startDate: '',
+                      endDate: '',
+                      brand: '',
+                      model: '',
+                      year: '',
+                      vehicleNumber: '',
+                      assignedTo: '',
+                      addedBy: '',
+                      sortBy: null,
+                    })}
+                    activeOpacity={0.8}>
+                    <Text style={styles.clearFiltersBtnText}>Clear Filters</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
-              disputes.map(dispute => (
+              filteredDisputes.map(dispute => (
                 <DisputeCard
                   key={dispute.id}
                   dispute={dispute}
@@ -430,10 +658,7 @@ export default function InquiryScreen() {
       <FiltersOverlay
         isOpen={showFilters}
         onClose={() => setShowFilters(false)}
-        onApply={filters => {
-          console.log('Filters applied:', filters);
-          setShowFilters(false);
-        }}
+        onApply={handleApplyFilters}
       />
     </View>
   );
@@ -496,8 +721,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5383b',
     borderRadius: 8,
+    position: 'relative',
   },
   filterBtnText: {fontSize: 13, fontWeight: '500', color: '#e5383b'},
+  filterBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#e5383b',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  filterBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '600',
+  },
 
   // Card list
   cardList: {gap: 16},
@@ -513,4 +756,16 @@ const styles = StyleSheet.create({
   loadingText: {fontSize: 14, color: '#99a2b6'},
   emptyTitle: {fontSize: 16, fontWeight: '500', color: '#2b2b2b'},
   emptySubtitle: {fontSize: 14, color: '#99a2b6', textAlign: 'center'},
+  clearFiltersBtn: {
+    backgroundColor: '#e5383b',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  clearFiltersBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
 });

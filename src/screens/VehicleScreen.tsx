@@ -15,7 +15,7 @@ import VehicleCard from '../components/dashboard/VehicleCard';
 import {RootStackParamList} from '../navigation/RootNavigator';
 import AddVehicleOverlay from '../components/overlays/AddVehicleOverlay';
 import FloatingActionButton from '../components/dashboard/FloatingActionButton';
-import FiltersOverlay from '../components/overlays/FiltersOverlay';
+import FiltersOverlay, {FilterData} from '../components/overlays/FiltersOverlay';
 import {getVehicles, type VehicleResponse} from '../services/api';
 import Header from '../components/dashboard/Header';
 
@@ -30,6 +30,7 @@ interface DisplayVehicle {
   additionalServices?: number;
   addedBy?: string;
   status: 'Active' | 'Inactive' | 'Requested';
+  createdAt?: string;
 }
 
 // ── Inline SVG Icons ──────────────────────────────────────────────────────────
@@ -83,6 +84,48 @@ function EmptyCarIcon() {
   );
 }
 
+// ── Helper Functions ──────────────────────────────────────────────────────────
+
+// Parse date from DD/MM/YY format to Date object
+function parseFilterDate(dateStr: string): Date | null {
+  if (!dateStr) return null;
+  const [day, month, year] = dateStr.split('/');
+  const fullYear = parseInt('20' + year);
+  return new Date(fullYear, parseInt(month) - 1, parseInt(day));
+}
+
+// Check if a date is within range
+function isDateInRange(
+  dateStr: string | undefined,
+  startDate: string,
+  endDate: string,
+): boolean {
+  if (!dateStr || (!startDate && !endDate)) return true;
+
+  const date = new Date(dateStr);
+  const start = parseFilterDate(startDate);
+  const end = parseFilterDate(endDate);
+
+  if (start && date < start) return false;
+  if (end && date > end) return false;
+
+  return true;
+}
+
+// Count active filters
+function countActiveFilters(filters: FilterData): number {
+  let count = 0;
+  if (filters.startDate || filters.endDate) count++;
+  if (filters.brand) count++;
+  if (filters.model) count++;
+  if (filters.year) count++;
+  if (filters.vehicleNumber) count++;
+  if (filters.assignedTo) count++;
+  if (filters.addedBy) count++;
+  if (filters.sortBy) count++;
+  return count;
+}
+
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function VehicleScreen() {
@@ -93,8 +136,81 @@ export default function VehicleScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [vehicles, setVehicles] = useState<DisplayVehicle[]>([]);
   const [requestedVehicles, setRequestedVehicles] = useState<DisplayVehicle[]>([]);
+  const [filteredVehicles, setFilteredVehicles] = useState<DisplayVehicle[]>([]);
+  const [filteredRequestedVehicles, setFilteredRequestedVehicles] = useState<DisplayVehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeFilters, setActiveFilters] = useState<FilterData>({
+    startDate: '',
+    endDate: '',
+    brand: '',
+    model: '',
+    year: '',
+    vehicleNumber: '',
+    assignedTo: '',
+    addedBy: '',
+    sortBy: null,
+  });
+
+  const applyFilters = useCallback((vehicleList: DisplayVehicle[], filters: FilterData) => {
+    let filtered = [...vehicleList];
+
+    // Filter by date range
+    if (filters.startDate || filters.endDate) {
+      filtered = filtered.filter(v =>
+        isDateInRange(v.createdAt, filters.startDate, filters.endDate),
+      );
+    }
+
+    // Filter by brand
+    if (filters.brand) {
+      filtered = filtered.filter(v =>
+        v.make.toUpperCase() === filters.brand.toUpperCase(),
+      );
+    }
+
+    // Filter by model
+    if (filters.model) {
+      filtered = filtered.filter(v =>
+        v.model.toUpperCase().includes(filters.model.toUpperCase()),
+      );
+    }
+
+    // Filter by year
+    if (filters.year) {
+      filtered = filtered.filter(v => v.year === parseInt(filters.year));
+    }
+
+    // Filter by vehicle number
+    if (filters.vehicleNumber) {
+      filtered = filtered.filter(v =>
+        v.plateNumber.toUpperCase().includes(filters.vehicleNumber.toUpperCase()),
+      );
+    }
+
+    // Filter by assigned to
+    if (filters.assignedTo) {
+      filtered = filtered.filter(v =>
+        v.addedBy?.toUpperCase().includes(filters.assignedTo.toUpperCase()),
+      );
+    }
+
+    // Filter by added by
+    if (filters.addedBy) {
+      filtered = filtered.filter(v =>
+        v.addedBy?.toUpperCase().includes(filters.addedBy.toUpperCase()),
+      );
+    }
+
+    // Sort
+    if (filters.sortBy === 'amount_low_high') {
+      filtered.sort((a, b) => (a.year ?? 0) - (b.year ?? 0));
+    } else if (filters.sortBy === 'amount_high_low') {
+      filtered.sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
+    }
+
+    return filtered;
+  }, []);
 
   const fetchVehicles = useCallback(async () => {
     setIsLoading(true);
@@ -113,10 +229,18 @@ export default function VehicleScreen() {
             services: [],
             additionalServices: 0,
             status: v.status as 'Active' | 'Inactive' | 'Requested',
+            createdAt: v.createdAt,
           }),
         );
-        setVehicles(all.filter(v => v.status === 'Active'));
-        setRequestedVehicles(all.filter(v => v.status === 'Requested'));
+        const active = all.filter(v => v.status === 'Active');
+        const requested = all.filter(v => v.status === 'Requested');
+
+        setVehicles(active);
+        setRequestedVehicles(requested);
+
+        // Apply current filters
+        setFilteredVehicles(applyFilters(active, activeFilters));
+        setFilteredRequestedVehicles(applyFilters(requested, activeFilters));
       } else {
         setError(result.error ?? 'Failed to load vehicles.');
       }
@@ -125,7 +249,7 @@ export default function VehicleScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [activeFilters, applyFilters]);
 
   useFocusEffect(
     useCallback(() => {
@@ -133,7 +257,15 @@ export default function VehicleScreen() {
     }, [fetchVehicles]),
   );
 
-  const displayVehicles = activeTab === 'all' ? vehicles : requestedVehicles;
+  const handleApplyFilters = (filters: FilterData) => {
+    setActiveFilters(filters);
+    setFilteredVehicles(applyFilters(vehicles, filters));
+    setFilteredRequestedVehicles(applyFilters(requestedVehicles, filters));
+    setShowFilters(false);
+  };
+
+  const displayVehicles = activeTab === 'all' ? filteredVehicles : filteredRequestedVehicles;
+  const filterCount = countActiveFilters(activeFilters);
 
   return (
     <View style={[styles.container, {paddingTop: insets.top}]}>
@@ -152,7 +284,7 @@ export default function VehicleScreen() {
                 styles.tabBtnText,
                 activeTab === 'all' && styles.tabBtnTextActive,
               ]}>
-              All Vehicles ({vehicles.length})
+              All Vehicles ({filteredVehicles.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -167,7 +299,7 @@ export default function VehicleScreen() {
                 styles.tabBtnText,
                 activeTab === 'requested' && styles.tabBtnTextActive,
               ]}>
-              Requested ({requestedVehicles.length})
+              Requested ({filteredRequestedVehicles.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -178,6 +310,11 @@ export default function VehicleScreen() {
           activeOpacity={0.8}>
           <FilterIcon />
           <Text style={styles.filterBtnText}>Filter</Text>
+          {filterCount > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{filterCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -207,19 +344,43 @@ export default function VehicleScreen() {
         <View style={styles.centerContainer}>
           <EmptyCarIcon />
           <Text style={styles.emptyTitle}>
-            {activeTab === 'all' ? 'No vehicles found' : 'No requested vehicles'}
+            {filterCount > 0
+              ? 'No vehicles match your filters'
+              : activeTab === 'all'
+              ? 'No vehicles found'
+              : 'No requested vehicles'}
           </Text>
           <Text style={styles.emptySubtitle}>
-            {activeTab === 'all'
+            {filterCount > 0
+              ? 'Try adjusting your filter criteria'
+              : activeTab === 'all'
               ? 'Add your first vehicle to get started'
               : 'Staff-added vehicles will appear here'}
           </Text>
-          {activeTab === 'all' && (
+          {activeTab === 'all' && filterCount === 0 && (
             <TouchableOpacity
               style={[styles.actionBtn, {marginTop: 8}]}
               onPress={() => setShowAddVehicle(true)}
               activeOpacity={0.8}>
               <Text style={styles.actionBtnText}>Add Vehicle</Text>
+            </TouchableOpacity>
+          )}
+          {filterCount > 0 && (
+            <TouchableOpacity
+              style={[styles.actionBtn, {marginTop: 8}]}
+              onPress={() => handleApplyFilters({
+                startDate: '',
+                endDate: '',
+                brand: '',
+                model: '',
+                year: '',
+                vehicleNumber: '',
+                assignedTo: '',
+                addedBy: '',
+                sortBy: null,
+              })}
+              activeOpacity={0.8}>
+              <Text style={styles.actionBtnText}>Clear Filters</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -280,10 +441,7 @@ export default function VehicleScreen() {
       <FiltersOverlay
         isOpen={showFilters}
         onClose={() => setShowFilters(false)}
-        onApply={filters => {
-          console.log('Applied filters:', filters);
-          setShowFilters(false);
-        }}
+        onApply={handleApplyFilters}
       />
     </View>
   );
@@ -327,8 +485,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5383b',
     borderRadius: 8,
+    position: 'relative',
   },
   filterBtnText: {fontSize: 13, fontWeight: '500', color: '#e5383b'},
+  filterBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#e5383b',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  filterBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '600',
+  },
 
   // States
   centerContainer: {

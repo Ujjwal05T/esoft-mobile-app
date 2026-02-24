@@ -94,7 +94,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
               title="Orders in Process"
               value={loading ? '...' : String(stats?.ordersInProcess ?? 0)}
               bgColor="#f24822"
-              onPress={() => navigation?.navigate('Order')}
+              onPress={() => navigation?.navigate('Orders')}
               VectorIcon={VehicleVector}
               vectorWidth={147}
               vectorHeight={130}

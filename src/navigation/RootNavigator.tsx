@@ -10,6 +10,8 @@ import QuoteDetailScreen from '../screens/QuoteDetailScreen';
 import PaymentScreen from '../screens/PaymentScreen';
 import StaffScreen from '../screens/StaffScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import ReportsScreen from '../screens/ReportsScreen';
+import FAQsScreen from '../screens/FAQsScreen';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -21,6 +23,8 @@ export type RootStackParamList = {
   Payment: {quoteId: number};
   Staff: undefined;
   Profile: undefined;
+  Reports: undefined;
+  FAQs: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -84,6 +88,16 @@ const RootNavigator: React.FC = () => {
         <Stack.Screen
           name="Profile"
           component={ProfileScreen}
+          options={{animation: 'slide_from_right', headerShown: false}}
+        />
+        <Stack.Screen
+          name="Reports"
+          component={ReportsScreen}
+          options={{animation: 'slide_from_right', headerShown: false}}
+        />
+        <Stack.Screen
+          name="FAQs"
+          component={FAQsScreen}
           options={{animation: 'slide_from_right', headerShown: false}}
         />
       </Stack.Navigator>
