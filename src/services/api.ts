@@ -1,8 +1,8 @@
 import * as Keychain from 'react-native-keychain';
 
 // API Base URL
-const API_BASE_URL = 'http://192.168.1.60:5196/api';
-export const SERVER_ORIGIN = 'http://192.168.1.60:5196';
+const API_BASE_URL = 'http://192.168.1.8:5196/api';
+export const SERVER_ORIGIN = 'http://192.168.1.8:5196';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -1742,4 +1742,98 @@ export async function createDisputeWithFiles(
     console.error('API Error (createDisputeWithFiles):', error);
     return {success: false, error: 'Network error. Please try again.'};
   }
+}
+
+// ==========================================
+// PUSH NOTIFICATIONS (FCM)
+// ==========================================
+
+// Store FCM token in backend
+export async function setFcmToken(token: string, platform: string) {
+  return apiRequest<{ message: string }>('/notification/register-token', {
+    method: 'POST',
+    body: JSON.stringify({ fcmToken: token, platform }),
+  });
+}
+
+// Remove FCM token from backend (on logout)
+export async function removeFcmToken() {
+  return apiRequest<{ message: string }>('/notification/remove-token', {
+    method: 'DELETE',
+  });
+}
+
+// ==========================================
+// DASHBOARD STATISTICS
+// ==========================================
+
+export interface DashboardStatsResponse {
+  ordersInProcess: number;
+  pendingQuotes: number;
+  pendingPartRequests: number;
+  raisedDisputes: number;
+}
+
+// Get dashboard statistics for authenticated workshop owner
+export async function getDashboardStats() {
+  return apiRequest<DashboardStatsResponse>('/dashboard/stats', {
+    method: 'GET',
+  });
+}
+
+// ==========================================
+// WORKSHOP OWNER PROFILE
+// ==========================================
+
+export interface PersonalInfo {
+  ownerName: string;
+  contactNumber: string;
+  email?: string;
+}
+
+export interface WorkshopDetails {
+  workshopName: string;
+  gstNumber?: string;
+  tradeLicense?: string;
+  aadhaarNumber: string;
+  address: string;
+}
+
+export interface ProfileData {
+  name: string;
+  avatarUrl?: string;
+  personalInfo: PersonalInfo;
+  workshopDetails: WorkshopDetails;
+}
+
+export interface ProfileResponse {
+  success: boolean;
+  message: string;
+  data: ProfileData;
+}
+
+export interface UpdateProfileData {
+  ownerName?: string;
+  contactNumber?: string;
+  email?: string;
+  workshopName?: string;
+  gstNumber?: string;
+  tradeLicense?: string;
+  aadhaarNumber?: string;
+  address?: string;
+}
+
+// Get authenticated workshop owner's profile
+export async function getProfile() {
+  return apiRequest<ProfileResponse>('/workshop/profile', {
+    method: 'GET',
+  });
+}
+
+// Update authenticated workshop owner's profile
+export async function updateProfile(data: UpdateProfileData) {
+  return apiRequest<{ success: boolean; message: string }>('/workshop/profile', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
 }

@@ -138,7 +138,7 @@ export default function VehicleScreen() {
   return (
     <View style={[styles.container, {paddingTop: insets.top}]}>
       {/* ── Header ───────────────────────────────────────────────────── */}
-      <Header />
+      <Header onNotificationPress={() => navigation.navigate('Notifications')} />
 
       {/* ── Tab Toggle + Filter ───────────────────────────────────────── */}
       <View style={styles.filterRow}>

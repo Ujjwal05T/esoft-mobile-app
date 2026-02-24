@@ -1,7 +1,8 @@
 import React, {createContext, useContext, useState, useEffect} from 'react';
-import {isAuthenticated as checkIsAuth, getStoredUser} from '../services/api';
+import {isAuthenticated as checkIsAuth, getStoredUser, removeFcmToken} from '../services/api';
 import type {UserInfo} from '../services/api';
 import type {UserRole} from '../components';
+import {registerFCMToken, unregisterFCMToken, onTokenRefresh} from '../services/notificationService';
 
 interface AuthContextType {
   isAuth: boolean;
@@ -35,6 +36,8 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
         if (storedUser) {
           setUser(storedUser);
           setUserRole(storedUser.role);
+          // Register FCM token for authenticated user
+          await registerFCMToken();
         }
       }
       setIsAuth(auth);
@@ -42,13 +45,33 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     })();
   }, []);
 
-  const signIn = (loggedInUser: UserInfo) => {
+  // Listen for FCM token refresh
+  useEffect(() => {
+    if (isAuth) {
+      const unsubscribe = onTokenRefresh(async (newToken) => {
+        console.log('FCM Token refreshed:', newToken);
+        // Re-register the new token with backend
+        await registerFCMToken();
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    }
+  }, [isAuth]);
+
+  const signIn = async (loggedInUser: UserInfo) => {
     setIsAuth(true);
     setUser(loggedInUser);
     setUserRole(loggedInUser.role);
+    // Register FCM token after successful login
+    await registerFCMToken();
   };
 
-  const signOut = () => {
+  const signOut = async () => {
+    // Unregister FCM token before logging out
+    await unregisterFCMToken();
+    await removeFcmToken();
     setIsAuth(false);
     setUser(null);
     setUserRole('staff');

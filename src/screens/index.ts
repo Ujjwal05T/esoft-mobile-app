@@ -9,3 +9,4 @@ export {default as AIAssistantScreen} from './AIAssistantScreen';
 export {default as OrdersScreen} from './OrdersScreen';
 export {default as QuoteDetailScreen} from './QuoteDetailScreen';
 export {default as PaymentScreen} from './PaymentScreen';
+export {default as NotificationsScreen} from './NotificationsScreen';

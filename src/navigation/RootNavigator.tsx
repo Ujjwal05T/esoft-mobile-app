@@ -4,7 +4,7 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import AuthStack from './AuthStack';
 import TabNavigator from './TabNavigator';
 import {useAuth} from '../context/AuthContext';
-import {AIAssistantScreen} from '../screens';
+import {AIAssistantScreen, NotificationsScreen} from '../screens';
 import VehicleDetailScreen from '../screens/VehicleDetailScreen';
 import QuoteDetailScreen from '../screens/QuoteDetailScreen';
 import PaymentScreen from '../screens/PaymentScreen';
@@ -15,6 +15,7 @@ export type RootStackParamList = {
   Auth: undefined;
   MainTabs: undefined;
   AIAssistant: undefined;
+  Notifications: undefined;
   VehicleDetail: {vehicleId: number};
   QuoteDetail: {quoteId: number};
   Payment: {quoteId: number};
@@ -49,6 +50,14 @@ const RootNavigator: React.FC = () => {
           options={{
             presentation: 'fullScreenModal',
             animation: 'slide_from_bottom',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Notifications"
+          component={NotificationsScreen}
+          options={{
+            animation: 'slide_from_right',
             headerShown: false,
           }}
         />

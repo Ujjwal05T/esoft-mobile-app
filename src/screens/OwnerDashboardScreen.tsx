@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StatusBar,
 } from 'react-native';
 
+import {getDashboardStats, DashboardStatsResponse} from '../services/api';
 import Header from '../components/dashboard/Header';
 import StatusCard from '../components/dashboard/StatusCard';
 import VehicleVector from '../assets/vectors/vehicle-vector.svg';
@@ -34,6 +35,31 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
   const [newJobOpen, setNewJobOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  // Dashboard statistics state
+  const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch dashboard stats on component mount
+  useEffect(() => {
+    async function fetchDashboardStats() {
+      setLoading(true);
+      setError(null);
+
+      const response = await getDashboardStats();
+
+      if (response.success && response.data) {
+        setStats(response.data);
+      } else {
+        setError(response.error || 'Failed to load dashboard statistics');
+      }
+
+      setLoading(false);
+    }
+
+    fetchDashboardStats();
+  }, []);
+
   const fabOptions = [
     {
       label: 'Add Vehicle',
@@ -54,7 +80,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
       {/* Header (sidebar is managed internally by Header) */}
-      <Header onSearchPress={() => {}} />
+      <Header onNotificationPress={() => navigation?.navigate('Notifications')} />
 
       {/* Main Scrollable Content */}
       <ScrollView
@@ -66,7 +92,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
           <View style={styles.statusRow}>
             <StatusCard
               title="Orders in Process"
-              value="2"
+              value={loading ? '...' : String(stats?.ordersInProcess ?? 0)}
               bgColor="#f24822"
               onPress={() => navigation?.navigate('Order')}
               VectorIcon={VehicleVector}
@@ -76,7 +102,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
             />
             <StatusCard
               title="Pending Quotes"
-              value="10"
+              value={loading ? '...' : String(stats?.pendingQuotes ?? 0)}
               bgColor="#2294f2"
               onPress={() => navigation?.navigate('Inquiry')}
               VectorIcon={InquiryVector}
@@ -89,7 +115,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
           <View style={styles.statusRow}>
             <StatusCard
               title="Pending Part Requests"
-              value="8"
+              value={loading ? '...' : String(stats?.pendingPartRequests ?? 0)}
               bgColor="#ffad2a"
               onPress={() => navigation?.navigate('Inquiry')}
               VectorIcon={ClockVector}
@@ -99,7 +125,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
             />
             <StatusCard
               title="Raised Disputes"
-              value="4"
+              value={loading ? '...' : String(stats?.raisedDisputes ?? 0)}
               bgColor="#e43cd3"
               onPress={() => navigation?.navigate('Inquiry')}
               VectorIcon={QuestionVector}
@@ -109,6 +135,13 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
             />
           </View>
         </View>
+
+        {/* Error message if stats loading failed */}
+        {error && (
+          <View style={{padding: 16, backgroundColor: '#ffebee', borderRadius: 8}}>
+            <Text style={{color: '#c62828', fontSize: 14}}>{error}</Text>
+          </View>
+        )}
 
         {/* ── Add New Vehicle Card ── */}
         <AddVehicleCard onPress={() => setAddVehicleOpen(true)} />

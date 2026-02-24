@@ -17,6 +17,8 @@ interface FloatingInputProps {
   maxLength?: number;
   autoFocus?: boolean;
   secureTextEntry?: boolean;
+  editable?: boolean;
+  multiline?: boolean;
   containerStyle?: ViewStyle;
   wrapperStyle?: ViewStyle;
   rightElement?: React.ReactNode;
@@ -31,6 +33,8 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
   maxLength,
   autoFocus,
   secureTextEntry,
+  editable = true,
+  multiline = false,
   containerStyle,
   wrapperStyle,
   rightElement,
@@ -62,14 +66,14 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
 
   return (
     <View style={[styles.wrapper, wrapperStyle]}>
-      <View style={[styles.container, {borderColor}, containerStyle]}>
+      <View style={[styles.container, {borderColor}, multiline && styles.containerMultiline, containerStyle]}>
         <Animated.Text
           style={[styles.label, {top: labelTop, fontSize: labelFontSize}]}>
           {label}
           {required && value.length > 0 ? '*' : ''}
         </Animated.Text>
         <TextInput
-          style={[styles.input, rightElement ? styles.inputWithRight : null]}
+          style={[styles.input, rightElement ? styles.inputWithRight : null, multiline && styles.inputMultiline]}
           value={value}
           onChangeText={onChange}
           onFocus={() => setIsFocused(true)}
@@ -78,6 +82,10 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
           maxLength={maxLength}
           autoFocus={autoFocus}
           secureTextEntry={secureTextEntry}
+          editable={editable}
+          multiline={multiline}
+          numberOfLines={multiline ? 4 : 1}
+          textAlignVertical={multiline ? 'top' : 'center'}
           placeholder=""
         />
         {rightElement && (
@@ -101,6 +109,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     justifyContent: 'center',
   },
+  containerMultiline: {
+    height: 108,
+    justifyContent: 'flex-start',
+  },
   label: {
     position: 'absolute',
     left: 12,
@@ -115,6 +127,10 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     fontSize: 16,
     color: '#1a1a1a',
+  },
+  inputMultiline: {
+    height: 100,
+    paddingTop: 16,
   },
   inputWithRight: {
     paddingRight: 80,

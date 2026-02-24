@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 
 import Svg, {Path} from 'react-native-svg';
@@ -13,7 +15,8 @@ import AccordionSection from '../components/ui/AccordionSection';
 import FloatingInput from '../components/ui/FloatingInput';
 import {useNavigation} from '@react-navigation/native';
 import {useAuth} from '../context/AuthContext';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {getProfile, updateProfile, UpdateProfileData} from '../services/api';
 
 const BackIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -46,22 +49,48 @@ const EditIcon = () => (
   </Svg>
 );
 
-const mockProfileData = {
-  name: 'Shubham Jain',
-  avatar: undefined,
+const SaveIcon = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16L21 8V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z"
+      stroke="#000"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M17 21V13H7V21"
+      stroke="#000"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M7 3V8H15"
+      stroke="#000"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+interface ProfileData {
+  name: string;
+  avatarUrl?: string;
   personalInfo: {
-    ownerName: 'Shubham Jain',
-    contactNumber: '9888001109',
-  },
+    ownerName: string;
+    contactNumber: string;
+    email?: string;
+  };
   workshopDetails: {
-    workshopName: 'AutoCare Garage',
-    gstNumber: '345675678665',
-    tradeLicense: '1HFH7988DH',
-    aadhaarNumber: '9337-8987-9898',
-    address:
-      '16-A Basant Vihar Colony, Near Satya Sai Square, Indore (M.P) - 452010, Indore, Madhya Pradesh 452010, India',
-  },
-};
+    workshopName: string;
+    gstNumber?: string;
+    tradeLicense?: string;
+    aadhaarNumber: string;
+    address: string;
+  };
+}
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -69,26 +98,87 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [personalInfoOpen, setPersonalInfoOpen] = useState(false);
   const [workshopDetailsOpen, setWorkshopDetailsOpen] = useState(false);
-  const [profileData, setProfileData] = useState(mockProfileData);
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Fetch profile data on mount
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    setLoading(true);
+    const response = await getProfile();
+
+    if (response.success && response.data?.data) {
+      setProfileData(response.data.data);
+    } else {
+      Alert.alert('Error', response.error || 'Failed to load profile');
+    }
+    setLoading(false);
+  };
+
+  const handleSave = async () => {
+    if (!profileData) return;
+
+    setSaving(true);
+
+    const updateData: UpdateProfileData = {
+      ownerName: profileData.personalInfo.ownerName,
+      contactNumber: profileData.personalInfo.contactNumber,
+      email: profileData.personalInfo.email,
+      workshopName: profileData.workshopDetails.workshopName,
+      gstNumber: profileData.workshopDetails.gstNumber,
+      tradeLicense: profileData.workshopDetails.tradeLicense,
+      aadhaarNumber: profileData.workshopDetails.aadhaarNumber,
+      address: profileData.workshopDetails.address,
+    };
+
+    const response = await updateProfile(updateData);
+
+    setSaving(false);
+
+    if (response.success) {
+      Alert.alert('Success', 'Profile updated successfully');
+      setIsEditing(false);
+      // Refresh profile data
+      fetchProfile();
+    } else {
+      Alert.alert('Error', response.error || 'Failed to update profile');
+    }
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // User is done editing, save changes
+      handleSave();
+    } else {
+      // Enter edit mode
+      setIsEditing(true);
+    }
+  };
 
   const updatePersonalInfo = (field: string, value: string) => {
-    setProfileData(prev => ({
+    if (!profileData) return;
+    setProfileData(prev => prev ? ({
       ...prev,
       personalInfo: {
         ...prev.personalInfo,
         [field]: value,
       },
-    }));
+    }) : null);
   };
 
   const updateWorkshopDetails = (field: string, value: string) => {
-    setProfileData(prev => ({
+    if (!profileData) return;
+    setProfileData(prev => prev ? ({
       ...prev,
       workshopDetails: {
         ...prev.workshopDetails,
         [field]: value,
       },
-    }));
+    }) : null);
   };
 
   const handleSupport = () => {
@@ -104,6 +194,30 @@ export default function ProfileScreen() {
       .toUpperCase();
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#e5383b" />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!profileData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Failed to load profile</Text>
+          <TouchableOpacity onPress={fetchProfile} style={styles.retryBtn}>
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -114,8 +228,17 @@ export default function ProfileScreen() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Profile</Text>
         </View>
-        <TouchableOpacity onPress={() => setIsEditing(!isEditing)} style={styles.iconBtn}>
-          <EditIcon />
+        <TouchableOpacity
+          onPress={handleEditToggle}
+          style={styles.iconBtn}
+          disabled={saving}>
+          {saving ? (
+            <ActivityIndicator size="small" color="#e5383b" />
+          ) : isEditing ? (
+            <SaveIcon />
+          ) : (
+            <EditIcon />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -127,9 +250,9 @@ export default function ProfileScreen() {
         {/* Avatar Section */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarBox}>
-            {profileData.avatar ? (
+            {profileData.avatarUrl ? (
               <Image
-                source={{uri: profileData.avatar}}
+                source={{uri: profileData.avatarUrl}}
                 style={styles.avatar}
                 resizeMode="cover"
               />
@@ -167,6 +290,13 @@ export default function ProfileScreen() {
                 editable={isEditing}
                 keyboardType="phone-pad"
               />
+              <FloatingInput
+                label="Email"
+                value={profileData.personalInfo.email || ''}
+                onChange={v => updatePersonalInfo('email', v)}
+                editable={isEditing}
+                keyboardType="email-address"
+              />
             </View>
           </AccordionSection>
 
@@ -184,13 +314,13 @@ export default function ProfileScreen() {
               />
               <FloatingInput
                 label="GST Number"
-                value={profileData.workshopDetails.gstNumber}
+                value={profileData.workshopDetails.gstNumber || ''}
                 onChange={v => updateWorkshopDetails('gstNumber', v)}
                 editable={isEditing}
               />
               <FloatingInput
                 label="Trade License"
-                value={profileData.workshopDetails.tradeLicense}
+                value={profileData.workshopDetails.tradeLicense || ''}
                 onChange={v => updateWorkshopDetails('tradeLicense', v)}
                 editable={isEditing}
               />
@@ -224,6 +354,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#e5383b',
+  },
+  retryBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#e5383b',
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  retryBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
