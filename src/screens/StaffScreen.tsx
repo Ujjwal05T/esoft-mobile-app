@@ -18,13 +18,16 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {
   getStaff,
   createStaff,
+  createStaffWithPhoto,
   updateStaff,
+  uploadStaffPhoto,
   activateStaff,
   deactivateStaff,
   deleteStaff,
   WorkshopStaffResponse,
   CreateStaffData,
   UpdateStaffData,
+  RNFile,
 } from '../services/api';
 
 const BackIcon = () => (
@@ -190,7 +193,19 @@ export default function StaffScreen() {
       canApproveQuotesPayments: staffData.permissions.quoteApprovalsPayments,
     };
 
-    const response = await createStaff(createData);
+    let response;
+
+    // If photo is provided, use createStaffWithPhoto
+    if (staffData.photoUri) {
+      const photo: RNFile = {
+        uri: staffData.photoUri,
+        type: 'image/jpeg',
+        name: 'staff-photo.jpg',
+      };
+      response = await createStaffWithPhoto(createData, photo);
+    } else {
+      response = await createStaff(createData);
+    }
 
     if (response.success) {
       setShowAddOverlay(false);
@@ -216,7 +231,18 @@ export default function StaffScreen() {
       canApproveQuotesPayments: updatedStaff.permissions.quoteApprovalsPayments,
     };
 
+    // First update the staff details
     const response = await updateStaff(parseInt(updatedStaff.id), updateData);
+
+    // If photo was changed, upload the new photo
+    if (response.success && updatedStaff.photoUri) {
+      const photo: RNFile = {
+        uri: updatedStaff.photoUri,
+        type: 'image/jpeg',
+        name: 'staff-photo.jpg',
+      };
+      await uploadStaffPhoto(parseInt(updatedStaff.id), photo);
+    }
 
     if (response.success) {
       setShowEditOverlay(false);

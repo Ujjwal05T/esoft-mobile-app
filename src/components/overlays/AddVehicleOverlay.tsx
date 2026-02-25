@@ -168,6 +168,7 @@ export default function AddVehicleOverlay({
 
   // Camera scanner
   const [scanMode, setScanMode] = useState<ScanMode | null>(null);
+  const [isScanProcessing, setIsScanProcessing] = useState(false);
 
   // Manual view — which dropdown is currently open
   const [openManualDropdown, setOpenManualDropdown] = useState<string | null>(null);
@@ -255,6 +256,7 @@ export default function AddVehicleOverlay({
     setApiError(null);
     setCreatedVehicleId(null);
     setScanMode(null);
+    setIsScanProcessing(false);
   };
 
   useEffect(() => {
@@ -491,10 +493,9 @@ export default function AddVehicleOverlay({
   const handleScanCapture = async (uri: string) => {
     try {
       const currentScanMode = scanMode;
-      setScanMode(null); // Close scanner
 
-      // Show loading indicator
-      setIsLoading(true);
+      // Start processing - keep scanner open with animation
+      setIsScanProcessing(true);
 
       // Convert image URI to base64
       const base64Image = await RNFS.readFile(uri, 'base64');
@@ -504,7 +505,9 @@ export default function AddVehicleOverlay({
         ? await scanRcCard(base64Image)
         : await scanVehiclePlate(base64Image);
 
-      setIsLoading(false);
+      // Stop processing and close scanner
+      setIsScanProcessing(false);
+      setScanMode(null);
 
       if (ocrResult.success) {
         // Auto-populate form fields with OCR results
@@ -559,13 +562,17 @@ export default function AddVehicleOverlay({
           'Scan Failed',
           ocrResult?.error || 'Could not read the document. Please try again with a clearer image.',
           [
-            {text: 'Retry', onPress: () => setScanMode(currentScanMode)},
+            {text: 'Retry', onPress: () => {
+              setIsScanProcessing(false);
+              setScanMode(currentScanMode);
+            }},
             {text: 'Cancel', style: 'cancel'},
           ]
         );
       }
     } catch (error) {
-      setIsLoading(false);
+      setIsScanProcessing(false);
+      setScanMode(null);
       console.error('Error processing scanned image:', error);
       Alert.alert(
         'Error',
@@ -1139,7 +1146,11 @@ export default function AddVehicleOverlay({
           visible={scanMode !== null}
           mode={scanMode}
           onCapture={handleScanCapture}
-          onClose={() => setScanMode(null)}
+          onClose={() => {
+            setIsScanProcessing(false);
+            setScanMode(null);
+          }}
+          isProcessing={isScanProcessing}
         />
       )}
     </Modal>

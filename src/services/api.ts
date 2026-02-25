@@ -1,8 +1,8 @@
 import * as Keychain from 'react-native-keychain';
 
 // API Base URL
-const API_BASE_URL = 'http://192.168.1.8:5196/api';
-export const SERVER_ORIGIN = 'http://192.168.1.8:5196';
+const API_BASE_URL = 'http://192.168.1.23:5196/api';
+export const SERVER_ORIGIN = 'http://192.168.1.23:5196';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -221,6 +221,7 @@ export interface WorkshopRegistrationData {
   landmark?: string;
   pinCode: string;
   city: string;
+  gstNumber?: string;
 }
 
 export async function submitWorkshopRegistration(data: WorkshopRegistrationData) {

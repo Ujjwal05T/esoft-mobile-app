@@ -55,6 +55,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     landmark: '',
     pinCode: '',
     city: '',
+    gstNumber: '',
   });
 
   const setField = (field: keyof typeof workshopDetails) => (value: string) =>
@@ -116,6 +117,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
       landmark: workshopDetails.landmark || undefined,
       pinCode: workshopDetails.pinCode,
       city: workshopDetails.city,
+      gstNumber: workshopDetails.gstNumber || undefined,
     });
     setLoading(false);
     if (!result.success) {
@@ -201,8 +203,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled">
 
-          {/* Error */}
-          {!!error && (
+          {/* Error at top for workshop-details step only (has many fields) */}
+          {!!error && currentStep === 'workshop-details' && (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>
             </View>
@@ -220,6 +222,13 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 maxLength={10}
                 required
               />
+
+              {/* Error message below form */}
+              {!!error && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -252,6 +261,13 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
               <TouchableOpacity onPress={handleResend}>
                 <Text style={styles.resendLink}>Resend OTP</Text>
               </TouchableOpacity>
+
+              {/* Error message below form */}
+              {!!error && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -288,6 +304,13 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 keyboardType="numeric"
                 maxLength={12}
                 required
+              />
+              <FloatingInput
+                label="GST Number"
+                value={workshopDetails.gstNumber}
+                onChange={setField('gstNumber')}
+                autoCapitalize="characters"
+                maxLength={15}
               />
               <FloatingInput
                 label="Workshop Name (Required)"
@@ -455,7 +478,7 @@ const styles = StyleSheet.create({
   },
   // Error
   errorBox: {
-    marginTop: 16,
+    marginTop: 20,
     padding: 12,
     backgroundColor: '#fef2f2',
     borderWidth: 1,

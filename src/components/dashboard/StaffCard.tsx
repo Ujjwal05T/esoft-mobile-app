@@ -40,7 +40,7 @@ const EyeIcon = () => (
   </Svg>
 );
 
-const API_BASE = 'http://192.168.29.155:5196';
+const API_BASE = 'http://192.168.1.23:5196';
 
 export default function StaffCard({
   staff,

@@ -33,6 +33,7 @@ const PauseIcon = () => (
 const audioRecorderPlayer = AudioRecorderPlayer;
 
 export default function JobCard({
+  id,
   jobCategory,
   assignedStaffName,
   remark,

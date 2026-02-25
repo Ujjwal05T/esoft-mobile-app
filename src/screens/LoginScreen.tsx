@@ -162,13 +162,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled">
 
-          {/* Error message */}
-          {!!error && (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-
           {/* Step 1: Enter Mobile Number */}
           {currentStep === 'enter-mobile' && (
             <View style={styles.stepContent}>
@@ -184,6 +177,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
               <Text style={styles.helperText}>
                 We'll send you an OTP to verify your number
               </Text>
+
+              {/* Error message below form */}
+              {!!error && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -235,6 +235,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                   <Text style={styles.demoBold}>111111</Text> to login
                 </Text>
               </View>
+
+              {/* Error message below form */}
+              {!!error && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
             </View>
           )}
         </ScrollView>
@@ -334,7 +341,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   errorBox: {
-    marginTop: 16,
+    marginTop: 20,
     padding: 12,
     backgroundColor: '#fef2f2',
     borderWidth: 1,

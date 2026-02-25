@@ -1,4 +1,4 @@
-import React, {useRef} from 'react';
+import React, {useRef, useEffect} from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   Dimensions,
   StatusBar,
   SafeAreaView,
+  Animated,
+  ActivityIndicator,
 } from 'react-native';
 import {Camera, useCameraDevice, useCameraPermission} from 'react-native-vision-camera';
 import Svg, {Path} from 'react-native-svg';
@@ -33,6 +35,7 @@ interface Props {
   mode: ScanMode;
   onCapture: (uri: string) => void;
   onClose: () => void;
+  isProcessing?: boolean;
 }
 
 function CornerBrackets({frameH}: {frameH: number}) {
@@ -74,15 +77,39 @@ export default function CameraScannerOverlay({
   mode,
   onCapture,
   onClose,
+  isProcessing = false,
 }: Props) {
   const cameraRef = useRef<Camera>(null);
   const device = useCameraDevice('back');
   const {hasPermission, requestPermission} = useCameraPermission();
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
 
   const frameH = FRAME_H[mode];
 
+  // Scanning animation
+  useEffect(() => {
+    if (isProcessing) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(scanLineAnim, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scanLineAnim, {
+            toValue: 0,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      scanLineAnim.setValue(0);
+    }
+  }, [isProcessing, scanLineAnim]);
+
   const handleCapture = async () => {
-    if (!cameraRef.current) {
+    if (!cameraRef.current || isProcessing) {
       return;
     }
     const photo = await cameraRef.current.takePhoto({flash: 'off'});
@@ -114,7 +141,7 @@ export default function CameraScannerOverlay({
           ref={cameraRef}
           style={StyleSheet.absoluteFill}
           device={device}
-          isActive={visible}
+          isActive={visible && !isProcessing}
           photo
         />
       ) : (
@@ -189,14 +216,49 @@ export default function CameraScannerOverlay({
       </Text>
 
       {/* Capture button */}
-      <View style={styles.captureArea}>
-        <TouchableOpacity
-          style={styles.captureBtn}
-          onPress={handleCapture}
-          activeOpacity={0.85}>
-          <View style={styles.captureInner} />
-        </TouchableOpacity>
-      </View>
+      {!isProcessing && (
+        <View style={styles.captureArea}>
+          <TouchableOpacity
+            style={styles.captureBtn}
+            onPress={handleCapture}
+            activeOpacity={0.85}>
+            <View style={styles.captureInner} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Processing overlay with scanning effect */}
+      {isProcessing && (
+        <View style={styles.processingOverlay}>
+          {/* Scanning line animation */}
+          <Animated.View
+            style={[
+              styles.scanLine,
+              {
+                top: FRAME_TOP,
+                left: FRAME_MARGIN_H,
+                width: FRAME_W,
+                transform: [
+                  {
+                    translateY: scanLineAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, frameH],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+
+          {/* Processing indicator below frame */}
+          <View style={[styles.processingIndicator, {top: FRAME_TOP + frameH + 30}]}>
+            <ActivityIndicator size="large" color="#ffffff" />
+            <Text style={styles.processingText}>
+              {mode === 'plate' ? 'Reading Number Plate...' : 'Reading RC Card...'}
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -300,5 +362,33 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  // Processing overlay
+  processingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  scanLine: {
+    position: 'absolute',
+    height: 3,
+    backgroundColor: '#e5383b',
+    shadowColor: '#e5383b',
+    shadowOffset: {width: 0, height: 0},
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  processingIndicator: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    gap: 12,
+  },
+  processingText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

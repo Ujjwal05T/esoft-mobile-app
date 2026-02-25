@@ -138,12 +138,22 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
     );
   };
 
+  const hasPermissionsChanged = staffData && (
+    permissions.vehicleApprovals !== staffData.permissions.vehicleApprovals ||
+    permissions.inquiryApprovals !== staffData.permissions.inquiryApprovals ||
+    permissions.generateEstimates !== staffData.permissions.generateEstimates ||
+    permissions.createJobCard !== staffData.permissions.createJobCard ||
+    permissions.disputeApprovals !== staffData.permissions.disputeApprovals ||
+    permissions.quoteApprovalsPayments !== staffData.permissions.quoteApprovalsPayments
+  );
+
   const hasChanges = staffData && (
     name !== staffData.name ||
     contactNumber !== staffData.contactNumber ||
     address !== staffData.address ||
     role !== staffData.role ||
-    photo !== staffData.photo
+    photo !== staffData.photo ||
+    hasPermissionsChanged
   );
 
   const handleUpdate = () => {
