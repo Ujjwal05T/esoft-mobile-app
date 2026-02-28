@@ -1,8 +1,8 @@
 import * as Keychain from 'react-native-keychain';
 
 // API Base URL
-const API_BASE_URL = 'http://192.168.1.23:5196/api';
-export const SERVER_ORIGIN = 'http://192.168.1.23:5196';
+const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
+export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -1357,6 +1357,77 @@ export async function createInquiry(data: CreateInquiryRequest) {
   });
 }
 
+// Create inquiry with media files
+export async function createInquiryWithMedia(
+  vehicleId: number,
+  workshopOwnerId: number,
+  jobCategory: string,
+  items: InquiryItemRequest[],
+  audioFiles: RNFile[],
+  imageFiles: RNFile[],
+  vehicleVisitId?: number,
+  requestedByStaffId?: number | null
+) {
+  try {
+    const token = await getAuthToken();
+    const formData = new FormData();
+
+    // Append basic fields
+    formData.append('vehicleId', vehicleId.toString());
+    formData.append('workshopOwnerId', workshopOwnerId.toString());
+    formData.append('jobCategory', jobCategory);
+    formData.append('itemsJson', JSON.stringify(items));
+
+    if (vehicleVisitId) {
+      formData.append('vehicleVisitId', vehicleVisitId.toString());
+    }
+    if (requestedByStaffId !== undefined && requestedByStaffId !== null) {
+      formData.append('requestedByStaffId', requestedByStaffId.toString());
+    }
+
+    // Append audio files
+    audioFiles.forEach((file, index) => {
+      if (file && file.uri) {
+        formData.append('audioFiles', {
+          uri: file.uri,
+          name: file.name || `audio_${index}.mp4`,
+          type: file.type || 'audio/mp4',
+        } as any);
+      }
+    });
+
+    // Append image files
+    imageFiles.forEach((file, index) => {
+      if (file && file.uri) {
+        formData.append('imageFiles', {
+          uri: file.uri,
+          name: file.name || `image_${index}.jpg`,
+          type: file.type || 'image/jpeg',
+        } as any);
+      }
+    });
+
+    const response = await fetch(`${API_BASE_URL}/inquiry/with-media`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: result.message || 'Failed to create inquiry with media' };
+    }
+
+    return { success: true, data: result as InquiryResponse };
+  } catch (error) {
+    console.error('API Error (createInquiryWithMedia):', error);
+    return { success: false, error: 'Network error. Please try again.' };
+  }
+}
+
 // Get inquiry by ID
 export async function getInquiryById(id: number) {
   return apiRequest<InquiryResponse>(`/inquiry/${id}`, {
@@ -1390,6 +1461,14 @@ export async function updateInquiryStatus(id: number, status: string) {
 export async function deleteInquiry(id: number) {
   return apiRequest<{ message: string }>(`/inquiry/${id}`, {
     method: 'DELETE',
+  });
+}
+
+// Update inquiry item
+export async function updateInquiryItem(itemId: number, data: Partial<InquiryItemResponse>) {
+  return apiRequest<{ message: string }>(`/inquiry/item/${itemId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
   });
 }
 
@@ -1572,6 +1651,18 @@ export interface OrderDetailApiResponse {
   vehicleName: string | null;
   plateNumber: string | null;
   items: OrderItemApiResponse[];
+  vehicleBrand?: string;
+  vehicleModel?: string;
+  vehicleVariant?: string;
+  createdAt: string;
+  deliveryDriverName?: string;
+  deliveryDriverContact?: string;
+  deliveryPartnerName?: string;
+  packingCharges?: number;
+  forwardingCharges?: number;
+  shippingCharges?: number;
+  lrNumber?: string;
+  workshopPhone?: string;
 }
 
 export async function getOrderById(id: number) {

@@ -175,7 +175,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                 required
               />
               <Text style={styles.helperText}>
-                We'll send you an OTP to verify your number
+                We'll send you an OTP via WhatsApp to verify your number
               </Text>
 
               {/* Error message below form */}
@@ -192,7 +192,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             <View style={styles.stepContent}>
               <Text style={styles.stepTitle}>Verify OTP</Text>
               <Text style={styles.otpSubtitle}>
-                Enter the 6-digit code sent to {mobileNumber}
+                Enter the 6-digit code sent to your WhatsApp ({mobileNumber})
               </Text>
 
               {/* OTP Boxes */}
@@ -228,13 +228,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                 </Text>
               </TouchableOpacity>
 
-              {/* Demo hint */}
-              <View style={styles.demoBox}>
-                <Text style={styles.demoText}>
-                   <Text style={styles.demoBold}>Demo OTP:</Text> Use{' '}
-                  <Text style={styles.demoBold}>111111</Text> to login
-                </Text>
-              </View>
+              {/* Demo hint for bypass number (Play Store verification) */}
+              {mobileNumber === '7024316744' && (
+                <View style={styles.demoBox}>
+                  <Text style={styles.demoText}>
+                    <Text style={styles.demoBold}>Test Mode:</Text> You can use any 6-digit code (e.g., <Text style={styles.demoBold}>111111</Text>) for verification
+                  </Text>
+                </View>
+              )}
 
               {/* Error message below form */}
               {!!error && (

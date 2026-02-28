@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import Header from '../components/dashboard/Header';
 import OrderCard, {Order, OrderStatus} from '../components/dashboard/OrderCard';
 import {
@@ -16,6 +18,7 @@ import {
   getOrderById,
   type WorkshopOrderListItem,
 } from '../services/api';
+import type {RootStackParamList} from '../navigation/RootNavigator';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -40,8 +43,11 @@ function mapStatus(backendStatus: string): OrderStatus {
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
+type OrdersScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 export default function OrdersScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<OrdersScreenNavigationProp>();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -161,8 +167,11 @@ export default function OrdersScreen() {
             <OrderCard
               key={order.id}
               order={order}
-              onTrackOrder={orderId => console.log('Track:', orderId)}
+              onTrackOrder={orderId =>
+                navigation.navigate('OrderDetail', {orderId: parseInt(orderId)})
+              }
               onDownloadInvoice={orderId => console.log('Invoice:', orderId)}
+              onViewOrder={orderId => navigation.navigate('OrderDetail', {orderId: parseInt(orderId)})}
             />
           ))}
         </ScrollView>

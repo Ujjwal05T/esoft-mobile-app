@@ -46,6 +46,7 @@ interface OrderCardProps {
   defaultExpanded?: boolean;
   onTrackOrder?: (orderId: string) => void;
   onDownloadInvoice?: (orderId: string) => void;
+  onViewOrder?: (orderId: string) => void;
 }
 
 const mapStatus = (status: OrderStatus): StatusType => {
@@ -74,6 +75,7 @@ export default function OrderCard({
   defaultExpanded = false,
   onTrackOrder,
   onDownloadInvoice,
+  onViewOrder,
 }: OrderCardProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const visibleParts = isExpanded ? order.orderedParts.slice(0, 3) : [];
@@ -165,7 +167,7 @@ export default function OrderCard({
                   <Text style={styles.actionBtnText}>Track order</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => onTrackOrder?.(order.id)}
+                  onPress={() => onViewOrder?.(order.id)}
                   style={styles.trackIconBtn}>
                   <EyeIcon />
                 </TouchableOpacity>

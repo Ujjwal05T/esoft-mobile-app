@@ -236,6 +236,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
           {currentStep === 'verify-otp' && (
             <View style={styles.stepContent}>
               <Text style={styles.stepTitle}>Verify OTP</Text>
+              <Text style={styles.otpSubtitle}>
+                Enter the 6-digit code sent to your WhatsApp ({mobileNumber})
+              </Text>
 
               <View style={styles.otpRow}>
                 {otp.map((digit, i) => (
@@ -261,6 +264,15 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
               <TouchableOpacity onPress={handleResend}>
                 <Text style={styles.resendLink}>Resend OTP</Text>
               </TouchableOpacity>
+
+              {/* Demo hint for bypass number (Play Store verification) */}
+              {mobileNumber === '7024316744' && (
+                <View style={styles.demoBox}>
+                  <Text style={styles.demoText}>
+                    <Text style={styles.demoBold}>Test Mode:</Text> You can use any 6-digit code (e.g., <Text style={styles.demoBold}>111111</Text>) for verification
+                  </Text>
+                </View>
+              )}
 
               {/* Error message below form */}
               {!!error && (
@@ -499,6 +511,11 @@ const styles = StyleSheet.create({
     color: '#e5383b',
     marginBottom: 8,
   },
+  otpSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 16,
+  },
   // OTP
   otpRow: {
     flexDirection: 'row',
@@ -524,6 +541,21 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#e5383b',
     marginTop: 4,
+  },
+  demoBox: {
+    marginTop: 24,
+    padding: 12,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 8,
+  },
+  demoText: {
+    fontSize: 12,
+    color: '#2563eb',
+  },
+  demoBold: {
+    fontWeight: '700',
   },
   // Success
   successContent: {

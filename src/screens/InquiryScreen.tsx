@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -18,15 +19,28 @@ import InquiryCard, {
 } from '../components/dashboard/InquiryCard';
 import QuoteCard, {Quote} from '../components/dashboard/QuoteCard';
 import DisputeCard, {Dispute} from '../components/dashboard/DisputeCard';
+import FloatingActionButton from '../components/dashboard/FloatingActionButton';
 import FiltersOverlay, {FilterData} from '../components/overlays/FiltersOverlay';
+import VehicleSelectionOverlay, {
+  type VehicleInfo,
+} from '../components/overlays/VehicleSelectionOverlay';
+import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
+import RaiseDisputeOverlay from '../components/overlays/RaiseDisputeOverlay';
 import {
   getStoredUser,
   getInquiriesByWorkshopOwnerId,
   getQuotesByWorkshopOwnerId,
   getDisputesByWorkshopOwner,
+  getOrdersByVehicleId,
+  getOrderById,
+  createInquiryWithMedia,
+  createDisputeWithFiles,
   type InquiryResponse,
   type QuoteApiResponse,
   type DisputeListItemResponse,
+  type VehicleResponse,
+  type WorkshopOrderListItem,
+  type InquiryItemRequest,
 } from '../services/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -34,7 +48,7 @@ import {
 type ActiveTab = 'inquiries' | 'quotes' | 'disputes';
 
 // Extended types with rawDate for filtering
-type InquiryWithDate = Inquiry & {rawDate?: string};
+type InquiryWithDate = Inquiry & {rawDate?: string; numericId?: number};
 type QuoteWithDate = Quote & {rawDate?: string};
 type DisputeWithDate = Dispute & {rawDate?: string};
 
@@ -51,6 +65,7 @@ function formatDate(iso: string): string {
 function mapApiInquiry(api: InquiryResponse): InquiryWithDate {
   return {
     id: api.inquiryNumber,
+    numericId: api.id,
     vehicleName: api.vehicleName ?? '',
     numberPlate: api.numberPlate ?? '',
     placedDate: formatDate(api.placedDate),
@@ -229,6 +244,15 @@ export default function InquiryScreen() {
     sortBy: null,
   });
 
+  // Overlay states
+  const [showVehicleSelection, setShowVehicleSelection] = useState(false);
+  const [targetOverlay, setTargetOverlay] = useState<'requestPart' | 'raiseDispute' | null>(null);
+  const [showRequestPart, setShowRequestPart] = useState(false);
+  const [showRaiseDispute, setShowRaiseDispute] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleResponse | null>(null);
+  const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo | null>(null);
+  const [vehicleOrders, setVehicleOrders] = useState<any[]>([]);
+
   // ── Filter Functions ────────────────────────────────────────────────────────
 
   const applyInquiryFilters = useCallback((inquiryList: InquiryWithDate[], filters: FilterData) => {
@@ -398,6 +422,198 @@ export default function InquiryScreen() {
 
   const filterCount = countActiveFilters(activeFilters);
 
+  // ── FAB Handlers ────────────────────────────────────────────────────────────
+
+  const handleRequestPart = () => {
+    setTargetOverlay('requestPart');
+    setShowVehicleSelection(true);
+  };
+
+  const handleRaiseDispute = () => {
+    setTargetOverlay('raiseDispute');
+    setShowVehicleSelection(true);
+  };
+
+  const handleVehicleSelected = async (vehicle: VehicleResponse, info: VehicleInfo) => {
+    setSelectedVehicle(vehicle);
+    setVehicleInfo(info);
+
+    // Fetch orders if raising dispute
+    if (targetOverlay === 'raiseDispute') {
+      try {
+        const listRes = await getOrdersByVehicleId(vehicle.id);
+        if (listRes.success && listRes.data) {
+          const detailResults = await Promise.all(
+            listRes.data.orders.map((o: WorkshopOrderListItem) => getOrderById(o.id)),
+          );
+
+          const ordersWithParts = listRes.data.orders.map(
+            (o: WorkshopOrderListItem, idx: number) => {
+              const detail = detailResults[idx];
+              const items = detail.success && detail.data ? detail.data.items : [];
+              return {
+                id: String(o.id),
+                orderId: o.orderNumber,
+                date: formatDate(o.createdAt),
+                parts: items.map(item => ({
+                  id: String(item.id),
+                  name: item.partName,
+                })),
+              };
+            },
+          );
+          setVehicleOrders(ordersWithParts);
+        }
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+        setVehicleOrders([]);
+      }
+      setShowRaiseDispute(true);
+    } else if (targetOverlay === 'requestPart') {
+      setShowRequestPart(true);
+    }
+  };
+
+  const handleRequestPartSubmit = async (parts: any[]) => {
+    try {
+      const user = await getStoredUser();
+      if (!user || !selectedVehicle) {
+        Alert.alert('Error', 'User or vehicle not found. Please try again.');
+        return;
+      }
+
+      // Collect all audio and image files from parts
+      const audioFiles: any[] = [];
+      const imageFiles: any[] = [];
+
+      // Transform parts data and collect files
+      const items: InquiryItemRequest[] = parts.map(part => {
+        if (part.audioPath) {
+          audioFiles.push({
+            uri: part.audioPath,
+            name: `audio_${Date.now()}_${audioFiles.length}.mp4`,
+            type: 'audio/mp4',
+          });
+        }
+
+        part.images.forEach((img: any) => {
+          if (img && img.uri) {
+            imageFiles.push({
+              uri: img.uri,
+              name: img.name || `image_${Date.now()}_${imageFiles.length}.jpg`,
+              type: 'image/jpeg',
+            });
+          }
+        });
+
+        return {
+          partName: part.partName,
+          preferredBrand: part.preferredBrand,
+          quantity: parseInt(part.quantity, 10) || 1,
+          remark: part.remark,
+          audioDuration: part.audioDuration || undefined,
+        };
+      });
+
+      const result = await createInquiryWithMedia(
+        selectedVehicle.id,
+        user.id,
+        'Parts Request',
+        items,
+        audioFiles,
+        imageFiles,
+        undefined, // vehicleVisitId
+        null, // requestedByStaffId
+      );
+
+      if (result.success) {
+        Alert.alert(
+          'Success',
+          `Inquiry created successfully!\n\nInquiry Number: ${result.data?.inquiryNumber || 'N/A'}`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setShowRequestPart(false);
+                fetchInquiries();
+              },
+            },
+          ],
+        );
+      } else {
+        Alert.alert('Error', result.error || 'Failed to create inquiry');
+      }
+    } catch (error) {
+      console.error('Error creating inquiry:', error);
+      Alert.alert('Error', 'An error occurred while creating the inquiry');
+    }
+  };
+
+  const handleDisputeConfirm = async (formData: any) => {
+    try {
+      const user = await getStoredUser();
+      if (!user) {
+        Alert.alert('Error', 'User not found. Please log in again.');
+        return;
+      }
+
+      const selectedOrder = vehicleOrders.find(
+        o => o.orderId === formData.orderId,
+      );
+
+      if (!selectedOrder) {
+        Alert.alert('Error', 'Order not found');
+        return;
+      }
+
+      const numericOrderId = parseInt(selectedOrder.id, 10);
+
+      const imageFiles = formData.images.map((img: any, idx: number) => ({
+        uri: img.uri,
+        type: 'image/jpeg',
+        name: img.name || `image_${idx}.jpg`,
+      }));
+
+      const audioFile = formData.audioPath
+        ? {
+            uri: formData.audioPath,
+            type: 'audio/mp4',
+            name: `audio_${Date.now()}.mp4`,
+          }
+        : undefined;
+
+      const result = await createDisputeWithFiles(
+        numericOrderId,
+        user.id,
+        formData.partName,
+        formData.reason,
+        formData.remark,
+        formData.partId ? parseInt(formData.partId, 10) : undefined,
+        audioFile,
+        imageFiles[0],
+        imageFiles[1],
+        imageFiles[2],
+      );
+
+      if (result.success) {
+        Alert.alert('Success', 'Dispute created successfully', [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowRaiseDispute(false);
+              fetchDisputes();
+            },
+          },
+        ]);
+      } else {
+        Alert.alert('Error', result.error || 'Failed to create dispute');
+      }
+    } catch (error) {
+      console.error('Error creating dispute:', error);
+      Alert.alert('Error', 'An error occurred while creating the dispute');
+    }
+  };
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
@@ -530,10 +746,15 @@ export default function InquiryScreen() {
                       expandedInquiryId === inquiry.id ? null : inquiry.id,
                     )
                   }
-                  onEdit={id => console.log('Edit inquiry:', id)}
-                  onView={id => console.log('View inquiry:', id)}
-                  onApprove={id => console.log('Approve inquiry:', id)}
-                  onReRequest={id => console.log('Re-request inquiry:', id)}
+                  onEdit={() => console.log('Edit inquiry:', inquiry.id)}
+                  onView={() => {
+                    // Navigate to inquiry detail screen using numeric ID
+                    if (inquiry.numericId) {
+                      navigation.navigate('InquiryDetail', {inquiryId: inquiry.numericId});
+                    }
+                  }}
+                  onApprove={() => console.log('Approve inquiry:', inquiry.id)}
+                  onReRequest={() => console.log('Re-request inquiry:', inquiry.id)}
                   showNumberPlate={true}
                   action="approve"
                 />
@@ -660,6 +881,51 @@ export default function InquiryScreen() {
         onClose={() => setShowFilters(false)}
         onApply={handleApplyFilters}
       />
+
+      {/* ── Floating Action Button ───────────────────────────────────── */}
+      <FloatingActionButton
+        style={{bottom: insets.bottom + 54}}
+        navigationOptions={[
+          {label: 'Request Part', onPress: handleRequestPart},
+          {label: 'Raise Dispute', onPress: handleRaiseDispute},
+        ]}
+      />
+
+      {/* ── Vehicle Selection Overlay ─────────────────────────────────── */}
+      <VehicleSelectionOverlay
+        isOpen={showVehicleSelection}
+        onClose={() => setShowVehicleSelection(false)}
+        onVehicleSelected={handleVehicleSelected}
+        title={
+          targetOverlay === 'requestPart'
+            ? 'Select Vehicle for Request Part'
+            : 'Select Vehicle for Dispute'
+        }
+      />
+
+      {/* ── Request Part Overlay ──────────────────────────────────────── */}
+      {vehicleInfo && (
+        <RequestPartOverlay
+          isOpen={showRequestPart}
+          onClose={() => setShowRequestPart(false)}
+          onSubmit={handleRequestPartSubmit}
+        />
+      )}
+
+      {/* ── Raise Dispute Overlay ─────────────────────────────────────── */}
+      {vehicleInfo && selectedVehicle && (
+        <RaiseDisputeOverlay
+          isOpen={showRaiseDispute}
+          onClose={() => setShowRaiseDispute(false)}
+          onConfirm={handleDisputeConfirm}
+          orders={vehicleOrders}
+          buttonText="SEND REQUEST"
+          vehicleInfo={vehicleInfo}
+          onChatWithUs={() => {
+            console.log('Chat with us clicked');
+          }}
+        />
+      )}
     </View>
   );
 }

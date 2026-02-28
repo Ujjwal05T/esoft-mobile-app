@@ -11,6 +11,9 @@ import {
   Dimensions,
   Animated,
   Image,
+  Platform,
+  PermissionsAndroid,
+  Alert,
 } from 'react-native';
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
@@ -200,7 +203,11 @@ export default function RequestPartOverlay({
   const [isRecording, setIsRecording] = useState(false);
   const [recordingPartId, setRecordingPartId] = useState<string | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
-  const audioRecorderPlayer = useRef(AudioRecorderPlayer);
+  const audioRecorderPlayerRef = useRef<typeof AudioRecorderPlayer | null>(null);
+  if (!audioRecorderPlayerRef.current) {
+    audioRecorderPlayerRef.current = AudioRecorderPlayer;
+  }
+  const audioRecorderPlayer = audioRecorderPlayerRef.current;
   const recordingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingTimeRef = useRef(0);
   const recordingPartIdRef = useRef<string | null>(null);
@@ -284,7 +291,23 @@ export default function RequestPartOverlay({
   /* Audio recording */
   const startRecording = async (partId: string) => {
     try {
-      await audioRecorderPlayer.current.startRecorder();
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          {
+            title: 'Audio Recording Permission',
+            message: 'This app needs access to your microphone to record audio.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert('Permission Denied', 'Audio recording permission is required.');
+          return;
+        }
+      }
+      await audioRecorderPlayer?.startRecorder();
       recordingTimeRef.current = 0;
       recordingPartIdRef.current = partId;
       setIsRecording(true);
@@ -296,12 +319,13 @@ export default function RequestPartOverlay({
       }, 1000);
     } catch (e) {
       console.error('startRecorder error', e);
+      Alert.alert('Error', 'Could not start recording. Please check permissions.');
     }
   };
 
   const stopRecording = async () => {
     try {
-      const path = await audioRecorderPlayer.current.stopRecorder();
+      const path = await audioRecorderPlayer?.stopRecorder();
       if (recordingTimer.current) {
         clearInterval(recordingTimer.current);
         recordingTimer.current = null;
@@ -323,13 +347,13 @@ export default function RequestPartOverlay({
   const togglePlayback = async (partId: string, path: string) => {
     try {
       if (playingPartId === partId) {
-        await audioRecorderPlayer.current.stopPlayer();
+        await audioRecorderPlayer?.stopPlayer();
         setPlayingPartId(null);
       } else {
-        if (playingPartId) await audioRecorderPlayer.current.stopPlayer();
-        await audioRecorderPlayer.current.startPlayer(path);
+        if (playingPartId) await audioRecorderPlayer?.stopPlayer();
+        await audioRecorderPlayer?.startPlayer(path);
         setPlayingPartId(partId);
-        audioRecorderPlayer.current.addPlayBackListener(e => {
+        audioRecorderPlayer?.addPlayBackListener(e => {
           if (e.currentPosition >= e.duration) {
             setPlayingPartId(null);
           }

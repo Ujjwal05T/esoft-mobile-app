@@ -12,6 +12,8 @@ import StaffScreen from '../screens/StaffScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ReportsScreen from '../screens/ReportsScreen';
 import FAQsScreen from '../screens/FAQsScreen';
+import InquiryDetailScreen from '../screens/InquiryDetailScreen';
+import OrderDetailScreen from '../screens/OrderDetailScreen';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -19,7 +21,9 @@ export type RootStackParamList = {
   AIAssistant: undefined;
   Notifications: undefined;
   VehicleDetail: {vehicleId: number};
+  InquiryDetail: {inquiryId: number};
   QuoteDetail: {quoteId: number};
+  OrderDetail: {orderId: number};
   Payment: {quoteId: number};
   Staff: undefined;
   Profile: undefined;
@@ -71,8 +75,18 @@ const RootNavigator: React.FC = () => {
           options={{animation: 'slide_from_right', headerShown: false}}
         />
         <Stack.Screen
+          name="InquiryDetail"
+          component={InquiryDetailScreen}
+          options={{animation: 'slide_from_right', headerShown: false}}
+        />
+        <Stack.Screen
           name="QuoteDetail"
           component={QuoteDetailScreen}
+          options={{animation: 'slide_from_right', headerShown: false}}
+        />
+        <Stack.Screen
+          name="OrderDetail"
+          component={OrderDetailScreen}
           options={{animation: 'slide_from_right', headerShown: false}}
         />
         <Stack.Screen

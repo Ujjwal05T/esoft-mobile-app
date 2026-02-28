@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
@@ -34,6 +35,8 @@ import {
   createDisputeWithFiles,
   getDisputesByWorkshopOwner,
   getStoredUser,
+  createInquiryWithMedia,
+  SERVER_ORIGIN,
   type VehicleResponse,
   type VehicleVisitResponse,
   type JobCardResponse,
@@ -41,6 +44,7 @@ import {
   type QuoteApiResponse,
   type WorkshopOrderListItem,
   type DisputeListItemResponse,
+  type InquiryItemRequest,
 } from '../services/api';
 import type {DisputeFormData} from '../components/overlays/RaiseDisputeOverlay';
 
@@ -68,9 +72,13 @@ function mapOrderStatus(s: string): Order['status'] {
   return 'in-process';
 }
 
-function mapApiInquiry(api: InquiryResponse, vehicle: VehicleResponse): Inquiry {
+// Extended Inquiry type with numeric ID
+type InquiryWithNumericId = Inquiry & {numericId?: number};
+
+function mapApiInquiry(api: InquiryResponse, vehicle: VehicleResponse): InquiryWithNumericId {
   return {
     id: api.inquiryNumber,
+    numericId: api.id,
     vehicleName: api.vehicleName ?? `${vehicle.brand ?? ''} ${vehicle.model ?? ''}`.trim(),
     numberPlate: api.numberPlate ?? vehicle.plateNumber,
     placedDate: formatDate(api.placedDate),
@@ -85,7 +93,7 @@ function mapApiInquiry(api: InquiryResponse, vehicle: VehicleResponse): Inquiry 
       preferredBrand: item.preferredBrand,
       notes: item.remark,
       quantity: item.quantity,
-      imageUrl: item.image1Url ?? undefined,
+      imageUrl: item.image1Url ? `${SERVER_ORIGIN}${item.image1Url}` : undefined,
     })),
     media: [],
   };
@@ -283,7 +291,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   const [vehicle, setVehicle] = useState<VehicleResponse | null>(null);
   const [activeVisit, setActiveVisit] = useState<VehicleVisitResponse | null>(null);
   const [jobCards, setJobCards] = useState<JobCardResponse[]>([]);
-  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [inquiries, setInquiries] = useState<InquiryWithNumericId[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
@@ -525,6 +533,87 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
       }
     } catch (error) {
       console.error('Error creating dispute:', error);
+    }
+  };
+
+  // Handle request part form submission
+  const handleRequestPartSubmit = async (parts: any[]) => {
+    try {
+      // Get workshopOwnerId from stored user
+      const user = await getStoredUser();
+      if (!user) {
+        Alert.alert('Error', 'User not found. Please log in again.');
+        return;
+      }
+
+      // Collect all audio and image files from parts
+      const audioFiles: any[] = [];
+      const imageFiles: any[] = [];
+
+      // Transform parts data and collect files
+      const items: InquiryItemRequest[] = parts.map(part => {
+        // Add audio file if present
+        if (part.audioPath) {
+          audioFiles.push({
+            uri: part.audioPath,
+            name: `audio_${Date.now()}_${audioFiles.length}.mp4`,
+            type: 'audio/mp4',
+          });
+        }
+
+        // Add image files if present
+        part.images.forEach((img: any) => {
+          if (img && img.uri) {
+            imageFiles.push({
+              uri: img.uri,
+              name: img.name || `image_${Date.now()}_${imageFiles.length}.jpg`,
+              type: 'image/jpeg',
+            });
+          }
+        });
+
+        return {
+          partName: part.partName,
+          preferredBrand: part.preferredBrand,
+          quantity: parseInt(part.quantity, 10) || 1,
+          remark: part.remark,
+          audioDuration: part.audioDuration || undefined,
+        };
+      });
+
+      // Call API to create inquiry with media
+      const result = await createInquiryWithMedia(
+        vehicleId,
+        user.id,
+        'Parts Request',
+        items,
+        audioFiles,
+        imageFiles,
+        activeVisit?.id,
+        null // requestedByStaffId - owner creating inquiry
+      );
+
+      if (result.success) {
+        Alert.alert(
+          'Success',
+          `Inquiry created successfully!\n\nInquiry Number: ${result.data?.inquiryNumber || 'N/A'}`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Refresh inquiries list and switch to inquiry tab
+                fetchInquiries();
+                setActiveTab('inquiry');
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Error', result.error || 'Failed to create inquiry');
+      }
+    } catch (error) {
+      console.error('Error creating inquiry:', error);
+      Alert.alert('Error', 'An error occurred while creating the inquiry');
     }
   };
 
@@ -778,7 +867,9 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
                     key={order.id}
                     order={order}
                     defaultExpanded={false}
-                    onTrackOrder={id => console.log('Track order:', id)}
+                    onTrackOrder={id =>
+                      navigation.navigate('OrderDetail', {orderId: parseInt(id)})
+                    }
                     onDownloadInvoice={id => console.log('Invoice:', id)}
                   />
                 ))}
@@ -814,10 +905,15 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
                         expandedInquiryId === inquiry.id ? null : inquiry.id,
                       )
                     }
-                    onEdit={id => console.log('Edit inquiry:', id)}
-                    onView={id => console.log('View inquiry:', id)}
-                    onApprove={id => console.log('Approve inquiry:', id)}
-                    onReRequest={id => console.log('Re-request inquiry:', id)}
+                    onEdit={() => console.log('Edit inquiry:', inquiry.id)}
+                    onView={() => {
+                      // Navigate to inquiry detail screen using numeric ID
+                      if (inquiry.numericId) {
+                        navigation.navigate('InquiryDetail', {inquiryId: inquiry.numericId});
+                      }
+                    }}
+                    onApprove={() => console.log('Approve inquiry:', inquiry.id)}
+                    onReRequest={() => console.log('Re-request inquiry:', inquiry.id)}
                     showNumberPlate={false}
                     action={
                       inquiry.status === 'closed' || inquiry.status === 'approved'
@@ -940,6 +1036,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
       <RequestPartOverlay
         isOpen={showRequestPart}
         onClose={() => setShowRequestPart(false)}
+        onSubmit={handleRequestPartSubmit}
       />
     </SafeAreaView>
   );
