@@ -12,6 +12,7 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import Svg, {Path} from 'react-native-svg';
 import {RootStackParamList} from '../navigation/RootNavigator';
+import {useAuth} from '../context/AuthContext';
 import VehicleCard from '../components/dashboard/VehicleCard';
 import InquiryCard, {Inquiry} from '../components/dashboard/InquiryCard';
 import QuoteCard, {Quote} from '../components/dashboard/QuoteCard';
@@ -267,6 +268,7 @@ const grid = StyleSheet.create({
 export default function VehicleDetailScreen({navigation, route}: Props) {
   const insets = useSafeAreaInsets();
   const vehicleId = route.params.vehicleId;
+  const {userRole} = useAuth();
 
   // ── State ───────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<ActiveTab>('jobcard');
@@ -662,10 +664,13 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     },
   ];
 
+  // Role-aware tabs: Staff sees only Job card, Inquiry, Disputes (matching Next.js)
+  const isOwnerOrAdmin = userRole === 'owner' || userRole === 'admin';
+
   const tabs: {key: ActiveTab; label: string}[] = [
     {key: 'jobcard', label: 'Job card'},
-    {key: 'quotes', label: 'Quotes'},
-    {key: 'orders', label: 'Orders'},
+    ...(isOwnerOrAdmin ? [{key: 'quotes' as ActiveTab, label: 'Quotes'}] : []),
+    ...(isOwnerOrAdmin ? [{key: 'orders' as ActiveTab, label: 'Orders'}] : []),
     {key: 'inquiry', label: 'Inquiry'},
     {key: 'disputes', label: 'Disputes'},
   ];

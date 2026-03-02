@@ -1,98 +1,259 @@
-import React from 'react';
+import React, {useState, useCallback} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
+  ActivityIndicator,
   StatusBar,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useNavigation, useFocusEffect, CompositeNavigationProp} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
+import {RootStackParamList} from '../navigation/RootNavigator';
+import {MainTabParamList} from '../navigation/TabNavigator';
+import StatusCard from '../components/dashboard/StatusCard';
+import AddVehicleCard from '../components/dashboard/AddVehicleCard';
+import RaisePartsCard from '../components/dashboard/RaisePartsCard';
+import JobsCard from '../components/dashboard/JobsCard';
+import AddVehicleOverlay from '../components/overlays/AddVehicleOverlay';
+import VehicleSelectionOverlay, {
+  type VehicleInfo,
+} from '../components/overlays/VehicleSelectionOverlay';
+import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
+import Header from '../components/dashboard/Header';
+import {
+  getVehicles,
+  getStoredUser,
+  getInquiriesByWorkshopOwnerId,
+  createInquiryWithMedia,
+  type VehicleResponse,
+  type InquiryItemRequest,
+} from '../services/api';
 
-// Import SVG icons
-import VehicleIcon from '../assets/icons/vehicle.svg';
-import InquiryIcon from '../assets/icons/inquiry.svg';
-import OrderIcon from '../assets/icons/order.svg';
-import SearchIcon from '../assets/icons/search.svg';
-import ChevronRightIcon from '../assets/icons/chevron-right.svg';
+// Import vector icons for StatusCards
+import VehicleVectorIcon from '../assets/vectors/vehicle-vector.svg';
+import InquiryVectorIcon from '../assets/vectors/inquiry-vector.svg';
+
+// Composite navigation type that supports both tab and stack navigation
+type HomeScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 interface HomeScreenProps {
   navigation?: any;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
-  const quickActions = [
-    {label: 'Add Vehicle', Icon: VehicleIcon, color: '#e5383b'},
-    {label: 'New Inquiry', Icon: InquiryIcon, color: '#3b82f6'},
-    {label: 'View Reports', Icon: OrderIcon, color: '#10b981'},
-    {label: 'Search', Icon: SearchIcon, color: '#f59e0b'},
-  ];
+const HomeScreen: React.FC<HomeScreenProps> = () => {
+  const navigation = useNavigation<HomeScreenNavigationProp>();
+
+  // State for dynamic data
+  const [vehiclesCount, setVehiclesCount] = useState(0);
+  const [approvedInquiriesCount, setApprovedInquiriesCount] = useState(0);
+  const [totalInquiriesCount, setTotalInquiriesCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Overlay states
+  const [showAddVehicle, setShowAddVehicle] = useState(false);
+  const [showVehicleSelection, setShowVehicleSelection] = useState(false);
+  const [showRequestPart, setShowRequestPart] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleResponse | null>(
+    null,
+  );
+  const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo | null>(null);
+
+  // Fetch dashboard data
+  const fetchDashboardData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const user = await getStoredUser();
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch vehicles count
+      const vehiclesResult = await getVehicles();
+      if (vehiclesResult.success && vehiclesResult.data) {
+        const activeVehicles = vehiclesResult.data.vehicles.filter(
+          (v: VehicleResponse) => v.status === 'Active',
+        );
+        setVehiclesCount(activeVehicles.length);
+      }
+
+      // Fetch inquiries for approval ratio
+      const inquiriesResult = await getInquiriesByWorkshopOwnerId(user.id);
+      if (inquiriesResult.success && inquiriesResult.data) {
+        const inquiries = inquiriesResult.data.inquiries;
+        const approved = inquiries.filter(
+          (i: any) => i.status.toLowerCase() === 'approved',
+        );
+        setApprovedInquiriesCount(approved.length);
+        setTotalInquiriesCount(inquiries.length);
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchDashboardData();
+    }, [fetchDashboardData]),
+  );
+
+  const handleVehicleSelected = async (
+    vehicle: VehicleResponse,
+    info: VehicleInfo,
+  ) => {
+    setSelectedVehicle(vehicle);
+    setVehicleInfo(info);
+    setShowRequestPart(true);
+  };
+
+  const handleRequestPartSubmit = async (parts: any[]) => {
+    try {
+      const user = await getStoredUser();
+      if (!user || !selectedVehicle) {
+        console.error('User or vehicle not found');
+        return;
+      }
+
+      // Collect audio and image files
+      const audioFiles: any[] = [];
+      const imageFiles: any[] = [];
+
+      const items: InquiryItemRequest[] = parts.map(part => {
+        if (part.audioPath) {
+          audioFiles.push({
+            uri: part.audioPath,
+            name: `audio_${Date.now()}_${audioFiles.length}.mp4`,
+            type: 'audio/mp4',
+          });
+        }
+
+        part.images.forEach((img: any) => {
+          if (img && img.uri) {
+            imageFiles.push({
+              uri: img.uri,
+              name: img.name || `image_${Date.now()}_${imageFiles.length}.jpg`,
+              type: 'image/jpeg',
+            });
+          }
+        });
+
+        return {
+          partName: part.partName,
+          preferredBrand: part.preferredBrand,
+          quantity: parseInt(part.quantity, 10) || 1,
+          remark: part.remark,
+          audioDuration: part.audioDuration || undefined,
+        };
+      });
+
+      const result = await createInquiryWithMedia(
+        selectedVehicle.id,
+        user.id,
+        'Parts Request',
+        items,
+        audioFiles,
+        imageFiles,
+        undefined,
+        null,
+      );
+
+      if (result.success) {
+        setShowRequestPart(false);
+        fetchDashboardData(); // Refresh dashboard
+      }
+    } catch (error) {
+      console.error('Error creating inquiry:', error);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f5f7fa" />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <Header onNotificationPress={() => navigation.navigate('Notifications')} />
+
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.greeting}>Good Morning!</Text>
-          <Text style={styles.userName}>John Doe</Text>
-        </View>
-
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>12</Text>
-            <Text style={styles.statLabel}>Total Vehicles</Text>
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}>
+        {/* Loading State */}
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#e5383b" />
+            <Text style={styles.loadingText}>Loading dashboard...</Text>
           </View>
-          <View style={[styles.statCard, styles.statCardAccent]}>
-            <Text style={[styles.statNumber, styles.statNumberAccent]}>5</Text>
-            <Text style={[styles.statLabel, styles.statLabelAccent]}>
-              Active Jobs
-            </Text>
-          </View>
-        </View>
+        ) : (
+          <>
+            {/* Status Cards Row */}
+            <View style={styles.statusRow}>
+              <StatusCard
+                title="Vehicles Assigned"
+                value={vehiclesCount}
+                bgColor="#e5383b"
+                VectorIcon={VehicleVectorIcon}
+                vectorTop={15}
+                vectorOpacity={0.25}
+                onPress={() => navigation?.navigate('Vehicle')}
+              />
+              <StatusCard
+                title="Approved Inquiry"
+                value={`${approvedInquiriesCount}/${totalInquiriesCount}`}
+                bgColor="#161a1d"
+                VectorIcon={InquiryVectorIcon}
+                vectorTop={20}
+                vectorOpacity={0.2}
+                onPress={() => navigation?.navigate('Inquiry')}
+              />
+            </View>
 
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsGrid}>
-            {quickActions.map((action, index) => {
-              const IconComponent = action.Icon;
-              return (
-                <TouchableOpacity key={index} style={styles.quickActionCard}>
-                  <View
-                    style={[
-                      styles.quickActionIcon,
-                      {backgroundColor: `${action.color}15`},
-                    ]}>
-                    <IconComponent width={24} height={24} fill={action.color} />
-                  </View>
-                  <Text style={styles.quickActionText}>{action.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
+            {/* Add Vehicle Card */}
+            <AddVehicleCard onPress={() => setShowAddVehicle(true)} />
 
-        {/* Recent Activity */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          {[1, 2, 3].map(item => (
-            <TouchableOpacity key={item} style={styles.activityCard}>
-              <View style={styles.activityDot} />
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>
-                  Vehicle #{item} serviced
-                </Text>
-                <Text style={styles.activityTime}>2 hours ago</Text>
-              </View>
-              <ChevronRightIcon width={16} height={16} fill="#9ca3af" />
-            </TouchableOpacity>
-          ))}
-        </View>
+            {/* Raise Parts Inquiry Card */}
+            <RaisePartsCard
+              onPress={() => setShowVehicleSelection(true)}
+            />
+
+            {/* Jobs Card */}
+            <JobsCard />
+          </>
+        )}
       </ScrollView>
+
+      {/* Add Vehicle Overlay */}
+      <AddVehicleOverlay
+        isOpen={showAddVehicle}
+        onClose={() => {
+          setShowAddVehicle(false);
+          fetchDashboardData(); // Refresh after adding vehicle
+        }}
+        onSubmitRequest={() => fetchDashboardData()}
+      />
+
+      {/* Vehicle Selection Overlay for Parts Request */}
+      <VehicleSelectionOverlay
+        isOpen={showVehicleSelection}
+        onClose={() => setShowVehicleSelection(false)}
+        onVehicleSelected={handleVehicleSelected}
+        title="Select Vehicle for Parts Request"
+      />
+
+      {/* Request Part Overlay */}
+      {vehicleInfo && (
+        <RequestPartOverlay
+          isOpen={showRequestPart}
+          onClose={() => setShowRequestPart(false)}
+          onSubmit={handleRequestPartSubmit}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -100,131 +261,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#ffffff',
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  greeting: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  userName: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1f2937',
-  },
-  statsContainer: {
-    flexDirection: 'row',
+    padding: 16,
+    paddingBottom: 120,
     gap: 16,
-    marginBottom: 24,
   },
-  statCard: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statCardAccent: {
-    backgroundColor: '#e5383b',
-  },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  statNumberAccent: {
-    color: '#ffffff',
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  statLabelAccent: {
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 16,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
     gap: 12,
   },
-  quickActionCard: {
-    width: '47%',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  quickActionText: {
+  loadingText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    color: '#828282',
   },
-  activityCard: {
+  statusRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  activityDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#e5383b',
-    marginRight: 12,
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1f2937',
-    marginBottom: 2,
-  },
-  activityTime: {
-    fontSize: 12,
-    color: '#9ca3af',
+    gap: 16,
   },
 });
 

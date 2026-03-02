@@ -6,7 +6,9 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {
   HomeScreen,
   VehicleScreen,
+  StaffVehicleScreen,
   InquiryScreen,
+  StaffInquiryScreen,
   OwnerDashboardScreen,
   OrdersScreen,
 } from '../screens';
@@ -36,6 +38,27 @@ const iconMap: Record<string, SvgIcon> = {
 
 function TabBar({state, navigation}: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+
+  // Dynamic tab width and icon size based on number of tabs
+  const tabCount = state.routes.length;
+  const getTabWidth = () => {
+    // 3 tabs (staff): wider tabs for better spacing
+    if (tabCount === 3) return 95;
+    // 4 tabs (owner): slightly narrower to fit all
+    if (tabCount === 4) return 82;
+    // Fallback
+    return 85;
+  };
+
+  const getIconSize = () => {
+    // 3 tabs (staff): larger icons to fill the space
+    if (tabCount === 3) return 20;
+    // 4 tabs (owner): slightly smaller icons
+    if (tabCount === 4) return 16;
+    // Fallback
+    return 18;
+  };
+
   return (
     <View style={[styles.container, {paddingBottom: insets.bottom + 6}]}>
       <View style={styles.row}>
@@ -58,12 +81,16 @@ function TabBar({state, navigation}: BottomTabBarProps) {
             <TouchableOpacity
               key={route.key}
               onPress={onPress}
-              style={[styles.tabItem, isFocused && styles.tabItemActive]}
+              style={[
+                styles.tabItem,
+                {maxWidth: getTabWidth()},
+                isFocused && styles.tabItemActive,
+              ]}
               activeOpacity={0.8}>
               {Icon && (
                 <Icon
-                  width={16}
-                  height={16}
+                  width={getIconSize()}
+                  height={getIconSize()}
                   color={isFocused ? '#ffffff' : '#2b2b2b'}
                 />
               )}
@@ -102,6 +129,10 @@ const TabNavigator: React.FC = () => {
   const {userRole} = useAuth();
   const HomeComponent =
     userRole === 'owner' ? OwnerDashboardScreen : HomeScreen;
+  const VehicleComponent =
+    userRole === 'owner' || userRole === 'admin' ? VehicleScreen : StaffVehicleScreen;
+  const InquiryComponent =
+    userRole === 'owner' || userRole === 'admin' ? InquiryScreen : StaffInquiryScreen;
   const isAdminOrOwner = userRole === 'admin' || userRole === 'owner';
 
   return (
@@ -109,11 +140,11 @@ const TabNavigator: React.FC = () => {
       screenOptions={{headerShown: false}}
       tabBar={props => <TabBar {...props} />}>
       <Tab.Screen name="Home" component={HomeComponent} />
-      <Tab.Screen name="Vehicle" component={VehicleScreen} />
+      <Tab.Screen name="Vehicle" component={VehicleComponent} />
       {isAdminOrOwner && (
         <Tab.Screen name="Orders" component={OrdersScreen} />
       )}
-      <Tab.Screen name="Inquiry" component={InquiryScreen} />
+      <Tab.Screen name="Inquiry" component={InquiryComponent} />
     </Tab.Navigator>
   );
 };
@@ -129,7 +160,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8ebf2',
     paddingHorizontal: 10,
     paddingTop: 6,
-    maxWidth: 500,
+    maxWidth: 520, // Slightly increased for better spacing
     alignSelf: 'center',
     width: '100%',
   },
@@ -140,7 +171,7 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     flex: 1,
-    maxWidth: 85,
+    // maxWidth is now dynamic - set inline based on tab count
     height: 70,
     borderRadius: 16,
     alignItems: 'center',
