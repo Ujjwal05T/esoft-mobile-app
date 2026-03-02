@@ -884,7 +884,6 @@ export default function InquiryScreen() {
 
       {/* ── Floating Action Button ───────────────────────────────────── */}
       <FloatingActionButton
-        style={{bottom: insets.bottom + 54}}
         navigationOptions={[
           {label: 'Request Part', onPress: handleRequestPart},
           {label: 'Raise Dispute', onPress: handleRaiseDispute},

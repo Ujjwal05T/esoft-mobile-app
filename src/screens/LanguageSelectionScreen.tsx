@@ -6,12 +6,10 @@ import {
   TouchableOpacity,
   Dimensions,
   StatusBar,
+  Image,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Import logo
-import EtnaLogo from '../assets/logos/etna-logo.svg';
 
 interface LanguageSelectionScreenProps {
   navigation?: any;
@@ -78,9 +76,10 @@ const LanguageSelectionScreen: React.FC<LanguageSelectionScreenProps> = ({
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       {/* Header with Logo */}
       <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <EtnaLogo width={100} height={55} />
-        </View>
+          <Image 
+            source={require('../assets/logos/parts_now.png')}
+            style={{width: 186, height: 36}}
+          />
       </View>
 
       {/* Title */}

@@ -10,6 +10,7 @@ import {
   ScrollView,
   StatusBar,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {
@@ -179,17 +180,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-      {/* Header */}
+      {/* Header with Back Button and Logo */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={handleBack} style={styles.headerIconBtn}>
-            <Text style={styles.headerBackArrow}>{'←'}</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Register</Text>
+          <Image 
+            source={require('../assets/logos/parts_now.png')}
+            style={{width: 186, height: 36}}
+          />
         </View>
-        <TouchableOpacity style={styles.headerIconBtn}>
-          <Text style={styles.headerSearchIcon}>⌕</Text>
-        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
@@ -321,7 +319,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 label="GST Number"
                 value={workshopDetails.gstNumber}
                 onChange={setField('gstNumber')}
-                autoCapitalize="characters"
+                // autoCapitalize="characters"
                 maxLength={15}
               />
               <FloatingInput
@@ -454,11 +452,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
     backgroundColor: '#ffffff',
   },
   headerLeft: {

@@ -4,9 +4,9 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Image,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
-import EtnaLogo from '../../assets/logos/etna-logo.svg';
 import MobileSidebar from '../layout/MobileSidebar';
 import {subscribeToUnreadCount} from '../../services/notificationStorage';
 
@@ -48,7 +48,10 @@ export default function Header({onNotificationPress}: HeaderProps) {
           </TouchableOpacity>
 
           {/* Logo */}
-          <EtnaLogo width={66} height={36} />
+          <Image
+            source={require('../../assets/logos/parts_now.png')}
+            style={{width: 186, height: 36}}
+          />
         </View>
 
         {/* Notification Bell */}

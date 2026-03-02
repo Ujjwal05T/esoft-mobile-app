@@ -1,8 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Animated, Dimensions, StyleSheet, View} from 'react-native';
+import {Animated, Dimensions, Image, StyleSheet, View} from 'react-native';
 
-// Import the white logo
-import EtnaLogoWhite from '../assets/logos/etna-logo-white.svg';
+
 
 interface SplashScreenProps {
   /** Duration in milliseconds before the splash screen fades out */
@@ -88,7 +87,10 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
             transform: [{scale: logoScale}],
           },
         ]}>
-        <EtnaLogoWhite width={160} height={90} />
+          <Image 
+            source={require('../assets/logos/parts_now.png')}
+            style={{width: 186, height: 36}}
+          />
       </Animated.View>
     </Animated.View>
   );
@@ -103,7 +105,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: width,
     height: height,
-    backgroundColor: '#E5383B',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 99999,

@@ -81,13 +81,13 @@ const CloseIcon = () => (
   </Svg>
 );
 
-// Search icon
-const SearchIcon = () => (
-  <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+// Arrow Right icon
+const ArrowRightIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
     <Path
-      d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM18 18l-4.35-4.35"
-      stroke="#666"
-      strokeWidth={2}
+      d="M5 12H19M19 12L12 5M19 12L12 19"
+      stroke="#fff"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -173,15 +173,20 @@ export default function VehicleSelectionOverlay({
       onRequestClose={handleClose}>
       <View style={styles.overlay}>
         <View style={styles.sheet}>
+          {/* Drag Handle */}
+          <View style={styles.dragHandle} />
+
+          {/* Close Button */}
+          <TouchableOpacity
+            onPress={handleClose}
+            activeOpacity={0.7}
+            style={styles.closeBtn}>
+            <CloseIcon />
+          </TouchableOpacity>
+
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{title}</Text>
-            <TouchableOpacity
-              onPress={handleClose}
-              activeOpacity={0.7}
-              style={styles.closeBtn}>
-              <CloseIcon />
-            </TouchableOpacity>
           </View>
 
           <ScrollView
@@ -189,36 +194,34 @@ export default function VehicleSelectionOverlay({
             showsVerticalScrollIndicator={false}>
             {/* Search Section */}
             <View style={styles.section}>
-              <Text style={styles.label}>Enter Vehicle Plate Number</Text>
-              <View style={styles.searchRow}>
-                <View style={styles.inputWrapper}>
-                  <SearchIcon />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g., MP 09 GL 5656"
-                    placeholderTextColor="#999"
-                    value={plateNumber}
-                    onChangeText={text => {
-                      setPlateNumber(text);
-                      setError(null);
-                    }}
-                    autoCapitalize="characters"
-                    editable={!isSearching}
-                    onSubmitEditing={handleSearch}
-                  />
-                </View>
-                <TouchableOpacity
+              <View style={styles.plateInput}>
+                <TextInput
+                  value={plateNumber}
+                  onChangeText={text => {
+                    setPlateNumber(text.toUpperCase());
+                    setError(null);
+                  }}
+                  placeholder="MP 09 GL 5656"
+                  placeholderTextColor="#c4c4c4"
                   style={[
-                    styles.searchBtn,
-                    isSearching && styles.searchBtnDisabled,
+                    styles.plateTextInput,
+                    plateNumber ? styles.plateTextInputFilled : null,
                   ]}
+                  autoCapitalize="characters"
+                  editable={!isSearching}
+                  onSubmitEditing={handleSearch}
+                />
+                <TouchableOpacity
                   onPress={handleSearch}
                   disabled={isSearching}
-                  activeOpacity={0.8}>
+                  style={[
+                    styles.arrowBtn,
+                    plateNumber ? styles.arrowBtnActive : styles.arrowBtnInactive,
+                  ]}>
                   {isSearching ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={styles.searchBtnText}>Search</Text>
+                    <ArrowRightIcon />
                   )}
                 </TouchableOpacity>
               </View>
@@ -234,7 +237,6 @@ export default function VehicleSelectionOverlay({
             {/* Vehicle Card */}
             {vehicle && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Vehicle Found</Text>
                 <TouchableOpacity
                   onPress={handleVehicleSelect}
                   activeOpacity={0.9}
@@ -249,21 +251,13 @@ export default function VehicleSelectionOverlay({
                     additionalServices={0}
                   />
                   <View style={styles.tapHint}>
-                    <Text style={styles.tapHintText}>Tap to continue</Text>
+                    <Text style={styles.tapHintText}>Tap to select</Text>
                   </View>
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* Empty State */}
-            {!isSearching && !vehicle && !error && plateNumber.trim() === '' && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>Search for a Vehicle</Text>
-                <Text style={styles.emptySubtitle}>
-                  Enter the vehicle plate number to get started
-                </Text>
-              </View>
-            )}
+            
           </ScrollView>
         </View>
       </View>
@@ -278,34 +272,48 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#f5f3f4',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     maxHeight: SCREEN_H * 0.85,
-    paddingBottom: 20,
+    paddingBottom: 51,
+    paddingTop: 16,
+    paddingHorizontal: 18,
+    shadowColor: '#e5383b',
+    shadowOffset: {width: 0, height: -4},
+    shadowOpacity: 0.2,
+    shadowRadius: 19.2,
+    elevation: 10,
+  },
+  dragHandle: {
+    width: 172,
+    height: 4,
+    backgroundColor: '#d9d9d9',
+    borderRadius: 23,
+    alignSelf: 'center',
+    marginBottom: 34,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    // alignItems: 'center',
+    paddingLeft: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2b2b2b',
+    fontSize: 28,
+    fontWeight: '900',
+    color: 'rgba(0, 0, 0, 0.25)',
+    marginBottom: 24,
+    lineHeight: 34,
+    letterSpacing: -1,
+    paddingTop: 8,
   },
   closeBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 18,
     padding: 4,
+    zIndex: 10,
   },
   scrollContent: {
-    padding: 16,
     gap: 20,
   },
   section: {
@@ -321,22 +329,67 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  inputWrapper: {
+  plateInput: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d3d3d3',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    backgroundColor: '#f5f3f4',
+  },
+  plateTextInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+    paddingVertical: 12,
+  },
+  plateTextInputFilled: {
+    color: '#e5383b',
+  },
+  arrowBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  arrowBtnActive: {
+    backgroundColor: '#e5383b',
+  },
+  arrowBtnInactive: {
+    backgroundColor: '#828282',
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f3f4',
     borderRadius: 10,
     paddingHorizontal: 12,
+    paddingVertical: 10,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#d3d3d3',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    minHeight: 72,
+    width: '100%',
   },
   input: {
     flex: 1,
-    fontSize: 15,
-    color: '#2b2b2b',
-    paddingVertical: 12,
+    fontSize: 20,
+    fontWeight: '700',
+    color: 'rgba(0, 0, 0, 0.16)',
+    paddingVertical: 0,
+  },
+  inputFilled: {
+    color: '#000',
   },
   searchBtn: {
     backgroundColor: '#e5383b',
@@ -346,20 +399,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 90,
+    minHeight: 52,
   },
   searchBtnDisabled: {
     opacity: 0.6,
   },
   searchBtnText: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
   },
   errorBox: {
     backgroundColor: '#fee',
     padding: 12,
     borderRadius: 8,
-    borderLeftWidth: 3,
     borderLeftColor: '#e5383b',
   },
   errorText: {
