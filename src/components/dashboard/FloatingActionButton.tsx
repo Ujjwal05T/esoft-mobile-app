@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   Animated,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
@@ -12,6 +11,7 @@ import Svg, {Path} from 'react-native-svg';
 interface NavigationOption {
   label: string;
   onPress: () => void;
+  disabled?: boolean;
 }
 
 interface FloatingActionButtonProps {
@@ -75,9 +75,12 @@ export default function FloatingActionButton({
             {navigationOptions.map((option, i) => (
               <TouchableOpacity
                 key={i}
-                onPress={() => handleOptionPress(option)}
-                style={styles.optionBtn}>
-                <Text style={styles.optionText}>{option.label}</Text>
+                onPress={() => !option.disabled && handleOptionPress(option)}
+                style={[styles.optionBtn, option.disabled && styles.optionBtnDisabled]}
+                activeOpacity={option.disabled ? 1 : 0.7}>
+                <Text style={[styles.optionText, option.disabled && styles.optionTextDisabled]}>
+                  {option.label}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -124,6 +127,7 @@ const styles = StyleSheet.create({
   options: {
     marginBottom: 8,
     gap: 10,
+    alignItems: 'flex-end',
   },
   optionBtn: {
     backgroundColor: '#ffffff',
@@ -137,9 +141,15 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   optionText: {
-    fontWeight: '700',
+    fontWeight: '500',
     fontSize: 15,
     color: '#000000',
+  },
+  optionBtnDisabled: {
+    backgroundColor: '#f5f5f5',
+  },
+  optionTextDisabled: {
+    color: '#b0b0b0',
   },
   fab: {
     width: 74,

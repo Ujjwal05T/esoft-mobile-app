@@ -7,7 +7,6 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Animated,
-  Image,
 } from 'react-native';
 import Svg, {Path, Circle} from 'react-native-svg';
 import {useNavigation} from '@react-navigation/native';
@@ -62,6 +61,14 @@ const FAQIcon = () => (
   </Svg>
 );
 
+const LogoutIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M15 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H15" stroke="white" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M10 17L15 12L10 7" stroke="white" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M15 12H3" stroke="white" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 const DeleteIcon = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
     <Path d="M21 5.98C17.67 5.65 14.32 5.48 10.98 5.48C9 5.48 7.02 5.58 5.04 5.78L3 5.98" stroke="white" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
@@ -78,7 +85,7 @@ const BackIcon = () => (
 
 export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
   const navigation = useNavigation<any>();
-  const {user} = useAuth();
+  const {user, signOut, userRole} = useAuth();
   const translateX = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const [showContactOverlay, setShowContactOverlay] = useState(false);
@@ -127,17 +134,30 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
     setShowDeleteOverlay(true);
   };
 
+  const handleLogout = () => {
+    onClose();
+    signOut();
+  };
+
   const displayName = user?.name ?? 'User';
   const displayEmail = user?.email ?? '';
-  const displayAvatar = user?.avatar;
+
+  const isOwner = userRole === 'owner' || userRole === 'admin';
 
   const menuItems = [
-    {icon: <PersonIcon />, label: 'My account', action: () => navigate('Profile')},
-    {icon: <StaffIcon />, label: 'My staff', action: () => navigate('Staff')},
-    {icon: <ReportIcon />, label: 'Generate reports', action: () => navigate('Reports')},
+    {
+      icon: <PersonIcon />,
+      label: 'My account',
+      action: () => navigate(isOwner ? 'Profile' : 'StaffProfile'),
+    },
+    ...(isOwner ? [
+      {icon: <StaffIcon />, label: 'My staff', action: () => navigate('Staff')},
+      {icon: <ReportIcon />, label: 'Generate reports', action: () => navigate('Reports')},
+    ] : []),
     {icon: <PhoneIcon />, label: 'Contact ETNA', action: handleContactETNA},
     {icon: <FAQIcon />, label: 'FAQs', action: () => navigate('FAQs')},
     {icon: <DeleteIcon />, label: 'Delete account', action: handleDeleteAccount},
+    {icon: <LogoutIcon />, label: 'Logout', action: handleLogout},
   ];
 
   return (

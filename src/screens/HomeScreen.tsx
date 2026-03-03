@@ -28,9 +28,12 @@ import {
   getStoredUser,
   getInquiriesByWorkshopOwnerId,
   createInquiryWithMedia,
+  getStaffProfile,
   type VehicleResponse,
   type InquiryItemRequest,
+  type StaffPermissions,
 } from '../services/api';
+import NoPermissionOverlay from '../components/overlays/NoPermissionOverlay';
 
 // Import vector icons for StatusCards
 import VehicleVectorIcon from '../assets/vectors/vehicle-vector.svg';
@@ -55,10 +58,14 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
   const [totalInquiriesCount, setTotalInquiriesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Staff permissions
+  const [staffPermissions, setStaffPermissions] = useState<StaffPermissions | null>(null);
+
   // Overlay states
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [showVehicleSelection, setShowVehicleSelection] = useState(false);
   const [showRequestPart, setShowRequestPart] = useState(false);
+  const [showNoPermission, setShowNoPermission] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleResponse | null>(
     null,
   );
@@ -92,6 +99,14 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
         );
         setApprovedInquiriesCount(approved.length);
         setTotalInquiriesCount(inquiries.length);
+      }
+
+      // Fetch staff permissions if user is staff
+      if (user.role === 'staff') {
+        const profileResult = await getStaffProfile();
+        if (profileResult.success && profileResult.data) {
+          setStaffPermissions(profileResult.data.permissions);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
@@ -206,7 +221,7 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
               <StatusCard
                 title="Approved Inquiry"
                 value={`${approvedInquiriesCount}/${totalInquiriesCount}`}
-                bgColor="#161a1d"
+                bgColor="#2294F2"
                 VectorIcon={InquiryVectorIcon}
                 vectorTop={20}
                 vectorOpacity={0.2}
@@ -215,11 +230,25 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
             </View>
 
             {/* Add Vehicle Card */}
-            <AddVehicleCard onPress={() => setShowAddVehicle(true)} />
+            <AddVehicleCard
+              onPress={() => {
+                if (staffPermissions && !staffPermissions.addVehicle) {
+                  setShowNoPermission(true);
+                } else {
+                  setShowAddVehicle(true);
+                }
+              }}
+            />
 
             {/* Raise Parts Inquiry Card */}
             <RaisePartsCard
-              onPress={() => setShowVehicleSelection(true)}
+              onPress={() => {
+                if (staffPermissions && !staffPermissions.createInquiry) {
+                  setShowNoPermission(true);
+                } else {
+                  setShowVehicleSelection(true);
+                }
+              }}
             />
 
             {/* Jobs Card */}
@@ -254,6 +283,12 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
           onSubmit={handleRequestPartSubmit}
         />
       )}
+
+      {/* No Permission Overlay */}
+      <NoPermissionOverlay
+        isOpen={showNoPermission}
+        onClose={() => setShowNoPermission(false)}
+      />
     </SafeAreaView>
   );
 };

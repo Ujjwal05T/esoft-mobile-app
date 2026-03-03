@@ -41,6 +41,9 @@ export interface StaffPermissions {
   createJobCard: boolean;
   disputeApprovals: boolean;
   quoteApprovalsPayments: boolean;
+  addVehicle: boolean;
+  raiseDispute: boolean;
+  createInquiry: boolean;
 }
 
 const BackIcon = () => (
@@ -84,6 +87,9 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
     createJobCard: false,
     disputeApprovals: false,
     quoteApprovalsPayments: false,
+    addVehicle: false,
+    raiseDispute: false,
+    createInquiry: false,
   });
 
   const [showPermissions, setShowPermissions] = useState(false);
@@ -144,7 +150,10 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
     permissions.generateEstimates !== staffData.permissions.generateEstimates ||
     permissions.createJobCard !== staffData.permissions.createJobCard ||
     permissions.disputeApprovals !== staffData.permissions.disputeApprovals ||
-    permissions.quoteApprovalsPayments !== staffData.permissions.quoteApprovalsPayments
+    permissions.quoteApprovalsPayments !== staffData.permissions.quoteApprovalsPayments ||
+    permissions.addVehicle !== staffData.permissions.addVehicle ||
+    permissions.raiseDispute !== staffData.permissions.raiseDispute ||
+    permissions.createInquiry !== staffData.permissions.createInquiry
   );
 
   const hasChanges = staffData && (
@@ -237,6 +246,9 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
                 {key: 'createJobCard', label: 'Create Job Card'},
                 {key: 'disputeApprovals', label: 'Dispute Approvals'},
                 {key: 'quoteApprovalsPayments', label: 'Quote Approvals/Payments'},
+                {key: 'addVehicle', label: 'Add Vehicle'},
+                {key: 'raiseDispute', label: 'Raise Dispute'},
+                {key: 'createInquiry', label: 'Create Inquiry'},
               ].map(({key, label}) => (
                 <View key={key} style={styles.permissionRow}>
                   <Text style={[styles.permissionLabel, permissions[key as keyof StaffPermissions] && styles.permissionActive]}>

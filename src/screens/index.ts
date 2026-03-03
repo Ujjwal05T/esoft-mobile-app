@@ -14,3 +14,4 @@ export {default as PaymentScreen} from './PaymentScreen';
 export {default as NotificationsScreen} from './NotificationsScreen';
 export {default as ReportsScreen} from './ReportsScreen';
 export {default as FAQsScreen} from './FAQsScreen';
+export {default as StaffProfileScreen} from './StaffProfileScreen';

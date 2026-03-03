@@ -1,5 +1,5 @@
 import React, {createContext, useContext, useState, useEffect} from 'react';
-import {isAuthenticated as checkIsAuth, getStoredUser, removeFcmToken} from '../services/api';
+import {isAuthenticated as checkIsAuth, getStoredUser, removeFcmToken, removeAuthToken} from '../services/api';
 import type {UserInfo} from '../services/api';
 import type {UserRole} from '../components';
 import {registerFCMToken, unregisterFCMToken, onTokenRefresh} from '../services/notificationService';
@@ -72,6 +72,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     // Unregister FCM token before logging out
     await unregisterFCMToken();
     await removeFcmToken();
+    await removeAuthToken();
     setIsAuth(false);
     setUser(null);
     setUserRole('staff');

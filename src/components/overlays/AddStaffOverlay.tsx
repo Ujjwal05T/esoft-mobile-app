@@ -38,6 +38,9 @@ export interface StaffPermissions {
   createJobCard: boolean;
   disputeApprovals: boolean;
   quoteApprovalsPayments: boolean;
+  addVehicle: boolean;
+  raiseDispute: boolean;
+  createInquiry: boolean;
 }
 
 const BackIcon = () => (
@@ -154,6 +157,9 @@ export default function AddStaffOverlay({
     createJobCard: false,
     disputeApprovals: false,
     quoteApprovalsPayments: false,
+    addVehicle: false,
+    raiseDispute: false,
+    createInquiry: false,
   });
 
   const isFormValid = name.trim() !== '' && role.trim() !== '';
@@ -176,6 +182,9 @@ export default function AddStaffOverlay({
         createJobCard: false,
         disputeApprovals: false,
         quoteApprovalsPayments: false,
+        addVehicle: false,
+        raiseDispute: false,
+        createInquiry: false,
       });
     }
   }, [isOpen]);
@@ -271,6 +280,9 @@ export default function AddStaffOverlay({
                 {key: 'createJobCard', label: 'Create Job Card'},
                 {key: 'disputeApprovals', label: 'Dispute Approvals'},
                 {key: 'quoteApprovalsPayments', label: 'Quote Approvals/Payments'},
+                {key: 'addVehicle', label: 'Add Vehicle'},
+                {key: 'raiseDispute', label: 'Raise Dispute'},
+                {key: 'createInquiry', label: 'Create Inquiry'},
               ].map(({key, label}) => (
                 <View key={key} style={styles.permissionRow}>
                   <Text style={[styles.permissionLabel, permissions[key as keyof StaffPermissions] && styles.permissionActive]}>

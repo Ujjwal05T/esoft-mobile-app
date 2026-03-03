@@ -3,8 +3,8 @@ import * as Keychain from 'react-native-keychain';
 // API Base URL
 // const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
 // export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-const API_BASE_URL = 'http://192.168.1.24:5196/api';
-export const SERVER_ORIGIN = 'http://192.168.1.24:5196';
+const API_BASE_URL = 'http://192.168.137.1:5196/api';
+export const SERVER_ORIGIN = 'http://192.168.137.1:5196';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -890,6 +890,9 @@ export interface StaffPermissions {
   createJobCard: boolean;
   disputeApprovals: boolean;
   quoteApprovalsPayments: boolean;
+  addVehicle: boolean;
+  raiseDispute: boolean;
+  createInquiry: boolean;
 }
 
 // Staff Response interface (for staff management by owner)
@@ -936,6 +939,9 @@ export interface CreateStaffData {
   canCreateJobCard?: boolean;
   canApproveDisputes?: boolean;
   canApproveQuotesPayments?: boolean;
+  canAddVehicle?: boolean;
+  canRaiseDispute?: boolean;
+  canCreateInquiry?: boolean;
 }
 
 // Update Staff Data interface
@@ -953,6 +959,9 @@ export interface UpdateStaffData {
   canCreateJobCard?: boolean;
   canApproveDisputes?: boolean;
   canApproveQuotesPayments?: boolean;
+  canAddVehicle?: boolean;
+  canRaiseDispute?: boolean;
+  canCreateInquiry?: boolean;
 }
 
 // Update Staff Permissions Data interface
@@ -963,6 +972,9 @@ export interface UpdateStaffPermissionsData {
   canCreateJobCard: boolean;
   canApproveDisputes: boolean;
   canApproveQuotesPayments: boolean;
+  canAddVehicle: boolean;
+  canRaiseDispute: boolean;
+  canCreateInquiry: boolean;
 }
 
 // Get all staff members
@@ -983,6 +995,28 @@ export async function getActiveStaff() {
 export async function getInactiveStaff() {
   return apiRequest<StaffListResponse>('/staff/inactive', {
     method: 'GET',
+  });
+}
+
+// Get the currently authenticated staff member's own profile
+export async function getStaffProfile() {
+  return apiRequest<WorkshopStaffResponse>('/staff/me', {
+    method: 'GET',
+  });
+}
+
+// Update the currently authenticated staff member's own profile
+export interface UpdateStaffSelfData {
+  name?: string;
+  phoneNumber?: string;
+  email?: string;
+  address?: string;
+}
+
+export async function updateStaffProfile(data: UpdateStaffSelfData) {
+  return apiRequest<WorkshopStaffResponse>('/staff/me', {
+    method: 'PUT',
+    body: JSON.stringify(data),
   });
 }
 

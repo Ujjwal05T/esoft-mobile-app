@@ -37,6 +37,7 @@ import {
   getDisputesByWorkshopOwner,
   getStoredUser,
   createInquiryWithMedia,
+  getStaffProfile,
   SERVER_ORIGIN,
   type VehicleResponse,
   type VehicleVisitResponse,
@@ -46,6 +47,7 @@ import {
   type WorkshopOrderListItem,
   type DisputeListItemResponse,
   type InquiryItemRequest,
+  type StaffPermissions,
 } from '../services/api';
 import type {DisputeFormData} from '../components/overlays/RaiseDisputeOverlay';
 
@@ -298,6 +300,9 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
 
+  // Staff permissions (null = owner, all actions allowed)
+  const [permissions, setPermissions] = useState<StaffPermissions | null>(null);
+
   // Loading / error
   const [loadingVehicle, setLoadingVehicle] = useState(true);
   const [loadingJobs, setLoadingJobs] = useState(false);
@@ -442,7 +447,14 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
 
   useEffect(() => {
     fetchVehicle();
-  }, [fetchVehicle]);
+    if (userRole === 'staff') {
+      getStaffProfile().then(res => {
+        if (res.success && res.data) {
+          setPermissions(res.data.permissions);
+        }
+      });
+    }
+  }, [fetchVehicle, userRole]);
 
   useEffect(() => {
     if (vehicle) {
@@ -970,10 +982,32 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         style={{bottom: insets.bottom + 54}}
         navigationOptions={[
           {label: 'Gate Out', onPress: () => setShowGateOut(true)},
-          {label: 'Generate Estimate', onPress: () => setShowEstimation(true)},
-          {label: 'Create New Job', onPress: () => setShowNewJob(true)},
-          {label: 'Raise Dispute', onPress: () => setShowRaiseDispute(true)},
-          {label: 'Request Part', onPress: () => setShowRequestPart(true)},
+          {
+            label: 'Generate Estimate',
+            onPress: () => setShowEstimation(true),
+            disabled:
+              jobCards.length === 0 ||
+              (permissions !== null && !permissions.generateEstimates),
+          },
+          {
+            label: 'Create New Job',
+            onPress: () => setShowNewJob(true),
+            disabled: permissions !== null && !permissions.createJobCard,
+          },
+          {
+            label: 'Raise Dispute',
+            onPress: () => setShowRaiseDispute(true),
+            disabled:
+              jobCards.length === 0 ||
+              (permissions !== null && !permissions.raiseDispute),
+          },
+          {
+            label: 'Request Part',
+            onPress: () => setShowRequestPart(true),
+            disabled:
+              jobCards.length === 0 ||
+              (permissions !== null && !permissions.createInquiry),
+          },
         ]}
       />
 

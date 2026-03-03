@@ -158,6 +158,9 @@ export default function StaffScreen() {
           createJobCard: staff.permissions.createJobCard,
           disputeApprovals: staff.permissions.disputeApprovals,
           quoteApprovalsPayments: staff.permissions.quoteApprovalsPayments,
+          addVehicle: staff.permissions.addVehicle,
+          raiseDispute: staff.permissions.raiseDispute,
+          createInquiry: staff.permissions.createInquiry,
         },
       });
       setShowEditOverlay(true);
@@ -191,6 +194,9 @@ export default function StaffScreen() {
       canCreateJobCard: staffData.permissions.createJobCard,
       canApproveDisputes: staffData.permissions.disputeApprovals,
       canApproveQuotesPayments: staffData.permissions.quoteApprovalsPayments,
+      canAddVehicle: staffData.permissions.addVehicle,
+      canRaiseDispute: staffData.permissions.raiseDispute,
+      canCreateInquiry: staffData.permissions.createInquiry,
     };
 
     let response;
@@ -229,6 +235,9 @@ export default function StaffScreen() {
       canCreateJobCard: updatedStaff.permissions.createJobCard,
       canApproveDisputes: updatedStaff.permissions.disputeApprovals,
       canApproveQuotesPayments: updatedStaff.permissions.quoteApprovalsPayments,
+      canAddVehicle: updatedStaff.permissions.addVehicle,
+      canRaiseDispute: updatedStaff.permissions.raiseDispute,
+      canCreateInquiry: updatedStaff.permissions.createInquiry,
     };
 
     // First update the staff details

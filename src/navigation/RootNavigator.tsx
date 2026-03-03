@@ -12,6 +12,7 @@ import StaffScreen from '../screens/StaffScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ReportsScreen from '../screens/ReportsScreen';
 import FAQsScreen from '../screens/FAQsScreen';
+import StaffProfileScreen from '../screens/StaffProfileScreen';
 import InquiryDetailScreen from '../screens/InquiryDetailScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
 
@@ -27,6 +28,7 @@ export type RootStackParamList = {
   Payment: {quoteId: number};
   Staff: undefined;
   Profile: undefined;
+  StaffProfile: undefined;
   Reports: undefined;
   FAQs: undefined;
 };
@@ -48,72 +50,81 @@ const RootNavigator: React.FC = () => {
         screenOptions={{
           headerShown: false,
           animation: 'fade',
-        }}
-        initialRouteName={isAuth ? 'MainTabs' : 'Auth'}>
-        <Stack.Screen name="Auth" component={AuthStack} />
-        <Stack.Screen name="MainTabs" component={TabNavigator} />
-        <Stack.Screen
-          name="AIAssistant"
-          component={AIAssistantScreen}
-          options={{
-            presentation: 'fullScreenModal',
-            animation: 'slide_from_bottom',
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="Notifications"
-          component={NotificationsScreen}
-          options={{
-            animation: 'slide_from_right',
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="VehicleDetail"
-          component={VehicleDetailScreen}
-          options={{animation: 'slide_from_right', headerShown: false}}
-        />
-        <Stack.Screen
-          name="InquiryDetail"
-          component={InquiryDetailScreen}
-          options={{animation: 'slide_from_right', headerShown: false}}
-        />
-        <Stack.Screen
-          name="QuoteDetail"
-          component={QuoteDetailScreen}
-          options={{animation: 'slide_from_right', headerShown: false}}
-        />
-        <Stack.Screen
-          name="OrderDetail"
-          component={OrderDetailScreen}
-          options={{animation: 'slide_from_right', headerShown: false}}
-        />
-        <Stack.Screen
-          name="Payment"
-          component={PaymentScreen}
-          options={{animation: 'slide_from_right', headerShown: false}}
-        />
-        <Stack.Screen
-          name="Staff"
-          component={StaffScreen}
-          options={{animation: 'slide_from_right', headerShown: false}}
-        />
-        <Stack.Screen
-          name="Profile"
-          component={ProfileScreen}
-          options={{animation: 'slide_from_right', headerShown: false}}
-        />
-        <Stack.Screen
-          name="Reports"
-          component={ReportsScreen}
-          options={{animation: 'slide_from_right', headerShown: false}}
-        />
-        <Stack.Screen
-          name="FAQs"
-          component={FAQsScreen}
-          options={{animation: 'slide_from_right', headerShown: false}}
-        />
+        }}>
+        {isAuth ? (
+          <>
+            <Stack.Screen name="MainTabs" component={TabNavigator} />
+            <Stack.Screen
+              name="AIAssistant"
+              component={AIAssistantScreen}
+              options={{
+                presentation: 'fullScreenModal',
+                animation: 'slide_from_bottom',
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="Notifications"
+              component={NotificationsScreen}
+              options={{
+                animation: 'slide_from_right',
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="VehicleDetail"
+              component={VehicleDetailScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="InquiryDetail"
+              component={InquiryDetailScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="QuoteDetail"
+              component={QuoteDetailScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="OrderDetail"
+              component={OrderDetailScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="Payment"
+              component={PaymentScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="Staff"
+              component={StaffScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="Profile"
+              component={ProfileScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="Reports"
+              component={ReportsScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="FAQs"
+              component={FAQsScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="StaffProfile"
+              component={StaffProfileScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+          </>
+        ) : (
+          <Stack.Screen name="Auth" component={AuthStack} />
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

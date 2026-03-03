@@ -11,11 +11,13 @@ import {
 import StaffCard, {StaffMember} from '../dashboard/StaffCard';
 import VehicleCard from '../dashboard/VehicleCard';
 import JobCard, {JobCardProps} from '../dashboard/JobCard';
+import {StaffPermissions} from '../../services/api';
 
 interface ViewStaffOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   staff: StaffMember | null;
+  permissions?: StaffPermissions;
   vehicles?: {
     id: string; plateNumber: string; year?: number;
     make: string; model: string; specs: string; services?: string[];
@@ -23,7 +25,19 @@ interface ViewStaffOverlayProps {
   jobs?: JobCardProps[];
 }
 
-type TabType = 'Vehicles' | 'Jobs';
+type TabType = 'Vehicles' | 'Jobs' | 'Permissions';
+
+const PERMISSION_LABELS: {key: keyof StaffPermissions; label: string}[] = [
+  {key: 'vehicleApprovals', label: 'Vehicle Approvals'},
+  {key: 'inquiryApprovals', label: 'Inquiry Approvals'},
+  {key: 'generateEstimates', label: 'Generate Estimates'},
+  {key: 'createJobCard', label: 'Create Job Card'},
+  {key: 'disputeApprovals', label: 'Dispute Approvals'},
+  {key: 'quoteApprovalsPayments', label: 'Quote Approvals/Payments'},
+  {key: 'addVehicle', label: 'Add Vehicle'},
+  {key: 'raiseDispute', label: 'Raise Dispute'},
+  {key: 'createInquiry', label: 'Create Inquiry'},
+];
 
 export default function ViewStaffOverlay({
   isOpen,

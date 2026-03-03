@@ -34,11 +34,13 @@ import {
   getOrderById,
   createInquiryWithMedia,
   createDisputeWithFiles,
+  getStaffProfile,
   type InquiryResponse,
   type DisputeListItemResponse,
   type VehicleResponse,
   type WorkshopOrderListItem,
   type InquiryItemRequest,
+  type StaffPermissions,
 } from '../services/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -214,6 +216,8 @@ export default function StaffInquiryScreen() {
     sortBy: null,
   });
 
+  const [permissions, setPermissions] = useState<StaffPermissions | null>(null);
+
   // Overlay states
   const [showVehicleSelection, setShowVehicleSelection] = useState(false);
   const [targetOverlay, setTargetOverlay] = useState<'requestPart' | 'raiseDispute' | null>(null);
@@ -316,6 +320,11 @@ export default function StaffInquiryScreen() {
   useEffect(() => {
     fetchInquiries();
     fetchDisputes();
+    getStaffProfile().then(res => {
+      if (res.success && res.data) {
+        setPermissions(res.data.permissions);
+      }
+    });
   }, [fetchInquiries, fetchDisputes]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
@@ -721,8 +730,16 @@ export default function StaffInquiryScreen() {
       {/* ── Floating Action Button ───────────────────────────────────── */}
       <FloatingActionButton
         navigationOptions={[
-          {label: 'Request Part', onPress: handleRequestPart},
-          {label: 'Raise Dispute', onPress: handleRaiseDispute},
+          {
+            label: 'Request Part',
+            onPress: handleRequestPart,
+            disabled: permissions !== null && !permissions.createInquiry,
+          },
+          {
+            label: 'Raise Dispute',
+            onPress: handleRaiseDispute,
+            disabled: permissions !== null && !permissions.raiseDispute,
+          },
         ]}
       />
 

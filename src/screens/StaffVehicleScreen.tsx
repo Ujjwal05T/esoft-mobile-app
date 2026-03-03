@@ -17,7 +17,7 @@ import {RootStackParamList} from '../navigation/RootNavigator';
 import {MainTabParamList} from '../navigation/TabNavigator';
 import AddVehicleOverlay from '../components/overlays/AddVehicleOverlay';
 import FloatingActionButton from '../components/dashboard/FloatingActionButton';
-import {getVehicles, type VehicleResponse} from '../services/api';
+import {getVehicles, getStaffProfile, type VehicleResponse, type StaffPermissions} from '../services/api';
 import Header from '../components/dashboard/Header';
 
 // Composite navigation type that supports both tab and stack navigation
@@ -63,12 +63,20 @@ export default function StaffVehicleScreen() {
   const [vehicles, setVehicles] = useState<DisplayVehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<StaffPermissions | null>(null);
 
   const fetchVehicles = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await getVehicles();
+      const [result, profileResult] = await Promise.all([
+        getVehicles(),
+        getStaffProfile(),
+      ]);
+
+      if (profileResult.success && profileResult.data) {
+        setPermissions(profileResult.data.permissions);
+      }
       if (result.success && result.data) {
         const activeVehicles: DisplayVehicle[] = result.data.vehicles
           .filter((v: VehicleResponse) => v.status === 'Active')
@@ -134,12 +142,14 @@ export default function StaffVehicleScreen() {
           <Text style={styles.emptySubtitle}>
             Add your first vehicle to get started
           </Text>
-          <TouchableOpacity
-            style={[styles.actionBtn, {marginTop: 8}]}
-            onPress={() => setShowAddVehicle(true)}
-            activeOpacity={0.8}>
-            <Text style={styles.actionBtnText}>Add Vehicle</Text>
-          </TouchableOpacity>
+          {(permissions === null || permissions.addVehicle) && (
+            <TouchableOpacity
+              style={[styles.actionBtn, {marginTop: 8}]}
+              onPress={() => setShowAddVehicle(true)}
+              activeOpacity={0.8}>
+              <Text style={styles.actionBtnText}>Add Vehicle</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -178,6 +188,7 @@ export default function StaffVehicleScreen() {
           {
             label: 'Add new vehicle',
             onPress: () => setShowAddVehicle(true),
+            disabled: permissions !== null && !permissions.addVehicle,
           },
         ]}
       />

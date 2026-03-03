@@ -264,7 +264,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
               </TouchableOpacity>
 
               {/* Demo hint for bypass number (Play Store verification) */}
-              {mobileNumber === '7024316744' && (
+              {(mobileNumber === '7024316744' || mobileNumber === '7024316755') && (
                 <View style={styles.demoBox}>
                   <Text style={styles.demoText}>
                     <Text style={styles.demoBold}>Test Mode:</Text> You can use any 6-digit code (e.g., <Text style={styles.demoBold}>111111</Text>) for verification
