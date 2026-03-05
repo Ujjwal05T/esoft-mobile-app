@@ -13,11 +13,11 @@ import {
   Image,
   Platform,
   PermissionsAndroid,
-  Alert,
 } from 'react-native';
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import {launchImageLibrary} from 'react-native-image-picker';
+import AppAlert, {AlertState} from './AppAlert';
 
 const SCREEN_H = Dimensions.get('window').height;
 
@@ -192,6 +192,9 @@ export default function RequestPartOverlay({
   onClose,
   onSubmit,
 }: RequestPartOverlayProps) {
+  /* AppAlert */
+  const [appAlert, setAppAlert] = useState<AlertState | null>(null);
+
   /* View */
   const [currentView, setCurrentView] = useState<'search' | 'form'>('search');
   const [partNumber, setPartNumber] = useState('');
@@ -303,7 +306,7 @@ export default function RequestPartOverlay({
           }
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert('Permission Denied', 'Audio recording permission is required.');
+          setAppAlert({type: 'warning', title: 'Permission Denied', message: 'Audio recording permission is required.'});
           return;
         }
       }
@@ -319,7 +322,7 @@ export default function RequestPartOverlay({
       }, 1000);
     } catch (e) {
       console.error('startRecorder error', e);
-      Alert.alert('Error', 'Could not start recording. Please check permissions.');
+      setAppAlert({type: 'error', message: 'Could not start recording. Please check permissions.'});
     }
   };
 
@@ -858,6 +861,22 @@ export default function RequestPartOverlay({
           </Animated.View>
         )}
       </View>
+      <AppAlert
+        isOpen={!!appAlert}
+        type={appAlert?.type ?? 'info'}
+        title={appAlert?.title}
+        message={appAlert?.message ?? ''}
+        onClose={() => {
+          const done = appAlert?.onDone;
+          setAppAlert(null);
+          done?.();
+        }}
+        onConfirm={appAlert?.onConfirm ? () => {
+          const confirm = appAlert.onConfirm!;
+          setAppAlert(null);
+          confirm();
+        } : undefined}
+      />
     </Modal>
   );
 }

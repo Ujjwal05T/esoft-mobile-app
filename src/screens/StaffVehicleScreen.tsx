@@ -166,7 +166,7 @@ export default function StaffVehicleScreen() {
               key={vehicle.id}
               activeOpacity={0.85}
               onPress={() =>
-                navigation.navigate('VehicleDetail', {vehicleId: Number(vehicle.id)})
+                navigation.navigate('StaffVehicleDetail', {vehicleId: Number(vehicle.id)})
               }>
               <VehicleCard
                 plateNumber={vehicle.plateNumber}

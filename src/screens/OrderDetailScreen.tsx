@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
@@ -20,6 +19,7 @@ import {
   type OrderItemApiResponse,
 } from '../services/api';
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
+import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 
 type OrderDetailRouteProp = RouteProp<RootStackParamList, 'OrderDetail'>;
 type OrderDetailNavigationProp = NativeStackNavigationProp<
@@ -335,6 +335,7 @@ export default function OrderDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<OrderItemApiResponse | null>(null);
   const [showDisputeOverlay, setShowDisputeOverlay] = useState(false);
+  const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   useEffect(() => {
     async function fetchOrder() {
@@ -362,11 +363,11 @@ export default function OrderDetailScreen() {
   const status: OrderStatus = order ? mapStatus(order.status) : 'in-process';
 
   const handleDownloadInvoice = () => {
-    Alert.alert('Download Invoice', 'Invoice download functionality coming soon!');
+    setAppAlert({type: 'info', title: 'Download Invoice', message: 'Invoice download functionality coming soon!'});
   };
 
   const handleTrack = () => {
-    Alert.alert('Track Order', 'Order tracking functionality coming soon!');
+    setAppAlert({type: 'info', title: 'Track Order', message: 'Order tracking functionality coming soon!'});
   };
 
   const handlePartClick = (item: OrderItemApiResponse) => {
@@ -376,7 +377,7 @@ export default function OrderDetailScreen() {
 
   const handleRaiseDispute = (item: OrderItemApiResponse) => {
     // TODO: Call raise dispute API
-    Alert.alert('Raise Dispute', `Dispute raised for ${item.partName}!\n\nThis will be connected to the API soon.`);
+    setAppAlert({type: 'info', title: 'Raise Dispute', message: `Dispute raised for ${item.partName}!\n\nThis will be connected to the API soon.`});
     setShowDisputeOverlay(false);
     setSelectedItem(null);
   };
@@ -504,6 +505,22 @@ export default function OrderDetailScreen() {
           onRaiseDispute={handleRaiseDispute}
         />
       )}
+      <AppAlert
+        isOpen={!!appAlert}
+        type={appAlert?.type ?? 'info'}
+        title={appAlert?.title}
+        message={appAlert?.message ?? ''}
+        onClose={() => {
+          const done = appAlert?.onDone;
+          setAppAlert(null);
+          done?.();
+        }}
+        onConfirm={appAlert?.onConfirm ? () => {
+          const confirm = appAlert.onConfirm!;
+          setAppAlert(null);
+          confirm();
+        } : undefined}
+      />
     </SafeAreaView>
   );
 }

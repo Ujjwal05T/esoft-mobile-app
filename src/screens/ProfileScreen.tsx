@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 
 import Svg, {Path} from 'react-native-svg';
@@ -17,6 +16,7 @@ import {useNavigation} from '@react-navigation/native';
 import {useAuth} from '../context/AuthContext';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {getProfile, updateProfile, UpdateProfileData} from '../services/api';
+import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 
 const BackIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -101,6 +101,7 @@ export default function ProfileScreen() {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   // Fetch profile data on mount
   useEffect(() => {
@@ -114,7 +115,7 @@ export default function ProfileScreen() {
     if (response.success && response.data?.data) {
       setProfileData(response.data.data);
     } else {
-      Alert.alert('Error', response.error || 'Failed to load profile');
+      setAppAlert({type: 'error', message: response.error || 'Failed to load profile'});
     }
     setLoading(false);
   };
@@ -140,12 +141,12 @@ export default function ProfileScreen() {
     setSaving(false);
 
     if (response.success) {
-      Alert.alert('Success', 'Profile updated successfully');
+      setAppAlert({type: 'success', message: 'Profile updated successfully'});
       setIsEditing(false);
       // Refresh profile data
       fetchProfile();
     } else {
-      Alert.alert('Error', response.error || 'Failed to update profile');
+      setAppAlert({type: 'error', message: response.error || 'Failed to update profile'});
     }
   };
 
@@ -346,6 +347,23 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <AppAlert
+        isOpen={!!appAlert}
+        type={appAlert?.type ?? 'info'}
+        title={appAlert?.title}
+        message={appAlert?.message ?? ''}
+        onClose={() => {
+          const done = appAlert?.onDone;
+          setAppAlert(null);
+          done?.();
+        }}
+        onConfirm={appAlert?.onConfirm ? () => {
+          const confirm = appAlert.onConfirm!;
+          setAppAlert(null);
+          confirm();
+        } : undefined}
+      />
     </SafeAreaView>
   );
 }

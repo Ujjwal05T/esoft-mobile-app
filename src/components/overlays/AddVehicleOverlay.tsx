@@ -15,7 +15,6 @@ import {
   PermissionsAndroid,
   Animated,
   Easing,
-  Alert,
 } from 'react-native';
 import {launchImageLibrary} from 'react-native-image-picker';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
@@ -27,6 +26,7 @@ import FloatingInput from '../ui/FloatingInput';
 import VehicleCard from '../dashboard/VehicleCard';
 import {createVehicle, gateInVehicle, gateInVehicleWithMedia, scanRcCard, scanVehiclePlate} from '../../services/api';
 import CameraScannerOverlay, {ScanMode} from './CameraScannerOverlay';
+import AppAlert, {AlertState} from './AppAlert';
 
 export interface VehicleRequestFormData {
   plateNumber: string;
@@ -214,6 +214,9 @@ export default function AddVehicleOverlay({
   const checkScale = useRef(new Animated.Value(0)).current;
   const textFade = useRef(new Animated.Value(0)).current;
   const [hasAttemptedGateIn, setHasAttemptedGateIn] = useState(false);
+
+  // AppAlert state
+  const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   // API state
   const [isLoading, setIsLoading] = useState(false);
@@ -536,52 +539,37 @@ export default function AddVehicleOverlay({
         }
 
         // Show success message
-        Alert.alert(
-          'Success',
-          currentScanMode === 'rc'
+        setAppAlert({
+          type: 'success',
+          message: currentScanMode === 'rc'
             ? 'RC card scanned successfully! Fields have been auto-filled.'
             : 'Number plate scanned successfully!',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Switch to appropriate view based on what was scanned
-                if (currentScanMode === 'rc') {
-                  setCurrentView('manual'); // Show manual view to review/edit details
-                } else {
-                  // For plate scan, stay in search view so user can proceed
-                  setCurrentView('search');
-                }
-              },
-            },
-          ]
-        );
+          onDone: () => {
+            // Switch to appropriate view based on what was scanned
+            if (currentScanMode === 'rc') {
+              setCurrentView('manual'); // Show manual view to review/edit details
+            } else {
+              // For plate scan, stay in search view so user can proceed
+              setCurrentView('search');
+            }
+          },
+        });
       } else {
         // Show error message
-        Alert.alert(
-          'Scan Failed',
-          ocrResult?.error || 'Could not read the document. Please try again with a clearer image.',
-          [
-            {text: 'Retry', onPress: () => {
-              setIsScanProcessing(false);
-              setScanMode(currentScanMode);
-            }},
-            {text: 'Cancel', style: 'cancel'},
-          ]
-        );
+        setAppAlert({
+          type: 'error',
+          title: 'Scan Failed',
+          message: ocrResult?.error || 'Could not read the document. Please try again with a clearer image.',
+        });
       }
     } catch (error) {
       setIsScanProcessing(false);
       setScanMode(null);
       console.error('Error processing scanned image:', error);
-      Alert.alert(
-        'Error',
-        'Failed to process the image. Please try again.',
-        [
-          {text: 'Retry', onPress: () => setScanMode(scanMode)},
-          {text: 'Cancel', style: 'cancel'},
-        ]
-      );
+      setAppAlert({
+        type: 'error',
+        message: 'Failed to process the image. Please try again.',
+      });
     }
   };
 
@@ -1153,6 +1141,22 @@ export default function AddVehicleOverlay({
           isProcessing={isScanProcessing}
         />
       )}
+      <AppAlert
+        isOpen={!!appAlert}
+        type={appAlert?.type ?? 'info'}
+        title={appAlert?.title}
+        message={appAlert?.message ?? ''}
+        onClose={() => {
+          const done = appAlert?.onDone;
+          setAppAlert(null);
+          done?.();
+        }}
+        onConfirm={appAlert?.onConfirm ? () => {
+          const confirm = appAlert.onConfirm!;
+          setAppAlert(null);
+          confirm();
+        } : undefined}
+      />
     </Modal>
   );
 }

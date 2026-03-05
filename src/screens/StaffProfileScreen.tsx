@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import {useNavigation} from '@react-navigation/native';
@@ -19,6 +18,7 @@ import {
   updateStaffProfile,
   WorkshopStaffResponse,
 } from '../services/api';
+import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 
 const BackIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -97,6 +97,7 @@ export default function StaffProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [personalOpen, setPersonalOpen] = useState(false);
+  const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   useEffect(() => {
     fetchProfile();
@@ -114,7 +115,7 @@ export default function StaffProfileScreen() {
         address: response.data.address || '',
       });
     } else {
-      Alert.alert('Error', response.error || 'Failed to load profile');
+      setAppAlert({type: 'error', message: response.error || 'Failed to load profile'});
     }
     setLoading(false);
   };
@@ -136,10 +137,10 @@ export default function StaffProfileScreen() {
         email: response.data.email || '',
         address: response.data.address || '',
       });
-      Alert.alert('Success', 'Profile updated successfully');
+      setAppAlert({type: 'success', message: 'Profile updated successfully'});
       setIsEditing(false);
     } else {
-      Alert.alert('Error', response.error || 'Failed to update profile');
+      setAppAlert({type: 'error', message: response.error || 'Failed to update profile'});
     }
   };
 
@@ -292,6 +293,23 @@ export default function StaffProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <AppAlert
+        isOpen={!!appAlert}
+        type={appAlert?.type ?? 'info'}
+        title={appAlert?.title}
+        message={appAlert?.message ?? ''}
+        onClose={() => {
+          const done = appAlert?.onDone;
+          setAppAlert(null);
+          done?.();
+        }}
+        onConfirm={appAlert?.onConfirm ? () => {
+          const confirm = appAlert.onConfirm!;
+          setAppAlert(null);
+          confirm();
+        } : undefined}
+      />
     </SafeAreaView>
   );
 }

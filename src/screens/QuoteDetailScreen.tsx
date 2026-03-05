@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Svg, {Path} from 'react-native-svg';
@@ -19,6 +18,7 @@ import {
   updateQuoteStatus,
   type QuoteApiResponse,
 } from '../services/api';
+import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 
 type QuoteDetailRouteProp = RouteProp<RootStackParamList, 'QuoteDetail'>;
 type QuoteDetailNavProp = NativeStackNavigationProp<
@@ -59,6 +59,7 @@ export default function QuoteDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [declining, setDeclining] = useState(false);
+  const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   useEffect(() => {
     async function fetchQuote() {
@@ -85,35 +86,32 @@ export default function QuoteDetailScreen() {
 
   const handleDecline = useCallback(async () => {
     if (!quote) return;
-    Alert.alert(
-      'Decline Quote',
-      'Are you sure you want to decline this quote?',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Decline',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setDeclining(true);
-              const result = await updateQuoteStatus(quote.id, 'rejected');
-              if (result.success) {
-                const refreshed = await getQuoteById(quote.id);
-                if (refreshed.success && refreshed.data) {
-                  setQuote(refreshed.data);
-                }
-              } else {
-                Alert.alert('Error', 'Failed to decline quote. Please try again.');
+    setAppAlert({
+      type: 'confirm',
+      title: 'Decline Quote',
+      message: 'Are you sure you want to decline this quote?',
+      confirmText: 'Decline',
+      onConfirm: () => {
+        (async () => {
+          try {
+            setDeclining(true);
+            const result = await updateQuoteStatus(quote.id, 'rejected');
+            if (result.success) {
+              const refreshed = await getQuoteById(quote.id);
+              if (refreshed.success && refreshed.data) {
+                setQuote(refreshed.data);
               }
-            } catch {
-              Alert.alert('Error', 'Something went wrong. Please try again.');
-            } finally {
-              setDeclining(false);
+            } else {
+              setAppAlert({type: 'error', message: 'Failed to decline quote. Please try again.'});
             }
-          },
-        },
-      ],
-    );
+          } catch {
+            setAppAlert({type: 'error', message: 'Something went wrong. Please try again.'});
+          } finally {
+            setDeclining(false);
+          }
+        })();
+      },
+    });
   }, [quote]);
 
   const toggleItem = (itemId: number) => {
@@ -487,6 +485,22 @@ export default function QuoteDetailScreen() {
           </>
         )}
       </View>
+      <AppAlert
+        isOpen={!!appAlert}
+        type={appAlert?.type ?? 'info'}
+        title={appAlert?.title}
+        message={appAlert?.message ?? ''}
+        onClose={() => {
+          const done = appAlert?.onDone;
+          setAppAlert(null);
+          done?.();
+        }}
+        onConfirm={appAlert?.onConfirm ? () => {
+          const confirm = appAlert.onConfirm!;
+          setAppAlert(null);
+          confirm();
+        } : undefined}
+      />
     </SafeAreaView>
   );
 }

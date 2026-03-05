@@ -6,7 +6,6 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -26,6 +25,7 @@ import VehicleSelectionOverlay, {
 } from '../components/overlays/VehicleSelectionOverlay';
 import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
 import RaiseDisputeOverlay from '../components/overlays/RaiseDisputeOverlay';
+import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import {
   getStoredUser,
   getInquiriesByWorkshopOwnerId,
@@ -252,6 +252,7 @@ export default function InquiryScreen() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleResponse | null>(null);
   const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo | null>(null);
   const [vehicleOrders, setVehicleOrders] = useState<any[]>([]);
+  const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   // ── Filter Functions ────────────────────────────────────────────────────────
 
@@ -478,7 +479,7 @@ export default function InquiryScreen() {
     try {
       const user = await getStoredUser();
       if (!user || !selectedVehicle) {
-        Alert.alert('Error', 'User or vehicle not found. Please try again.');
+        setAppAlert({type: 'error', message: 'User or vehicle not found. Please try again.'});
         return;
       }
 
@@ -527,25 +528,13 @@ export default function InquiryScreen() {
       );
 
       if (result.success) {
-        Alert.alert(
-          'Success',
-          `Inquiry created successfully!\n\nInquiry Number: ${result.data?.inquiryNumber || 'N/A'}`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setShowRequestPart(false);
-                fetchInquiries();
-              },
-            },
-          ],
-        );
+        setAppAlert({type: 'success', message: `Inquiry created successfully!\n\nInquiry Number: ${result.data?.inquiryNumber || 'N/A'}`, onDone: () => { setShowRequestPart(false); fetchInquiries(); }});
       } else {
-        Alert.alert('Error', result.error || 'Failed to create inquiry');
+        setAppAlert({type: 'error', message: result.error || 'Failed to create inquiry'});
       }
     } catch (error) {
       console.error('Error creating inquiry:', error);
-      Alert.alert('Error', 'An error occurred while creating the inquiry');
+      setAppAlert({type: 'error', message: 'An error occurred while creating the inquiry'});
     }
   };
 
@@ -553,7 +542,7 @@ export default function InquiryScreen() {
     try {
       const user = await getStoredUser();
       if (!user) {
-        Alert.alert('Error', 'User not found. Please log in again.');
+        setAppAlert({type: 'error', message: 'User not found. Please log in again.'});
         return;
       }
 
@@ -562,7 +551,7 @@ export default function InquiryScreen() {
       );
 
       if (!selectedOrder) {
-        Alert.alert('Error', 'Order not found');
+        setAppAlert({type: 'error', message: 'Order not found'});
         return;
       }
 
@@ -596,21 +585,13 @@ export default function InquiryScreen() {
       );
 
       if (result.success) {
-        Alert.alert('Success', 'Dispute created successfully', [
-          {
-            text: 'OK',
-            onPress: () => {
-              setShowRaiseDispute(false);
-              fetchDisputes();
-            },
-          },
-        ]);
+        setAppAlert({type: 'success', message: 'Dispute created successfully', onDone: () => { setShowRaiseDispute(false); fetchDisputes(); }});
       } else {
-        Alert.alert('Error', result.error || 'Failed to create dispute');
+        setAppAlert({type: 'error', message: result.error || 'Failed to create dispute'});
       }
     } catch (error) {
       console.error('Error creating dispute:', error);
-      Alert.alert('Error', 'An error occurred while creating the dispute');
+      setAppAlert({type: 'error', message: 'An error occurred while creating the dispute'});
     }
   };
 
@@ -925,6 +906,23 @@ export default function InquiryScreen() {
           }}
         />
       )}
+
+      <AppAlert
+        isOpen={!!appAlert}
+        type={appAlert?.type ?? 'info'}
+        title={appAlert?.title}
+        message={appAlert?.message ?? ''}
+        onClose={() => {
+          const done = appAlert?.onDone;
+          setAppAlert(null);
+          done?.();
+        }}
+        onConfirm={appAlert?.onConfirm ? () => {
+          const confirm = appAlert.onConfirm!;
+          setAppAlert(null);
+          confirm();
+        } : undefined}
+      />
     </View>
   );
 }

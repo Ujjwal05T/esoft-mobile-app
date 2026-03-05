@@ -6,6 +6,7 @@ import TabNavigator from './TabNavigator';
 import {useAuth} from '../context/AuthContext';
 import {AIAssistantScreen, NotificationsScreen} from '../screens';
 import VehicleDetailScreen from '../screens/VehicleDetailScreen';
+import StaffVehicleDetailScreen from '../screens/StaffVehicleDetailScreen';
 import QuoteDetailScreen from '../screens/QuoteDetailScreen';
 import PaymentScreen from '../screens/PaymentScreen';
 import StaffScreen from '../screens/StaffScreen';
@@ -22,6 +23,7 @@ export type RootStackParamList = {
   AIAssistant: undefined;
   Notifications: undefined;
   VehicleDetail: {vehicleId: number};
+  StaffVehicleDetail: {vehicleId: number};
   InquiryDetail: {inquiryId: number};
   QuoteDetail: {quoteId: number};
   OrderDetail: {orderId: number};
@@ -74,6 +76,11 @@ const RootNavigator: React.FC = () => {
             <Stack.Screen
               name="VehicleDetail"
               component={VehicleDetailScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="StaffVehicleDetail"
+              component={StaffVehicleDetailScreen}
               options={{animation: 'slide_from_right', headerShown: false}}
             />
             <Stack.Screen

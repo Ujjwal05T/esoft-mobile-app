@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Image,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -31,6 +30,7 @@ import BankIcon from '../assets/icons/Bank.svg';
 
 import RazorpayCheckout, {type RazorpayOptions} from 'react-native-razorpay';
 import creditCardImg from '../assets/icons/Credit-Card.png';
+import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 
 type PaymentRouteProp = RouteProp<RootStackParamList, 'Payment'>;
 type PaymentNavProp = NativeStackNavigationProp<RootStackParamList, 'Payment'>;
@@ -56,6 +56,7 @@ export default function PaymentScreen() {
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   useEffect(() => {
     async function fetchQuote() {
@@ -109,10 +110,7 @@ export default function PaymentScreen() {
 
       if (!RazorpayCheckout) {
         console.error('[Payment] RazorpayCheckout module not found');
-        Alert.alert(
-          'Payment Unavailable',
-          'Payment gateway is not configured. Please contact support.',
-        );
+        setAppAlert({type: 'warning', title: 'Payment Unavailable', message: 'Payment gateway is not configured. Please contact support.'});
         return;
       }
 
@@ -126,7 +124,7 @@ export default function PaymentScreen() {
 
         if (!orderResult.success || !orderResult.data) {
           console.error('[Payment] Order creation failed:', orderResult);
-          Alert.alert('Error', 'Failed to create payment order. Please try again.');
+          setAppAlert({type: 'error', message: 'Failed to create payment order. Please try again.'});
           setPaymentLoading(false);
           return;
         }
@@ -162,15 +160,10 @@ export default function PaymentScreen() {
         console.log('[Payment] Verify result:', JSON.stringify(verifyResult));
 
         if (verifyResult.success) {
-          Alert.alert('Success', 'Payment successful! Your order has been placed.', [
-            {
-              text: 'OK',
-              onPress: () => navigation.navigate('QuoteDetail', {quoteId: quote.id}),
-            },
-          ]);
+          setAppAlert({type: 'success', message: 'Payment successful! Your order has been placed.', onDone: () => navigation.navigate('QuoteDetail', {quoteId: quote.id})});
         } else {
           console.error('[Payment] Verification failed:', verifyResult);
-          Alert.alert('Error', 'Payment verification failed. Please contact support.');
+          setAppAlert({type: 'error', message: 'Payment verification failed. Please contact support.'});
         }
       } catch (error: unknown) {
         // Razorpay errors are objects with code + description — JSON.stringify gives {}
@@ -185,7 +178,7 @@ export default function PaymentScreen() {
 
         // code 0 = user dismissed the modal, not a real error
         if (rzpError?.code !== 0) {
-          Alert.alert('Payment Failed', `${rzpError?.description || 'Payment was not completed.'} (code: ${rzpError?.code})`);
+          setAppAlert({type: 'error', title: 'Payment Failed', message: `${rzpError?.description || 'Payment was not completed.'} (code: ${rzpError?.code})`});
         } else {
           console.log('[Payment] User dismissed the payment modal');
         }
@@ -402,6 +395,23 @@ export default function PaymentScreen() {
           </View>
         )}
       </ScrollView>
+
+      <AppAlert
+        isOpen={!!appAlert}
+        type={appAlert?.type ?? 'info'}
+        title={appAlert?.title}
+        message={appAlert?.message ?? ''}
+        onClose={() => {
+          const done = appAlert?.onDone;
+          setAppAlert(null);
+          done?.();
+        }}
+        onConfirm={appAlert?.onConfirm ? () => {
+          const confirm = appAlert.onConfirm!;
+          setAppAlert(null);
+          confirm();
+        } : undefined}
+      />
     </SafeAreaView>
   );
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
+import {SERVER_ORIGIN} from '../../services/api';
 
 export interface StaffMember {
   id: string;
@@ -40,8 +41,6 @@ const EyeIcon = () => (
   </Svg>
 );
 
-const API_BASE = 'http://192.168.1.23:5196';
-
 export default function StaffCard({
   staff,
   isExpanded = false,
@@ -52,7 +51,7 @@ export default function StaffCard({
 }: StaffCardProps) {
   const avatarUri = staff.avatar?.startsWith('http')
     ? staff.avatar
-    : `${API_BASE}${staff.avatar}`;
+    : `${SERVER_ORIGIN}${staff.avatar}`;
 
   return (
     <TouchableOpacity

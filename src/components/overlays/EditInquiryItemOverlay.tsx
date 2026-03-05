@@ -9,7 +9,6 @@ import {
   TextInput,
   TouchableWithoutFeedback,
   Image,
-  Alert,
   Dimensions,
   Platform,
   PermissionsAndroid,
@@ -19,6 +18,7 @@ import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import Svg, {Path} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
 import type {InquiryItemResponse} from '../../services/api';
+import AppAlert, {AlertState} from './AppAlert';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
@@ -85,6 +85,9 @@ export default function EditInquiryItemOverlay({
   const [quantity, setQuantity] = useState(item?.quantity.toString() || '1');
   const [remark, setRemark] = useState(item?.remark || '');
 
+  // AppAlert state
+  const [appAlert, setAppAlert] = useState<AlertState | null>(null);
+
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
   const [audioPath, setAudioPath] = useState<string | null>(item?.audioUrl || null);
@@ -132,7 +135,7 @@ export default function EditInquiryItemOverlay({
           }
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert('Permission Denied', 'Audio recording permission is required to record audio.');
+          setAppAlert({type: 'warning', title: 'Permission Denied', message: 'Audio recording permission is required to record audio.'});
           return;
         }
       }
@@ -142,7 +145,7 @@ export default function EditInquiryItemOverlay({
       setIsRecording(true);
     } catch (error) {
       console.error('Error starting recording:', error);
-      Alert.alert('Error', 'Could not start recording. Please check permissions.');
+      setAppAlert({type: 'error', message: 'Could not start recording. Please check permissions.'});
     }
   };
 
@@ -165,7 +168,7 @@ export default function EditInquiryItemOverlay({
 
   const handleImageUpload = () => {
     if (images.length >= 3) {
-      Alert.alert('Maximum Images', 'You can only upload up to 3 images.');
+      setAppAlert({type: 'warning', title: 'Maximum Images', message: 'You can only upload up to 3 images.'});
       return;
     }
 
@@ -178,7 +181,7 @@ export default function EditInquiryItemOverlay({
       response => {
         if (response.didCancel) return;
         if (response.errorCode) {
-          Alert.alert('Error', response.errorMessage || 'Failed to select images');
+          setAppAlert({type: 'error', message: response.errorMessage || 'Failed to select images'});
           return;
         }
         if (response.assets) {
@@ -318,6 +321,22 @@ export default function EditInquiryItemOverlay({
           <Text style={styles.saveText}>SAVE CHANGES</Text>
         </TouchableOpacity>
       </View>
+      <AppAlert
+        isOpen={!!appAlert}
+        type={appAlert?.type ?? 'info'}
+        title={appAlert?.title}
+        message={appAlert?.message ?? ''}
+        onClose={() => {
+          const done = appAlert?.onDone;
+          setAppAlert(null);
+          done?.();
+        }}
+        onConfirm={appAlert?.onConfirm ? () => {
+          const confirm = appAlert.onConfirm!;
+          setAppAlert(null);
+          confirm();
+        } : undefined}
+      />
     </Modal>
   );
 }

@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -22,6 +21,7 @@ import {
 } from '../services/api';
 import Svg, {Path} from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 
 type InquiryDetailRouteProp = RouteProp<RootStackParamList, 'InquiryDetail'>;
 type InquiryDetailNavigationProp = NativeStackNavigationProp<
@@ -67,6 +67,7 @@ export default function InquiryDetailScreen() {
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InquiryItemResponse | null>(null);
   const [showEditOverlay, setShowEditOverlay] = useState(false);
+  const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   useEffect(() => {
     async function fetchInquiry() {
@@ -121,147 +122,133 @@ export default function InquiryDetailScreen() {
   const handleReRequest = async () => {
     if (!inquiry) return;
 
-    Alert.alert(
-      'Re-request Inquiry',
-      'Are you sure you want to re-request this inquiry?',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Confirm',
-          onPress: async () => {
-            try {
-              setActionLoading(true);
-              const result = await updateInquiryStatus(inquiry.id, 'Open');
-              if (result.success) {
-                Alert.alert('Success', 'Inquiry re-requested successfully');
-                // Refresh inquiry data
-                const updatedInquiry = await getInquiryById(inquiryId);
-                if (updatedInquiry.success && updatedInquiry.data) {
-                  setInquiry(updatedInquiry.data);
-                }
-              } else {
-                Alert.alert('Error', result.error || 'Failed to re-request inquiry');
+    setAppAlert({
+      type: 'confirm',
+      title: 'Re-request Inquiry',
+      message: 'Are you sure you want to re-request this inquiry?',
+      onConfirm: () => {
+        (async () => {
+          try {
+            setActionLoading(true);
+            const result = await updateInquiryStatus(inquiry.id, 'Open');
+            if (result.success) {
+              setAppAlert({type: 'success', message: 'Inquiry re-requested successfully'});
+              // Refresh inquiry data
+              const updatedInquiry = await getInquiryById(inquiryId);
+              if (updatedInquiry.success && updatedInquiry.data) {
+                setInquiry(updatedInquiry.data);
               }
-            } catch (error) {
-              console.error('Failed to re-request inquiry:', error);
-              Alert.alert('Error', 'Failed to re-request inquiry');
-            } finally {
-              setActionLoading(false);
+            } else {
+              setAppAlert({type: 'error', message: result.error || 'Failed to re-request inquiry'});
             }
-          },
-        },
-      ],
-    );
+          } catch (error) {
+            console.error('Failed to re-request inquiry:', error);
+            setAppAlert({type: 'error', message: 'Failed to re-request inquiry'});
+          } finally {
+            setActionLoading(false);
+          }
+        })();
+      },
+    });
   };
 
   const handleCancelRequest = async () => {
     if (!inquiry) return;
 
-    Alert.alert(
-      'Cancel Request',
-      'Are you sure you want to cancel this inquiry request?',
-      [
-        {text: 'No', style: 'cancel'},
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setActionLoading(true);
-              const result = await updateInquiryStatus(inquiry.id, 'Declined');
-              if (result.success) {
-                Alert.alert('Success', 'Inquiry cancelled successfully');
-                // Refresh inquiry data
-                const updatedInquiry = await getInquiryById(inquiryId);
-                if (updatedInquiry.success && updatedInquiry.data) {
-                  setInquiry(updatedInquiry.data);
-                }
-              } else {
-                Alert.alert('Error', result.error || 'Failed to cancel inquiry');
+    setAppAlert({
+      type: 'confirm',
+      title: 'Cancel Request',
+      message: 'Are you sure you want to cancel this inquiry request?',
+      onConfirm: () => {
+        (async () => {
+          try {
+            setActionLoading(true);
+            const result = await updateInquiryStatus(inquiry.id, 'Declined');
+            if (result.success) {
+              setAppAlert({type: 'success', message: 'Inquiry cancelled successfully'});
+              // Refresh inquiry data
+              const updatedInquiry = await getInquiryById(inquiryId);
+              if (updatedInquiry.success && updatedInquiry.data) {
+                setInquiry(updatedInquiry.data);
               }
-            } catch (error) {
-              console.error('Failed to cancel inquiry:', error);
-              Alert.alert('Error', 'Failed to cancel inquiry');
-            } finally {
-              setActionLoading(false);
+            } else {
+              setAppAlert({type: 'error', message: result.error || 'Failed to cancel inquiry'});
             }
-          },
-        },
-      ],
-    );
+          } catch (error) {
+            console.error('Failed to cancel inquiry:', error);
+            setAppAlert({type: 'error', message: 'Failed to cancel inquiry'});
+          } finally {
+            setActionLoading(false);
+          }
+        })();
+      },
+    });
   };
 
   const handleApproveAndSend = async () => {
     if (!inquiry) return;
 
-    Alert.alert(
-      'Approve and Send',
-      'Are you sure you want to approve and send this inquiry?',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Approve',
-          onPress: async () => {
-            try {
-              setActionLoading(true);
-              const result = await updateInquiryStatus(inquiry.id, 'Closed');
-              if (result.success) {
-                Alert.alert('Success', 'Inquiry approved and sent successfully');
-                // Refresh inquiry data
-                const updatedInquiry = await getInquiryById(inquiryId);
-                if (updatedInquiry.success && updatedInquiry.data) {
-                  setInquiry(updatedInquiry.data);
-                }
-              } else {
-                Alert.alert('Error', result.error || 'Failed to approve inquiry');
+    setAppAlert({
+      type: 'confirm',
+      title: 'Approve and Send',
+      message: 'Are you sure you want to approve and send this inquiry?',
+      onConfirm: () => {
+        (async () => {
+          try {
+            setActionLoading(true);
+            const result = await updateInquiryStatus(inquiry.id, 'Closed');
+            if (result.success) {
+              setAppAlert({type: 'success', message: 'Inquiry approved and sent successfully'});
+              // Refresh inquiry data
+              const updatedInquiry = await getInquiryById(inquiryId);
+              if (updatedInquiry.success && updatedInquiry.data) {
+                setInquiry(updatedInquiry.data);
               }
-            } catch (error) {
-              console.error('Failed to approve inquiry:', error);
-              Alert.alert('Error', 'Failed to approve inquiry');
-            } finally {
-              setActionLoading(false);
+            } else {
+              setAppAlert({type: 'error', message: result.error || 'Failed to approve inquiry'});
             }
-          },
-        },
-      ],
-    );
+          } catch (error) {
+            console.error('Failed to approve inquiry:', error);
+            setAppAlert({type: 'error', message: 'Failed to approve inquiry'});
+          } finally {
+            setActionLoading(false);
+          }
+        })();
+      },
+    });
   };
 
   const handleDecline = async () => {
     if (!inquiry) return;
 
-    Alert.alert(
-      'Decline Inquiry',
-      'Are you sure you want to decline this inquiry?',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Decline',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setActionLoading(true);
-              const result = await updateInquiryStatus(inquiry.id, 'Declined');
-              if (result.success) {
-                Alert.alert('Success', 'Inquiry declined successfully');
-                // Refresh inquiry data
-                const updatedInquiry = await getInquiryById(inquiryId);
-                if (updatedInquiry.success && updatedInquiry.data) {
-                  setInquiry(updatedInquiry.data);
-                }
-              } else {
-                Alert.alert('Error', result.error || 'Failed to decline inquiry');
+    setAppAlert({
+      type: 'confirm',
+      title: 'Decline Inquiry',
+      message: 'Are you sure you want to decline this inquiry?',
+      onConfirm: () => {
+        (async () => {
+          try {
+            setActionLoading(true);
+            const result = await updateInquiryStatus(inquiry.id, 'Declined');
+            if (result.success) {
+              setAppAlert({type: 'success', message: 'Inquiry declined successfully'});
+              // Refresh inquiry data
+              const updatedInquiry = await getInquiryById(inquiryId);
+              if (updatedInquiry.success && updatedInquiry.data) {
+                setInquiry(updatedInquiry.data);
               }
-            } catch (error) {
-              console.error('Failed to decline inquiry:', error);
-              Alert.alert('Error', 'Failed to decline inquiry');
-            } finally {
-              setActionLoading(false);
+            } else {
+              setAppAlert({type: 'error', message: result.error || 'Failed to decline inquiry'});
             }
-          },
-        },
-      ],
-    );
+          } catch (error) {
+            console.error('Failed to decline inquiry:', error);
+            setAppAlert({type: 'error', message: 'Failed to decline inquiry'});
+          } finally {
+            setActionLoading(false);
+          }
+        })();
+      },
+    });
   };
 
   const handleItemClick = (itemId: number) => {
@@ -280,18 +267,18 @@ export default function InquiryDetailScreen() {
       const result = await updateInquiryItem(selectedItem.id, updatedItem);
 
       if (result.success) {
-        Alert.alert('Success', 'Inquiry item updated successfully!');
+        setAppAlert({type: 'success', message: 'Inquiry item updated successfully!'});
         // Refresh inquiry data to show updated item
         const refreshResult = await getInquiryById(inquiryId);
         if (refreshResult.success && refreshResult.data) {
           setInquiry(refreshResult.data);
         }
       } else {
-        Alert.alert('Error', result.error || 'Failed to update inquiry item');
+        setAppAlert({type: 'error', message: result.error || 'Failed to update inquiry item'});
       }
     } catch (error) {
       console.error('Error updating inquiry item:', error);
-      Alert.alert('Error', 'An error occurred while updating the inquiry item');
+      setAppAlert({type: 'error', message: 'An error occurred while updating the inquiry item'});
     } finally {
       setActionLoading(false);
       setShowEditOverlay(false);
@@ -541,6 +528,22 @@ export default function InquiryDetailScreen() {
           onSave={handleSaveItem}
         />
       )}
+      <AppAlert
+        isOpen={!!appAlert}
+        type={appAlert?.type ?? 'info'}
+        title={appAlert?.title}
+        message={appAlert?.message ?? ''}
+        onClose={() => {
+          const done = appAlert?.onDone;
+          setAppAlert(null);
+          done?.();
+        }}
+        onConfirm={appAlert?.onConfirm ? () => {
+          const confirm = appAlert.onConfirm!;
+          setAppAlert(null);
+          confirm();
+        } : undefined}
+      />
     </SafeAreaView>
   );
 }

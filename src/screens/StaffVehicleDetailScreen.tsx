@@ -13,13 +13,10 @@ import Svg, {Path} from 'react-native-svg';
 import {RootStackParamList} from '../navigation/RootNavigator';
 import VehicleCard from '../components/dashboard/VehicleCard';
 import InquiryCard, {Inquiry} from '../components/dashboard/InquiryCard';
-import QuoteCard, {Quote} from '../components/dashboard/QuoteCard';
-import OrderCard, {Order} from '../components/dashboard/OrderCard';
 import DisputeCard, {Dispute} from '../components/dashboard/DisputeCard';
 import JobCard from '../components/dashboard/JobCard';
 import FloatingActionButton from '../components/dashboard/FloatingActionButton';
 import GateOutOverlay from '../components/overlays/GateOutOverlay';
-import EstimationOverlay from '../components/overlays/EstimationOverlay';
 import NewJobCardOverlay from '../components/overlays/NewJobCardOverlay';
 import RaiseDisputeOverlay from '../components/overlays/RaiseDisputeOverlay';
 import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
@@ -29,30 +26,31 @@ import {
   getActiveVehicleVisit,
   getJobCardsByVehicle,
   getInquiriesByVehicleId,
-  getQuotesByVehicleId,
   getOrdersByVehicleId,
   getOrderById,
   createDisputeWithFiles,
   getDisputesByWorkshopOwner,
   getStoredUser,
   createInquiryWithMedia,
+  getStaffProfile,
   SERVER_ORIGIN,
   type VehicleResponse,
   type VehicleVisitResponse,
   type JobCardResponse,
   type InquiryResponse,
-  type QuoteApiResponse,
   type WorkshopOrderListItem,
   type DisputeListItemResponse,
   type InquiryItemRequest,
+  type StaffPermissions,
 } from '../services/api';
 import type {DisputeFormData} from '../components/overlays/RaiseDisputeOverlay';
+import {Order} from '../components/dashboard/OrderCard';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Props = NativeStackScreenProps<RootStackParamList, 'VehicleDetail'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'StaffVehicleDetail'>;
 
-type ActiveTab = 'jobcard' | 'quotes' | 'orders' | 'inquiry' | 'disputes';
+type ActiveTab = 'jobcard' | 'inquiry' | 'disputes';
 
 type SectionKey = 'basicInfo' | 'problemsShared' | 'previousServices' | 'jobs';
 
@@ -72,7 +70,6 @@ function mapOrderStatus(s: string): Order['status'] {
   return 'in-process';
 }
 
-// Extended Inquiry type with numeric ID
 type InquiryWithNumericId = Inquiry & {numericId?: number};
 
 function mapApiInquiry(api: InquiryResponse, vehicle: VehicleResponse): InquiryWithNumericId {
@@ -85,7 +82,7 @@ function mapApiInquiry(api: InquiryResponse, vehicle: VehicleResponse): InquiryW
     closedDate: api.closedDate ? formatDate(api.closedDate) : undefined,
     declinedDate: api.declinedDate ? formatDate(api.declinedDate) : undefined,
     status: api.status.toLowerCase() as Inquiry['status'],
-    inquiryBy: api.requestedByName ?? 'Owner',
+    inquiryBy: api.requestedByName ?? 'Staff',
     jobCategory: api.jobCategory,
     items: api.items.map(item => ({
       id: item.id.toString(),
@@ -99,45 +96,15 @@ function mapApiInquiry(api: InquiryResponse, vehicle: VehicleResponse): InquiryW
   };
 }
 
-function mapApiQuote(api: QuoteApiResponse): Quote {
-  return {
-    id: api.id.toString(),
-    vehicleName: api.vehicleName ?? '',
-    plateNumber: api.plateNumber ?? '',
-    quoteId: api.quoteNumber,
-    submittedDate: formatDate(api.createdAt),
-    status: api.status === 'approved' ? 'accepted' : 'pending_review',
-    estimatedTotal: api.totalAmount,
-    items: api.items.map(item => ({
-      id: item.id.toString(),
-      itemName: item.partName,
-      brand: item.brand || undefined,
-      mrp: item.mrp || undefined,
-      price: item.unitPrice,
-      quantity: item.quantity,
-      isAvailable: item.availability === 'in_stock',
-    })),
-  };
-}
-
 function mapApiDispute(api: DisputeListItemResponse): Dispute {
-  // Map backend status to frontend status
-  const mapStatus = (backendStatus: string): Dispute['status'] => {
-    switch (backendStatus) {
-      case 'Resolved':
-        return 'closed';
-      case 'Pending':
-      case 'Acknowledged':
-      case 'Investigating':
-      default:
-        return 'open';
-    }
+  const mapStatus = (s: string): Dispute['status'] => {
+    if (s === 'Resolved') return 'closed';
+    return 'open';
   };
-
   return {
     id: api.disputeNumber,
-    vehicleName: '', // Not shown when showVehicleInfo is false
-    plateNumber: '', // Not shown when showVehicleInfo is false
+    vehicleName: '',
+    plateNumber: '',
     receivedDate: formatDate(api.date),
     status: mapStatus(api.status),
     disputeRaised: api.issue,
@@ -195,10 +162,7 @@ interface AccordionProps {
 function Accordion({title, expanded, onToggle, children}: AccordionProps) {
   return (
     <View style={acc.container}>
-      <TouchableOpacity
-        onPress={onToggle}
-        activeOpacity={0.8}
-        style={acc.header}>
+      <TouchableOpacity onPress={onToggle} activeOpacity={0.8} style={acc.header}>
         <Text style={acc.title}>{title}</Text>
         <ChevronDown rotated={expanded} />
       </TouchableOpacity>
@@ -213,18 +177,8 @@ function Accordion({title, expanded, onToggle, children}: AccordionProps) {
 }
 
 const acc = StyleSheet.create({
-  container: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  container: {backgroundColor: '#ffffff', borderRadius: 12, overflow: 'hidden'},
+  header: {paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
   title: {fontSize: 15, fontWeight: '600', color: '#2b2b2b'},
   divider: {height: 1, backgroundColor: '#e5e5e5'},
   body: {paddingHorizontal: 16, paddingBottom: 16},
@@ -232,10 +186,7 @@ const acc = StyleSheet.create({
 
 // ── Basic Info Grid ───────────────────────────────────────────────────────────
 
-interface InfoField {
-  label: string;
-  value: string;
-}
+interface InfoField {label: string; value: string}
 
 function BasicInfoGrid({fields}: {fields: InfoField[]}) {
   return (
@@ -251,12 +202,7 @@ function BasicInfoGrid({fields}: {fields: InfoField[]}) {
 }
 
 const grid = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingTop: 16,
-    gap: 16,
-  },
+  container: {flexDirection: 'row', flexWrap: 'wrap', paddingTop: 16, gap: 16},
   cell: {width: '30%'},
   label: {fontSize: 10, color: '#99a2b6', marginBottom: 4},
   value: {fontSize: 12, fontWeight: '500', color: '#2b2b2b'},
@@ -264,7 +210,7 @@ const grid = StyleSheet.create({
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
-export default function VehicleDetailScreen({navigation, route}: Props) {
+export default function StaffVehicleDetailScreen({navigation, route}: Props) {
   const insets = useSafeAreaInsets();
   const vehicleId = route.params.vehicleId;
 
@@ -278,12 +224,10 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     jobs: true,
   });
   const [expandedInquiryId, setExpandedInquiryId] = useState<string | null>(null);
-  const [expandedQuoteId, setExpandedQuoteId] = useState<string | null>(null);
 
   // Overlay visibility
   const [showGateOut, setShowGateOut] = useState(false);
   const gateOutCompleted = useRef(false);
-  const [showEstimation, setShowEstimation] = useState(false);
   const [showNewJob, setShowNewJob] = useState(false);
   const [showRaiseDispute, setShowRaiseDispute] = useState(false);
   const [showRequestPart, setShowRequestPart] = useState(false);
@@ -293,15 +237,16 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   const [activeVisit, setActiveVisit] = useState<VehicleVisitResponse | null>(null);
   const [jobCards, setJobCards] = useState<JobCardResponse[]>([]);
   const [inquiries, setInquiries] = useState<InquiryWithNumericId[]>([]);
-  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
+
+  // Staff permissions
+  const [permissions, setPermissions] = useState<StaffPermissions | null>(null);
 
   // Loading / error
   const [loadingVehicle, setLoadingVehicle] = useState(true);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [loadingInquiries, setLoadingInquiries] = useState(false);
-  const [loadingQuotes, setLoadingQuotes] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingDisputes, setLoadingDisputes] = useState(false);
   const [vehicleError, setVehicleError] = useState(false);
@@ -332,12 +277,8 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         getJobCardsByVehicle(vehicleId),
         getActiveVehicleVisit(vehicleId),
       ]);
-      if (jobRes.success && jobRes.data) {
-        setJobCards(jobRes.data.jobCards);
-      }
-      if (visitRes.success && visitRes.data) {
-        setActiveVisit(visitRes.data);
-      }
+      if (jobRes.success && jobRes.data) setJobCards(jobRes.data.jobCards);
+      if (visitRes.success && visitRes.data) setActiveVisit(visitRes.data);
     } catch (e) {
       console.error('Failed to fetch jobs/visit:', e);
     } finally {
@@ -358,20 +299,6 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
       setLoadingInquiries(false);
     }
   }, [vehicleId, vehicle]);
-
-  const fetchQuotes = useCallback(async () => {
-    setLoadingQuotes(true);
-    try {
-      const res = await getQuotesByVehicleId(vehicleId);
-      if (res.success && res.data) {
-        setQuotes(res.data.quotes.map(mapApiQuote));
-      }
-    } catch (e) {
-      console.error('Failed to fetch quotes:', e);
-    } finally {
-      setLoadingQuotes(false);
-    }
-  }, [vehicleId]);
 
   const fetchOrders = useCallback(async () => {
     setLoadingOrders(true);
@@ -422,13 +349,11 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     try {
       const user = await getStoredUser();
       if (!user) return;
-
       const res = await getDisputesByWorkshopOwner(user.id);
       if (res.success && res.data) {
-        // Filter disputes to only show those related to this vehicle's orders
         const vehicleOrderNumbers = orders.map(o => o.orderId);
-        const vehicleDisputes = res.data.filter(dispute =>
-          vehicleOrderNumbers.includes(dispute.orderNumber)
+        const vehicleDisputes = res.data.filter(d =>
+          vehicleOrderNumbers.includes(d.orderNumber),
         );
         setDisputes(vehicleDisputes.map(mapApiDispute));
       }
@@ -441,18 +366,21 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
 
   useEffect(() => {
     fetchVehicle();
+    getStaffProfile().then(res => {
+      if (res.success && res.data) {
+        setPermissions(res.data.permissions);
+      }
+    });
   }, [fetchVehicle]);
 
   useEffect(() => {
     if (vehicle) {
       fetchJobsAndVisit();
       fetchInquiries();
-      fetchQuotes();
       fetchOrders();
     }
-  }, [vehicle, fetchJobsAndVisit, fetchInquiries, fetchQuotes, fetchOrders]);
+  }, [vehicle, fetchJobsAndVisit, fetchInquiries, fetchOrders]);
 
-  // Fetch disputes after orders are loaded (since we filter by order numbers)
   useEffect(() => {
     if (orders.length > 0) {
       fetchDisputes();
@@ -463,53 +391,29 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     setExpandedSections(prev => ({...prev, [key]: !prev[key]}));
   };
 
-  // Transform orders to OrderWithParts format for dispute overlay
   const ordersWithParts = orders.map(order => ({
     id: order.id,
     orderId: order.orderId,
     date: order.placedDate,
-    parts: order.orderedParts.map(part => ({
-      id: part.id,
-      name: part.name,
-    })),
+    parts: order.orderedParts.map(part => ({id: part.id, name: part.name})),
   }));
 
-  // Handle dispute form submission
   const handleDisputeConfirm = async (formData: DisputeFormData) => {
     try {
-      // Get workshopOwnerId from stored user
       const user = await getStoredUser();
-      if (!user) {
-        console.error('User not found');
-        return;
-      }
+      if (!user) return;
 
-      // Find the actual order by matching the order number
-      const selectedOrder = ordersWithParts.find(
-        o => o.orderId === formData.orderId
-      );
+      const selectedOrder = ordersWithParts.find(o => o.orderId === formData.orderId);
+      if (!selectedOrder) return;
 
-      if (!selectedOrder) {
-        console.error('Order not found:', formData.orderId);
-        return;
-      }
-
-      // Get the numeric order ID
       const numericOrderId = parseInt(selectedOrder.id, 10);
-
-      // Convert image URIs to file objects for FormData
       const imageFiles = formData.images.map((img, idx) => ({
         uri: img.uri,
         type: 'image/jpeg',
         name: img.name || `image_${idx}.jpg`,
       }));
-
       const audioFile = formData.audioPath
-        ? {
-            uri: formData.audioPath,
-            type: 'audio/mp4',
-            name: `audio_${Date.now()}.mp4`,
-          }
+        ? {uri: formData.audioPath, type: 'audio/mp4', name: `audio_${Date.now()}.mp4`}
         : undefined;
 
       const result = await createDisputeWithFiles(
@@ -526,34 +430,25 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
       );
 
       if (result.success) {
-        console.log('Dispute created successfully:', result.data);
-        // Refresh disputes list
         fetchDisputes();
-      } else {
-        console.error('Failed to create dispute:', result.error);
       }
     } catch (error) {
       console.error('Error creating dispute:', error);
     }
   };
 
-  // Handle request part form submission
   const handleRequestPartSubmit = async (parts: any[]) => {
     try {
-      // Get workshopOwnerId from stored user
       const user = await getStoredUser();
       if (!user) {
         setAppAlert({type: 'error', message: 'User not found. Please log in again.'});
         return;
       }
 
-      // Collect all audio and image files from parts
       const audioFiles: any[] = [];
       const imageFiles: any[] = [];
 
-      // Transform parts data and collect files
       const items: InquiryItemRequest[] = parts.map(part => {
-        // Add audio file if present
         if (part.audioPath) {
           audioFiles.push({
             uri: part.audioPath,
@@ -561,8 +456,6 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
             type: 'audio/mp4',
           });
         }
-
-        // Add image files if present
         part.images.forEach((img: any) => {
           if (img && img.uri) {
             imageFiles.push({
@@ -572,7 +465,6 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
             });
           }
         });
-
         return {
           partName: part.partName,
           preferredBrand: part.preferredBrand,
@@ -582,7 +474,6 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         };
       });
 
-      // Call API to create inquiry with media
       const result = await createInquiryWithMedia(
         vehicleId,
         user.id,
@@ -591,11 +482,18 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         audioFiles,
         imageFiles,
         activeVisit?.id,
-        null // requestedByStaffId - owner creating inquiry
+        null,
       );
 
       if (result.success) {
-        setAppAlert({type: 'success', message: `Inquiry created successfully!\n\nInquiry Number: ${result.data?.inquiryNumber || 'N/A'}`, onDone: () => { fetchInquiries(); setActiveTab('inquiry'); }});
+        setAppAlert({
+          type: 'success',
+          message: `Inquiry created successfully!\n\nInquiry Number: ${result.data?.inquiryNumber || 'N/A'}`,
+          onDone: () => {
+            fetchInquiries();
+            setActiveTab('inquiry');
+          },
+        });
       } else {
         setAppAlert({type: 'error', message: result.error || 'Failed to create inquiry'});
       }
@@ -644,16 +542,11 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     {label: 'Variant', value: vehicle.variant ?? vehicle.specs ?? ''},
     {label: 'Owner Name', value: vehicle.ownerName ?? ''},
     {label: 'Contact', value: vehicle.contactNumber ?? ''},
-    {
-      label: 'Odometer',
-      value: activeVisit?.gateInOdometerReading ?? vehicle.odometerReading ?? 'N/A',
-    },
+    {label: 'Odometer', value: activeVisit?.gateInOdometerReading ?? vehicle.odometerReading ?? 'N/A'},
   ];
 
   const tabs: {key: ActiveTab; label: string}[] = [
     {key: 'jobcard', label: 'Job card'},
-    {key: 'quotes', label: 'Quotes'},
-    {key: 'orders', label: 'Orders'},
     {key: 'inquiry', label: 'Inquiry'},
     {key: 'disputes', label: 'Disputes'},
   ];
@@ -661,7 +554,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={[styles.container]}>
+    <SafeAreaView style={styles.container}>
       {/* ── Top Bar ──────────────────────────────────────────────────────── */}
       <View style={styles.topBar}>
         <TouchableOpacity
@@ -676,10 +569,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          {paddingBottom: insets.bottom + 120},
-        ]}>
+        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 120}]}>
 
         {/* ── Vehicle Card ─────────────────────────────────────────────── */}
         <VehicleCard
@@ -719,8 +609,6 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         {/* ── Job Card Tab ─────────────────────────────────────────────── */}
         {activeTab === 'jobcard' && (
           <View style={styles.tabContent}>
-
-            {/* Basic Info */}
             <Accordion
               title="Basic Info"
               expanded={expandedSections.basicInfo}
@@ -728,33 +616,25 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
               <BasicInfoGrid fields={basicInfoFields} />
             </Accordion>
 
-            {/* Problems Shared */}
             <Accordion
               title="Problems Shared"
               expanded={expandedSections.problemsShared}
               onToggle={() => toggleSection('problemsShared')}>
               <Text style={styles.problemText}>
-                {activeVisit?.gateInProblemShared ||
-                  'No problems shared for this visit'}
+                {activeVisit?.gateInProblemShared || 'No problems shared for this visit'}
               </Text>
             </Accordion>
 
-            {/* Previous Services */}
             <Accordion
               title="Previous Services"
               expanded={expandedSections.previousServices}
               onToggle={() => toggleSection('previousServices')}>
               <View style={styles.emptyAccordion}>
-                <Text style={styles.emptyAccordionText}>
-                  No previous services found
-                </Text>
-                <Text style={styles.emptyAccordionSub}>
-                  Service history will appear here
-                </Text>
+                <Text style={styles.emptyAccordionText}>No previous services found</Text>
+                <Text style={styles.emptyAccordionSub}>Service history will appear here</Text>
               </View>
             </Accordion>
 
-            {/* Jobs */}
             <Accordion
               title="Jobs"
               expanded={expandedSections.jobs}
@@ -794,78 +674,6 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
           </View>
         )}
 
-        {/* ── Quotes Tab ───────────────────────────────────────────────── */}
-        {activeTab === 'quotes' && (
-          <View style={styles.tabContent}>
-            {loadingQuotes ? (
-              <View style={styles.stateCard}>
-                <ActivityIndicator size="small" color="#e5383b" />
-                <Text style={styles.loadingText}>Loading quotes...</Text>
-              </View>
-            ) : quotes.length === 0 ? (
-              <View style={styles.stateCard}>
-                <Text style={styles.emptyTitle}>No Quotes Found</Text>
-                <Text style={styles.emptySubtitle}>
-                  No quotes found for this vehicle
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.cardList}>
-                {quotes.map(quote => (
-                  <QuoteCard
-                    key={quote.id}
-                    quote={quote}
-                    isExpanded={expandedQuoteId === quote.id}
-                    onToggle={() =>
-                      setExpandedQuoteId(
-                        expandedQuoteId === quote.id ? null : quote.id,
-                      )
-                    }
-                    showNumberPlate={false}
-                    onAccept={id => console.log('Accept quote:', id)}
-                    onView={id =>
-                      navigation.navigate('QuoteDetail', {quoteId: parseInt(id)})
-                    }
-                  />
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* ── Orders Tab ───────────────────────────────────────────────── */}
-        {activeTab === 'orders' && (
-          <View style={styles.tabContent}>
-            {loadingOrders ? (
-              <View style={styles.stateCard}>
-                <ActivityIndicator size="small" color="#e5383b" />
-                <Text style={styles.loadingText}>Loading orders...</Text>
-              </View>
-            ) : orders.length === 0 ? (
-              <View style={styles.stateCard}>
-                <Text style={styles.emptyTitle}>No Orders Found</Text>
-                <Text style={styles.emptySubtitle}>
-                  Orders for this vehicle will appear here
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.cardList}>
-                {orders.map(order => (
-                  <OrderCard
-                    key={order.id}
-                    order={order}
-                    defaultExpanded={false}
-                    onTrackOrder={id =>
-                      navigation.navigate('OrderDetail', {orderId: parseInt(id)})
-                    }
-                    onDownloadInvoice={id => console.log('Invoice:', id)}
-                  />
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
         {/* ── Inquiry Tab ──────────────────────────────────────────────── */}
         {activeTab === 'inquiry' && (
           <View style={styles.tabContent}>
@@ -877,9 +685,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
             ) : inquiries.length === 0 ? (
               <View style={styles.stateCard}>
                 <Text style={styles.emptyTitle}>No Inquiries Found</Text>
-                <Text style={styles.emptySubtitle}>
-                  No inquiries found for this vehicle
-                </Text>
+                <Text style={styles.emptySubtitle}>No inquiries found for this vehicle</Text>
               </View>
             ) : (
               <View style={styles.cardList}>
@@ -895,7 +701,6 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
                     }
                     onEdit={() => console.log('Edit inquiry:', inquiry.id)}
                     onView={() => {
-                      // Navigate to inquiry detail screen using numeric ID
                       if (inquiry.numericId) {
                         navigation.navigate('InquiryDetail', {inquiryId: inquiry.numericId});
                       }
@@ -926,9 +731,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
             ) : disputes.length === 0 ? (
               <View style={styles.stateCard}>
                 <Text style={styles.emptyTitle}>No Disputes Found</Text>
-                <Text style={styles.emptySubtitle}>
-                  No disputes found for this vehicle
-                </Text>
+                <Text style={styles.emptySubtitle}>No disputes found for this vehicle</Text>
               </View>
             ) : (
               <View style={styles.cardList}>
@@ -954,20 +757,23 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         navigationOptions={[
           {label: 'Gate Out', onPress: () => setShowGateOut(true)},
           {
-            label: 'Generate Estimate',
-            onPress: () => setShowEstimation(true),
-            disabled: jobCards.length === 0,
+            label: 'Create New Job',
+            onPress: () => setShowNewJob(true),
+            disabled: permissions !== null && !permissions.createJobCard,
           },
-          {label: 'Create New Job', onPress: () => setShowNewJob(true)},
           {
             label: 'Raise Dispute',
             onPress: () => setShowRaiseDispute(true),
-            disabled: jobCards.length === 0,
+            disabled:
+              jobCards.length === 0 ||
+              (permissions !== null && !permissions.raiseDispute),
           },
           {
             label: 'Request Part',
             onPress: () => setShowRequestPart(true),
-            disabled: jobCards.length === 0,
+            disabled:
+              jobCards.length === 0 ||
+              (permissions !== null && !permissions.createInquiry),
           },
         ]}
       />
@@ -993,18 +799,6 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
           make: vehicle.brand ?? '',
           model: vehicle.model ?? '',
           specs: vehicle.specs ?? vehicle.variant ?? '',
-        }}
-      />
-
-      <EstimationOverlay
-        isOpen={showEstimation}
-        onClose={() => setShowEstimation(false)}
-        vehicleInfo={{
-          plateNumber: vehicle?.plateNumber ?? '',
-          year: vehicle?.year ?? 0,
-          make: vehicle?.brand ?? '',
-          model: vehicle?.model ?? '',
-          specs: vehicle?.specs ?? vehicle?.variant ?? '',
         }}
       />
 
@@ -1063,120 +857,31 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#f5f3f4'},
-
-  // Error / loading full-screen
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f5f3f4',
-    gap: 12,
-    paddingHorizontal: 24,
-  },
+  centered: {flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f3f4', gap: 12, paddingHorizontal: 24},
   errorTitle: {fontSize: 20, fontWeight: '600', color: '#2b2b2b'},
-  errorSubtitle: {
-    fontSize: 14,
-    color: '#99a2b6',
-    textAlign: 'center',
-  },
-  backBtn: {
-    marginTop: 8,
-    backgroundColor: '#e5383b',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
+  errorSubtitle: {fontSize: 14, color: '#99a2b6', textAlign: 'center'},
+  backBtn: {marginTop: 8, backgroundColor: '#e5383b', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8},
   backBtnText: {color: '#ffffff', fontSize: 14, fontWeight: '500'},
-
-  // Top bar
-  topBar: {
-    height: 48,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
+  topBar: {height: 48, backgroundColor: '#ffffff', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0'},
   topBarBtn: {width: 32},
-  topBarTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 19,
-    fontWeight: '600',
-    color: '#e5383b',
-    letterSpacing: -0.64,
-  },
-
-  // Scroll
-  scrollContent: {
-    padding: 16,
-    gap: 16,
-  },
-
-  // Tab bar (flat strip)
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#e5e5e5',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  tabBarBtn: {
-    flex: 1,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#e5e5e5',
-  },
-  tabBarBtnActive: {
-    backgroundColor: '#e5383b',
-    borderRadius: 8,
-  },
+  topBarTitle: {flex: 1, textAlign: 'center', fontSize: 19, fontWeight: '600', color: '#e5383b', letterSpacing: -0.64},
+  scrollContent: {padding: 16, gap: 16},
+  tabBar: {flexDirection: 'row', backgroundColor: '#e5e5e5', borderRadius: 8, overflow: 'hidden'},
+  tabBarBtn: {flex: 1, height: 42, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e5e5e5'},
+  tabBarBtnActive: {backgroundColor: '#e5383b', borderRadius: 8},
   tabBarBtnFirst: {borderTopLeftRadius: 7, borderBottomLeftRadius: 7},
   tabBarBtnLast: {borderTopRightRadius: 7, borderBottomRightRadius: 7},
   tabBarBtnText: {fontSize: 13, fontWeight: '500', color: '#525252'},
   tabBarBtnTextActive: {color: '#ffffff'},
-
-  // Tab content area
   tabContent: {gap: 12},
-
-  // Card list
-  cardList: {gap: 12,marginTop:12},
-
-  // Loading text
-  centerRow: {
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
+  cardList: {gap: 12, marginTop: 12},
+  centerRow: {paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8},
   loadingText: {fontSize: 13, color: '#99a2b6'},
-
-  // Accordion body content
-  problemText: {
-    fontSize: 13,
-    color: '#525252',
-    paddingTop: 16,
-    lineHeight: 20,
-  },
-  emptyAccordion: {
-    paddingTop: 16,
-    paddingBottom: 8,
-    alignItems: 'center',
-    gap: 4,
-  },
-  emptyAccordionText: {fontSize: 14, color: '#99a2b6'},
+  problemText: {fontSize: 13, color: '#525252', paddingTop: 16, lineHeight: 20},
+  emptyAccordion: {paddingTop: 16, alignItems: 'center', gap: 4},
+  emptyAccordionText: {fontSize: 14, fontWeight: '500', color: '#525252'},
   emptyAccordionSub: {fontSize: 12, color: '#99a2b6'},
-
-  // State cards (loading / empty) for tabs
-  stateCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 32,
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyTitle: {fontSize: 16, fontWeight: '500', color: '#2b2b2b'},
-  emptySubtitle: {fontSize: 14, color: '#99a2b6', textAlign: 'center'},
+  stateCard: {backgroundColor: '#ffffff', borderRadius: 12, padding: 24, alignItems: 'center', gap: 8},
+  emptyTitle: {fontSize: 16, fontWeight: '600', color: '#2b2b2b'},
+  emptySubtitle: {fontSize: 13, color: '#99a2b6', textAlign: 'center'},
 });

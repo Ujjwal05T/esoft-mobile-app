@@ -3,8 +3,8 @@ import * as Keychain from 'react-native-keychain';
 // API Base URL
 // const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
 // export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-const API_BASE_URL = 'http://192.168.137.1:5196/api';
-export const SERVER_ORIGIN = 'http://192.168.137.1:5196';
+const API_BASE_URL = 'http://192.168.1.18:5196/api';
+export const SERVER_ORIGIN = 'http://192.168.1.18:5196';
 
 // ==========================================
 // TOKEN MANAGEMENT
