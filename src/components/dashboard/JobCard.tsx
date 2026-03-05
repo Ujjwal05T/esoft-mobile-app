@@ -7,7 +7,7 @@ import {SERVER_ORIGIN} from '../../services/api';
 export interface JobCardProps {
   id: number;
   jobCategory: string;
-  assignedStaffName?: string;
+  assignedStaffNames?: string[];
   remark?: string;
   audioUrl?: string;
   images?: string[];
@@ -35,7 +35,7 @@ const audioRecorderPlayer = AudioRecorderPlayer;
 export default function JobCard({
   id,
   jobCategory,
-  assignedStaffName,
+  assignedStaffNames,
   remark,
   audioUrl,
   images,
@@ -103,7 +103,11 @@ export default function JobCard({
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>Assigned To: </Text>
           <Text style={styles.metaValue}>
-            {assignedStaffName || 'Unassigned'}
+            {!assignedStaffNames || assignedStaffNames.length === 0
+              ? 'Unassigned'
+              : assignedStaffNames.length === 1
+              ? assignedStaffNames[0]
+              : `${assignedStaffNames[0]} +${assignedStaffNames.length - 1}`}
           </Text>
           <Text style={[styles.metaLabel, styles.ml8]}>{formattedDate}</Text>
         </View>

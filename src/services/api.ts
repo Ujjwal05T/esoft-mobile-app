@@ -651,12 +651,43 @@ export async function createVehicleWithAudio(data: CreateVehicleData, audioFile?
   }
 }
 
+// ==========================================
+// CAR MASTER DATA API (Cascading Dropdowns)
+// ==========================================
+
+// Get all car brands
+export async function getCarBrands() {
+  return apiRequest<string[]>('/carmaster/brands', { method: 'GET' });
+}
+
+// Get models for a selected brand
+export async function getCarModels(brand: string) {
+  return apiRequest<string[]>(`/carmaster/models?brand=${encodeURIComponent(brand)}`, { method: 'GET' });
+}
+
+// Get available years for a selected brand + model
+export async function getCarYears(brand: string, model: string) {
+  return apiRequest<string[]>(
+    `/carmaster/years?brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}`,
+    { method: 'GET' },
+  );
+}
+
+// Get variants for a selected brand + model + year
+export async function getCarVariants(brand: string, model: string, year: string) {
+  return apiRequest<string[]>(
+    `/carmaster/variants?brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&year=${encodeURIComponent(year)}`,
+    { method: 'GET' },
+  );
+}
+
 // Get all vehicles
 export async function getVehicles() {
   return apiRequest<VehicleListResponse>('/vehicle', {
     method: 'GET',
   });
 }
+
 
 // Get vehicle by ID
 export async function getVehicleById(id: number) {
@@ -719,6 +750,8 @@ export interface VehicleVisitResponse {
   gateOutImages: string[] | null;
   // Vehicle info
   vehicle: VehicleBasicInfo | null;
+  // Active job card categories for this visit
+  activeJobCategories: string[] | null;
   // Timestamps
   createdAt: string;
   updatedAt: string | null;
@@ -875,6 +908,13 @@ export async function getWorkshopVehicleSummary() {
 export async function deleteVehicleVisit(id: number) {
   return apiRequest<{ message: string }>(`/vehiclevisit/${id}`, {
     method: 'DELETE',
+  });
+}
+
+// Get vehicles currently gated-in where the logged-in staff has an assigned job card
+export async function getMyStaffVehicles() {
+  return apiRequest<VehicleVisitListResponse>('/jobcard/staff/my-vehicles', {
+    method: 'GET',
   });
 }
 
@@ -1166,8 +1206,8 @@ export interface JobCardResponse {
   vehicleVisitId?: number;
   workshopOwnerId: number;
   jobCategory: string;
-  assignedStaffId?: number;
-  assignedStaffName?: string;
+  assignedStaffIds?: number[];
+  assignedStaffNames?: string[];
   remark?: string;
   audioUrl?: string;
   images?: string[];
@@ -1203,14 +1243,14 @@ export interface CreateJobCardData {
   vehicleId: number;
   vehicleVisitId?: number;
   jobCategory: string;
-  assignedStaffId?: number;
+  assignedStaffIds?: number[];
   remark?: string;
   priority?: string;
 }
 
 export interface UpdateJobCardData {
   jobCategory?: string;
-  assignedStaffId?: number;
+  assignedStaffIds?: number[];
   remark?: string;
   status?: string;
   priority?: string;
@@ -1240,7 +1280,9 @@ export async function createJobCardWithMedia(
   formData.append('VehicleId', data.vehicleId.toString());
   formData.append('JobCategory', data.jobCategory);
   if (data.vehicleVisitId) formData.append('VehicleVisitId', data.vehicleVisitId.toString());
-  if (data.assignedStaffId) formData.append('AssignedStaffId', data.assignedStaffId.toString());
+  if (data.assignedStaffIds && data.assignedStaffIds.length > 0) {
+    data.assignedStaffIds.forEach(id => formData.append('AssignedStaffIds', id.toString()));
+  }
   if (data.remark) formData.append('Remark', data.remark);
   if (data.priority) formData.append('Priority', data.priority);
 

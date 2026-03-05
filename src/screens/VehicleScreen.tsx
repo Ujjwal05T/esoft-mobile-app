@@ -16,11 +16,12 @@ import {RootStackParamList} from '../navigation/RootNavigator';
 import AddVehicleOverlay from '../components/overlays/AddVehicleOverlay';
 import FloatingActionButton from '../components/dashboard/FloatingActionButton';
 import FiltersOverlay, {FilterData} from '../components/overlays/FiltersOverlay';
-import {getVehicles, type VehicleResponse} from '../services/api';
+import {getCurrentVehicles, getVehicles, type VehicleVisitResponse, type VehicleResponse} from '../services/api';
 import Header from '../components/dashboard/Header';
 
 interface DisplayVehicle {
   id: string;
+  vehicleId: string;
   plateNumber: string;
   year?: number;
   make: string;
@@ -29,7 +30,6 @@ interface DisplayVehicle {
   services?: string[];
   additionalServices?: number;
   addedBy?: string;
-  status: 'Active' | 'Inactive' | 'Requested';
   createdAt?: string;
 }
 
@@ -216,11 +216,38 @@ export default function VehicleScreen() {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await getVehicles();
-      if (result.success && result.data) {
-        const all: DisplayVehicle[] = result.data.vehicles.map(
-          (v: VehicleResponse) => ({
+      const [currentResult, allResult] = await Promise.all([
+        getCurrentVehicles(),
+        getVehicles(),
+      ]);
+
+      if (currentResult.success && currentResult.data) {
+        const gatedIn: DisplayVehicle[] = currentResult.data.visits.map(
+          (v: VehicleVisitResponse) => ({
             id: String(v.id),
+            vehicleId: String(v.vehicleId),
+            plateNumber: v.vehicle?.plateNumber ?? '',
+            year: v.vehicle?.year ?? undefined,
+            make: v.vehicle?.brand ?? 'Unknown',
+            model: v.vehicle?.model ?? 'Unknown',
+            specs: v.vehicle?.specs ?? v.vehicle?.variant ?? undefined,
+            services: (v.activeJobCategories ?? []).slice(0, 2),
+            additionalServices: Math.max(0, (v.activeJobCategories?.length ?? 0) - 2),
+            createdAt: v.gateInDateTime,
+          }),
+        );
+        setVehicles(gatedIn);
+        setFilteredVehicles(applyFilters(gatedIn, activeFilters));
+      } else {
+        setError(currentResult.error ?? 'Failed to load vehicles.');
+      }
+
+      if (allResult.success && allResult.data) {
+        const requested: DisplayVehicle[] = allResult.data.vehicles
+          .filter((v: VehicleResponse) => v.status === 'Requested')
+          .map((v: VehicleResponse) => ({
+            id: String(v.id),
+            vehicleId: String(v.id),
             plateNumber: v.plateNumber,
             year: v.year ?? undefined,
             make: v.brand ?? 'Unknown',
@@ -228,21 +255,10 @@ export default function VehicleScreen() {
             specs: v.specs ?? v.variant ?? undefined,
             services: [],
             additionalServices: 0,
-            status: v.status as 'Active' | 'Inactive' | 'Requested',
             createdAt: v.createdAt,
-          }),
-        );
-        const active = all.filter(v => v.status === 'Active');
-        const requested = all.filter(v => v.status === 'Requested');
-
-        setVehicles(active);
+          }));
         setRequestedVehicles(requested);
-
-        // Apply current filters
-        setFilteredVehicles(applyFilters(active, activeFilters));
         setFilteredRequestedVehicles(applyFilters(requested, activeFilters));
-      } else {
-        setError(result.error ?? 'Failed to load vehicles.');
       }
     } catch {
       setError('Network error. Please try again.');
@@ -279,26 +295,15 @@ export default function VehicleScreen() {
             style={[styles.tabBtn, activeTab === 'all' && styles.tabBtnActive]}
             onPress={() => setActiveTab('all')}
             activeOpacity={0.8}>
-            <Text
-              style={[
-                styles.tabBtnText,
-                activeTab === 'all' && styles.tabBtnTextActive,
-              ]}>
-              All Vehicles ({filteredVehicles.length})
+            <Text style={[styles.tabBtnText, activeTab === 'all' && styles.tabBtnTextActive]}>
+              All ({filteredVehicles.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[
-              styles.tabBtn,
-              activeTab === 'requested' && styles.tabBtnActive,
-            ]}
+            style={[styles.tabBtn, activeTab === 'requested' && styles.tabBtnActive]}
             onPress={() => setActiveTab('requested')}
             activeOpacity={0.8}>
-            <Text
-              style={[
-                styles.tabBtnText,
-                activeTab === 'requested' && styles.tabBtnTextActive,
-              ]}>
+            <Text style={[styles.tabBtnText, activeTab === 'requested' && styles.tabBtnTextActive]}>
               Requested ({filteredRequestedVehicles.length})
             </Text>
           </TouchableOpacity>
@@ -347,37 +352,22 @@ export default function VehicleScreen() {
             {filterCount > 0
               ? 'No vehicles match your filters'
               : activeTab === 'all'
-              ? 'No vehicles found'
+              ? 'No vehicles currently in workshop'
               : 'No requested vehicles'}
           </Text>
           <Text style={styles.emptySubtitle}>
             {filterCount > 0
               ? 'Try adjusting your filter criteria'
               : activeTab === 'all'
-              ? 'Add your first vehicle to get started'
+              ? 'Gate in a vehicle to see it here'
               : 'Staff-added vehicles will appear here'}
           </Text>
-          {activeTab === 'all' && filterCount === 0 && (
-            <TouchableOpacity
-              style={[styles.actionBtn, {marginTop: 8}]}
-              onPress={() => setShowAddVehicle(true)}
-              activeOpacity={0.8}>
-              <Text style={styles.actionBtnText}>Add Vehicle</Text>
-            </TouchableOpacity>
-          )}
           {filterCount > 0 && (
             <TouchableOpacity
               style={[styles.actionBtn, {marginTop: 8}]}
               onPress={() => handleApplyFilters({
-                startDate: '',
-                endDate: '',
-                brand: '',
-                model: '',
-                year: '',
-                vehicleNumber: '',
-                assignedTo: '',
-                addedBy: '',
-                sortBy: null,
+                startDate: '', endDate: '', brand: '', model: '',
+                year: '', vehicleNumber: '', assignedTo: '', addedBy: '', sortBy: null,
               })}
               activeOpacity={0.8}>
               <Text style={styles.actionBtnText}>Clear Filters</Text>
@@ -399,7 +389,7 @@ export default function VehicleScreen() {
               key={vehicle.id}
               activeOpacity={0.85}
               onPress={() =>
-                navigation.navigate('VehicleDetail', {vehicleId: Number(vehicle.id)})
+                navigation.navigate('VehicleDetail', {vehicleId: Number(vehicle.vehicleId)})
               }>
               <VehicleCard
                 plateNumber={vehicle.plateNumber}

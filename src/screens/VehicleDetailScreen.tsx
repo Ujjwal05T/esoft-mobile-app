@@ -778,7 +778,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
                       key={job.id}
                       id={job.id}
                       jobCategory={job.jobCategory}
-                      assignedStaffName={job.assignedStaffName}
+                      assignedStaffNames={job.assignedStaffNames}
                       remark={job.remark}
                       audioUrl={job.audioUrl}
                       images={job.images}
@@ -1012,6 +1012,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         isOpen={showNewJob}
         onClose={() => setShowNewJob(false)}
         vehicleId={vehicleId}
+        vehicleVisitId={activeVisit?.id}
         onAddJob={() => fetchJobsAndVisit()}
       />
 

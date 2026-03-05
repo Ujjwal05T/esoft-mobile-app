@@ -35,6 +35,7 @@ interface NewJobCardOverlayProps {
   onClose: () => void;
   onAddJob?: (data: CreateJobCardData) => void;
   vehicleId: number;
+  vehicleVisitId?: number;
 }
 
 interface StaffMember {
@@ -60,12 +61,12 @@ export default function NewJobCardOverlay({
   onClose,
   onAddJob,
   vehicleId,
+  vehicleVisitId,
 }: NewJobCardOverlayProps) {
   // Form state
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-  const [selectedStaff, setSelectedStaff] = useState('');
-  const [selectedStaffName, setSelectedStaffName] = useState('');
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   const [showStaffPicker, setShowStaffPicker] = useState(false);
   const [remark, setRemark] = useState('');
 
@@ -115,8 +116,7 @@ export default function NewJobCardOverlay({
     if (!isOpen) {
       setSelectedCategory('');
       setShowCategoryPicker(false);
-      setSelectedStaff('');
-      setSelectedStaffName('');
+      setSelectedStaffIds([]);
       setShowStaffPicker(false);
       setRemark('');
       setStaffMembers([]);
@@ -221,8 +221,11 @@ export default function NewJobCardOverlay({
     try {
       const jobData: CreateJobCardData = {
         vehicleId,
+        vehicleVisitId,
         jobCategory: selectedCategory,
-        assignedStaffId: selectedStaff ? parseInt(selectedStaff, 10) : undefined,
+        assignedStaffIds: selectedStaffIds.length > 0
+          ? selectedStaffIds.map(id => parseInt(id, 10))
+          : undefined,
         remark,
         priority: 'Normal',
       };
@@ -336,19 +339,25 @@ export default function NewJobCardOverlay({
 
           {/* Assign Staff Dropdown */}
           <View style={styles.fieldWrap}>
-            {selectedStaffName !== '' && <Text style={styles.floatLabel}>Assign Staff</Text>}
+            {selectedStaffIds.length > 0 && <Text style={styles.floatLabel}>Assign Staff</Text>}
             <TouchableOpacity
               style={[
                 styles.dropdown,
-                (showStaffPicker || selectedStaffName !== '') && styles.dropdownActive,
+                (showStaffPicker || selectedStaffIds.length > 0) && styles.dropdownActive,
               ]}
               onPress={() => {
                 setShowStaffPicker(v => !v);
                 setShowCategoryPicker(false);
               }}
               activeOpacity={0.8}>
-              <Text style={[styles.dropdownText, !selectedStaffName && styles.dropdownPlaceholder]}>
-                {selectedStaffName || 'Assign Staff'}
+              <Text style={[styles.dropdownText, selectedStaffIds.length === 0 && styles.dropdownPlaceholder]}>
+                {selectedStaffIds.length === 0
+                  ? 'Assign Staff'
+                  : (() => {
+                      const first = staffMembers.find(s => s.id === selectedStaffIds[0])?.name ?? '';
+                      const extra = selectedStaffIds.length - 1;
+                      return extra > 0 ? `${first} +${extra}` : first;
+                    })()}
               </Text>
               <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
                 <Path
@@ -368,19 +377,35 @@ export default function NewJobCardOverlay({
                 ) : staffMembers.length === 0 ? (
                   <Text style={styles.emptyText}>No staff available</Text>
                 ) : (
-                  staffMembers.map(s => (
-                    <TouchableOpacity
-                      key={s.id}
-                      style={[styles.staffItem, selectedStaff === s.id && styles.staffItemActive]}
-                      onPress={() => {
-                        setSelectedStaff(s.id);
-                        setSelectedStaffName(s.name);
-                        setShowStaffPicker(false);
-                      }}
-                      activeOpacity={0.8}>
-                      <Text style={styles.staffItemText}>{s.name}</Text>
-                    </TouchableOpacity>
-                  ))
+                  staffMembers.map(s => {
+                    const isSelected = selectedStaffIds.includes(s.id);
+                    return (
+                      <TouchableOpacity
+                        key={s.id}
+                        style={[styles.staffItem, isSelected && styles.staffItemActive]}
+                        onPress={() => {
+                          setSelectedStaffIds(prev =>
+                            isSelected ? prev.filter(id => id !== s.id) : [...prev, s.id],
+                          );
+                        }}
+                        activeOpacity={0.8}>
+                        <Text style={[styles.staffItemText, isSelected && styles.staffItemTextActive]}>
+                          {s.name}
+                        </Text>
+                        {isSelected && (
+                          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                            <Path
+                              d="M5 13L9 17L19 7"
+                              stroke="#e5383b"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </Svg>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })
                 )}
               </View>
             )}
@@ -643,9 +668,10 @@ const styles = StyleSheet.create({
   },
   staffLoader: {padding: 12},
   emptyText: {padding: 16, fontSize: 14, color: '#828282', textAlign: 'center'},
-  staffItem: {paddingHorizontal: 16, paddingVertical: 12},
+  staffItem: {paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
   staffItemActive: {backgroundColor: '#fff5f5'},
   staffItemText: {fontSize: 15, color: '#000'},
+  staffItemTextActive: {color: '#e5383b', fontWeight: '500'},
   remarkRow: {flexDirection: 'row', gap: 8, alignItems: 'center'},
   remarkInput: {flex: 1, justifyContent: 'center'},
   recordBtn: {

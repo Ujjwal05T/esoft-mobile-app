@@ -17,7 +17,7 @@ import {RootStackParamList} from '../navigation/RootNavigator';
 import {MainTabParamList} from '../navigation/TabNavigator';
 import AddVehicleOverlay from '../components/overlays/AddVehicleOverlay';
 import FloatingActionButton from '../components/dashboard/FloatingActionButton';
-import {getVehicles, getStaffProfile, type VehicleResponse, type StaffPermissions} from '../services/api';
+import {getMyStaffVehicles, getStaffProfile, type VehicleVisitResponse, type StaffPermissions} from '../services/api';
 import Header from '../components/dashboard/Header';
 
 // Composite navigation type that supports both tab and stack navigation
@@ -28,6 +28,7 @@ type StaffVehicleScreenNavigationProp = CompositeNavigationProp<
 
 interface DisplayVehicle {
   id: string;
+  vehicleId: string;
   plateNumber: string;
   year?: number;
   make: string;
@@ -70,7 +71,7 @@ export default function StaffVehicleScreen() {
     setError(null);
     try {
       const [result, profileResult] = await Promise.all([
-        getVehicles(),
+        getMyStaffVehicles(),
         getStaffProfile(),
       ]);
 
@@ -78,20 +79,19 @@ export default function StaffVehicleScreen() {
         setPermissions(profileResult.data.permissions);
       }
       if (result.success && result.data) {
-        const activeVehicles: DisplayVehicle[] = result.data.vehicles
-          .filter((v: VehicleResponse) => v.status === 'Active')
-          .map((v: VehicleResponse) => ({
-            id: String(v.id),
-            plateNumber: v.plateNumber,
-            year: v.year ?? undefined,
-            make: v.brand ?? 'Unknown',
-            model: v.model ?? 'Unknown',
-            specs: v.specs ?? v.variant ?? undefined,
-            services: [],
-            additionalServices: 0,
-            status: 'Active' as const,
-          }));
-        setVehicles(activeVehicles);
+        const mapped: DisplayVehicle[] = result.data.visits.map((v: VehicleVisitResponse) => ({
+          id: String(v.id),
+          vehicleId: String(v.vehicleId),
+          plateNumber: v.vehicle?.plateNumber ?? '',
+          year: v.vehicle?.year ?? undefined,
+          make: v.vehicle?.brand ?? 'Unknown',
+          model: v.vehicle?.model ?? 'Unknown',
+          specs: v.vehicle?.specs ?? v.vehicle?.variant ?? undefined,
+          services: (v.activeJobCategories ?? []).slice(0, 2),
+          additionalServices: Math.max(0, (v.activeJobCategories?.length ?? 0) - 2),
+          status: 'Active' as const,
+        }));
+        setVehicles(mapped);
       } else {
         setError(result.error ?? 'Failed to load vehicles.');
       }
@@ -166,7 +166,7 @@ export default function StaffVehicleScreen() {
               key={vehicle.id}
               activeOpacity={0.85}
               onPress={() =>
-                navigation.navigate('StaffVehicleDetail', {vehicleId: Number(vehicle.id)})
+                navigation.navigate('StaffVehicleDetail', {vehicleId: Number(vehicle.vehicleId)})
               }>
               <VehicleCard
                 plateNumber={vehicle.plateNumber}

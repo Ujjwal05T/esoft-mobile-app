@@ -47,8 +47,9 @@ import {
 import Svg, {Path} from 'react-native-svg';
 import VehicleCard from '../dashboard/VehicleCard';
 import {
-  getVehicles,
+  getCurrentVehicles,
   type VehicleResponse,
+  type VehicleVisitResponse,
 } from '../../services/api';
 
 const SCREEN_H = Dimensions.get('screen').height;
@@ -116,20 +117,44 @@ export default function VehicleSelectionOverlay({
     setVehicle(null);
 
     try {
-      const result = await getVehicles();
+      const result = await getCurrentVehicles();
       if (result.success && result.data) {
-        // Filter vehicles by plate number (case-insensitive)
-        const foundVehicle = result.data.vehicles.find(
-          v =>
-            v.plateNumber.toLowerCase().trim() ===
+        // Search only within currently gated-in vehicles
+        const foundVisit = result.data.visits.find(
+          (v: VehicleVisitResponse) =>
+            v.vehicle?.plateNumber.toLowerCase().trim() ===
             plateNumber.toLowerCase().trim(),
         );
 
-        if (foundVehicle) {
-          setVehicle(foundVehicle);
+        if (foundVisit && foundVisit.vehicle) {
+          // Reconstruct as VehicleResponse shape for compatibility
+          const vehicleData: VehicleResponse = {
+            id: foundVisit.vehicle.id,
+            plateNumber: foundVisit.vehicle.plateNumber,
+            brand: foundVisit.vehicle.brand,
+            model: foundVisit.vehicle.model,
+            year: foundVisit.vehicle.year,
+            variant: foundVisit.vehicle.variant,
+            chassisNumber: null,
+            specs: foundVisit.vehicle.specs,
+            registrationName: null,
+            ownerName: foundVisit.vehicle.ownerName,
+            contactNumber: foundVisit.vehicle.contactNumber,
+            email: null,
+            gstNumber: null,
+            insuranceProvider: null,
+            odometerReading: null,
+            observations: null,
+            observationsAudioUrl: null,
+            workshopOwnerId: foundVisit.workshopOwnerId,
+            status: 'Active',
+            createdAt: foundVisit.createdAt,
+            updatedAt: foundVisit.updatedAt,
+          };
+          setVehicle(vehicleData);
           setError(null);
         } else {
-          setError('Vehicle not found with this plate number');
+          setError('Vehicle not found or not currently in the workshop');
           setVehicle(null);
         }
       } else {

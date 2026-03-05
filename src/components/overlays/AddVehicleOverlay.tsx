@@ -24,7 +24,7 @@ const SCREEN_H = Dimensions.get('screen').height;
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
 import VehicleCard from '../dashboard/VehicleCard';
-import {createVehicle, gateInVehicle, gateInVehicleWithMedia, scanRcCard, scanVehiclePlate} from '../../services/api';
+import {createVehicle, gateInVehicle, gateInVehicleWithMedia, scanRcCard, scanVehiclePlate, getCarBrands, getCarModels, getCarYears, getCarVariants} from '../../services/api';
 import CameraScannerOverlay, {ScanMode} from './CameraScannerOverlay';
 import AppAlert, {AlertState} from './AppAlert';
 
@@ -55,26 +55,7 @@ interface AddVehicleOverlayProps {
   onSubmitRequest?: (data: VehicleRequestFormData) => void;
 }
 
-const brandOptions = ['Toyota', 'Honda', 'Hyundai', 'Maruti Suzuki', 'Tata', 'Mahindra', 'Kia'];
-const modelOptions: Record<string, string[]> = {
-  Toyota: ['Innova', 'Innova Crysta', 'Fortuner', 'Glanza'],
-  Honda: ['City', 'Amaze', 'Elevate'],
-  Hyundai: ['Creta', 'Venue', 'i20'],
-  'Maruti Suzuki': ['Swift', 'Baleno', 'Brezza'],
-  Tata: ['Nexon', 'Punch', 'Harrier'],
-  Mahindra: ['XUV500', 'Thar', 'Scorpio'],
-  Kia: ['Seltos', 'Sonet', 'Carens'],
-};
-const yearOptions = Array.from({length: 15}, (_, i) => String(2024 - i));
-const variantOptions = ['Crysta CX', 'Crysta VX', 'Crysta ZX', 'Base', 'Mid', 'Top'];
-const insuranceOptions = [
-  'ICICI Lombard',
-  'HDFC ERGO',
-  'Bajaj Allianz',
-  'New India Assurance',
-  'United India Insurance',
-  'National Insurance',
-];
+
 
 // Simple inline dropdown component
 function DropdownField({
@@ -110,9 +91,7 @@ function DropdownField({
 
   const handleSelect = (opt: string) => {
     onSelect(opt);
-    if (onToggle) {
-      onToggle();
-    } else {
+    if (!onToggle) {
       setInternalOpen(false);
     }
   };
@@ -144,14 +123,16 @@ function DropdownField({
       </TouchableOpacity>
       {open && (
         <View style={styles.dropdownList}>
-          {options.map(opt => (
-            <TouchableOpacity
-              key={opt}
-              onPress={() => handleSelect(opt)}
-              style={styles.dropdownItem}>
-              <Text style={styles.dropdownItemText}>{opt}</Text>
-            </TouchableOpacity>
-          ))}
+          <ScrollView nestedScrollEnabled={true} keyboardShouldPersistTaps="handled">
+            {options.map(opt => (
+              <TouchableOpacity
+                key={opt}
+                onPress={() => handleSelect(opt)}
+                style={styles.dropdownItem}>
+                <Text style={styles.dropdownItemText}>{opt}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       )}
     </View>
@@ -186,6 +167,18 @@ export default function AddVehicleOverlay({
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [chassisNumber, setChassisNumber] = useState('');
   const [hasAttemptedManual, setHasAttemptedManual] = useState(false);
+
+  // Manual dropdown options from API
+  const [brandOptions, setBrandOptions] = useState<string[]>([]);
+  const [modelOptions, setModelOptions] = useState<string[]>([]);
+  const [yearOptions, setYearOptions]   = useState<string[]>([]);
+  const [variantOptions, setVariantOptions] = useState<string[]>([]);
+
+  // Loading flags per dropdown
+  const [loadingBrands, setLoadingBrands]   = useState(false);
+  const [loadingModels, setLoadingModels]   = useState(false);
+  const [loadingYears, setLoadingYears]     = useState(false);
+  const [loadingVariants, setLoadingVariants] = useState(false);
 
   // Form (owner details)
   const [vehicleData, setVehicleData] = useState<VehicleData | null>(null);
@@ -223,7 +216,7 @@ export default function AddVehicleOverlay({
   const [apiError, setApiError] = useState<string | null>(null);
   const [createdVehicleId, setCreatedVehicleId] = useState<number | null>(null);
 
-  const availableModels = selectedBrand ? (modelOptions[selectedBrand] || []) : [];
+  const availableModels = modelOptions;
 
   const resetAll = () => {
     setCurrentView('search');
@@ -258,6 +251,10 @@ export default function AddVehicleOverlay({
     setIsLoading(false);
     setApiError(null);
     setCreatedVehicleId(null);
+    setBrandOptions([]);
+    setModelOptions([]);
+    setYearOptions([]);
+    setVariantOptions([]);
     setScanMode(null);
     setIsScanProcessing(false);
   };
@@ -265,6 +262,48 @@ export default function AddVehicleOverlay({
   useEffect(() => {
     if (!isOpen) resetAll();
   }, [isOpen]);
+
+  // ── Load brands once when overlay opens ──────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    setLoadingBrands(true);
+    getCarBrands()
+      .then(r => { if (r.success && r.data) setBrandOptions(r.data); })
+      .finally(() => setLoadingBrands(false));
+  }, [isOpen]);
+
+  // ── Load models whenever brand changes ───────────────────────────────────
+  useEffect(() => {
+    setModelOptions([]);
+    setYearOptions([]);
+    setVariantOptions([]);
+    if (!selectedBrand) return;
+    setLoadingModels(true);
+    getCarModels(selectedBrand)
+      .then(r => { if (r.success && r.data) setModelOptions(r.data); })
+      .finally(() => setLoadingModels(false));
+  }, [selectedBrand]);
+
+  // ── Load years whenever brand+model change ───────────────────────────────
+  useEffect(() => {
+    setYearOptions([]);
+    setVariantOptions([]);
+    if (!selectedBrand || !selectedModel) return;
+    setLoadingYears(true);
+    getCarYears(selectedBrand, selectedModel)
+      .then(r => { if (r.success && r.data) setYearOptions(r.data); })
+      .finally(() => setLoadingYears(false));
+  }, [selectedBrand, selectedModel]);
+
+  // ── Load variants whenever brand+model+year change ───────────────────────
+  useEffect(() => {
+    setVariantOptions([]);
+    if (!selectedBrand || !selectedModel || !selectedYear) return;
+    setLoadingVariants(true);
+    getCarVariants(selectedBrand, selectedModel, selectedYear)
+      .then(r => { if (r.success && r.data) setVariantOptions(r.data); })
+      .finally(() => setLoadingVariants(false));
+  }, [selectedBrand, selectedModel, selectedYear]);
 
   useEffect(() => {
     if (currentView === 'success') {
@@ -684,42 +723,59 @@ export default function AddVehicleOverlay({
             {renderHeader('Add Vehicle Details')}
             <View style={styles.formGap}>
               <DropdownField
-                label="Brand"
+                label={loadingBrands ? 'Loading brands...' : 'Brand'}
                 value={selectedBrand}
                 options={brandOptions}
                 onSelect={v => {
                   setSelectedBrand(v);
                   setSelectedModel('');
+                  setSelectedYear('');
+                  setSelectedVariant('');
                   setOpenManualDropdown(null);
                 }}
                 error={hasAttemptedManual}
                 isOpen={openManualDropdown === 'brand'}
                 onToggle={() => toggleManualDropdown('brand')}
+                disabled={loadingBrands}
               />
               <DropdownField
-                label="Model"
+                label={loadingModels ? 'Loading models...' : 'Model'}
                 value={selectedModel}
                 options={availableModels}
-                onSelect={setSelectedModel}
-                disabled={!selectedBrand}
+                onSelect={v => {
+                  setSelectedModel(v);
+                  setSelectedYear('');
+                  setSelectedVariant('');
+                  setOpenManualDropdown(null);
+                }}
+                disabled={!selectedBrand || loadingModels}
                 error={hasAttemptedManual}
                 isOpen={openManualDropdown === 'model'}
                 onToggle={() => toggleManualDropdown('model')}
               />
               <DropdownField
-                label="Year"
+                label={loadingYears ? 'Loading years...' : 'Year'}
                 value={selectedYear}
                 options={yearOptions}
-                onSelect={setSelectedYear}
+                onSelect={v => {
+                  setSelectedYear(v);
+                  setSelectedVariant('');
+                  setOpenManualDropdown(null);
+                }}
                 error={hasAttemptedManual}
+                disabled={!selectedModel || loadingYears}
                 isOpen={openManualDropdown === 'year'}
                 onToggle={() => toggleManualDropdown('year')}
               />
               <DropdownField
-                label="Select Variant"
+                label={loadingVariants ? 'Loading variants...' : 'Select Variant'}
                 value={selectedVariant}
                 options={variantOptions}
-                onSelect={setSelectedVariant}
+                onSelect={v => {
+                  setSelectedVariant(v);
+                  setOpenManualDropdown(null);
+                }}
+                disabled={!selectedYear || loadingVariants}
                 isOpen={openManualDropdown === 'variant'}
                 onToggle={() => toggleManualDropdown('variant')}
               />
@@ -848,7 +904,14 @@ export default function AddVehicleOverlay({
               <DropdownField
                 label="Insurance Provider"
                 value={insuranceProvider}
-                options={insuranceOptions}
+                options={[
+                  'ICICI Lombard',
+                  'HDFC ERGO',
+                  'Bajaj Allianz',
+                  'New India Assurance',
+                  'United India Insurance',
+                  'National Insurance',
+                ]}
                 onSelect={setInsuranceProvider}
               />
 
@@ -1403,7 +1466,7 @@ const styles = StyleSheet.create({
   },
   successText: {color: '#fff', fontSize: 20, fontWeight: '500', letterSpacing: 1},
   // Dropdown floating label
-  dropdownWrap: {position: 'relative'},
+  dropdownWrap: {position: 'relative',marginTop:2},
   dropdownFloatLabel: {
     position: 'absolute',
     top: -8,
