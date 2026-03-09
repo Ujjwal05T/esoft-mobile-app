@@ -12,6 +12,7 @@ interface StatusCardProps {
   vectorHeight?: number;
   vectorTop?: number;
   vectorOpacity?: number;
+  vectorRight?: number;
 }
 
 
@@ -26,6 +27,7 @@ export default function StatusCard({
   vectorHeight = 130,
   vectorTop = 25,
   vectorOpacity = 0.35,
+  vectorRight = 0,  
 }: StatusCardProps) {
   const Wrapper = onPress ? TouchableOpacity : View;
 
@@ -35,7 +37,7 @@ export default function StatusCard({
       activeOpacity={0.85}
       style={[styles.card, {backgroundColor: bgColor}]}>
       {VectorIcon && (
-        <View style={[styles.vectorContainer, {top: vectorTop}]}>
+        <View style={[styles.vectorContainer, {top: vectorTop}, {right: vectorRight}]}>
           <VectorIcon
             width={vectorWidth}
             height={vectorHeight}
@@ -82,7 +84,6 @@ const styles = StyleSheet.create({
   },
   vectorContainer: {
     position: 'absolute',
-    right: 0,
   },
   arrowContainer: {
     position: 'absolute',

@@ -24,6 +24,7 @@ import NewJobCardOverlay from '../components/overlays/NewJobCardOverlay';
 import RaiseDisputeOverlay from '../components/overlays/RaiseDisputeOverlay';
 import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import EditInquiryOverlay from '../components/overlays/EditInquiryOverlay';
 import {
   getVehicleById,
   getActiveVehicleVisit,
@@ -36,11 +37,13 @@ import {
   getDisputesByWorkshopOwner,
   getStoredUser,
   createInquiryWithMedia,
+  getInquiryById,
   SERVER_ORIGIN,
   type VehicleResponse,
   type VehicleVisitResponse,
   type JobCardResponse,
   type InquiryResponse,
+  type InquiryItemResponse,
   type QuoteApiResponse,
   type WorkshopOrderListItem,
   type DisputeListItemResponse,
@@ -86,14 +89,14 @@ function mapApiInquiry(api: InquiryResponse, vehicle: VehicleResponse): InquiryW
     declinedDate: api.declinedDate ? formatDate(api.declinedDate) : undefined,
     status: api.status.toLowerCase() as Inquiry['status'],
     inquiryBy: api.requestedByName ?? 'Owner',
-    jobCategory: api.jobCategory,
+    jobCategories: api.jobCategories ?? [],
     items: api.items.map(item => ({
       id: item.id.toString(),
       itemName: item.partName,
       preferredBrand: item.preferredBrand,
       notes: item.remark,
       quantity: item.quantity,
-      imageUrl: item.image1Url ? `${SERVER_ORIGIN}${item.image1Url}` : undefined,
+      imageUrl: item.image1Url ? (item.image1Url.startsWith('http') ? item.image1Url : `${SERVER_ORIGIN}${item.image1Url}`) : undefined,
     })),
     media: [],
   };
@@ -270,6 +273,15 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
 
   // ── State ───────────────────────────────────────────────────────────────────
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
+  const [editInquiry, setEditInquiry] = useState<{id: number; items: InquiryItemResponse[]} | null>(null);
+
+  const handleEditInquiry = async (numericId: number) => {
+    const result = await getInquiryById(numericId);
+    if (result.success && result.data) {
+      setEditInquiry({id: numericId, items: result.data.items});
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('jobcard');
   const [expandedSections, setExpandedSections] = useState<Record<SectionKey, boolean>>({
     basicInfo: false,
@@ -586,7 +598,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
       const result = await createInquiryWithMedia(
         vehicleId,
         user.id,
-        'Parts Request',
+        activeVisit?.activeJobCategories ?? [],
         items,
         audioFiles,
         imageFiles,
@@ -688,8 +700,8 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
           make={vehicle.brand ?? ''}
           model={vehicle.model ?? ''}
           specs={vehicle.specs ?? vehicle.variant ?? ''}
-          services={[]}
-          additionalServices={0}
+          services={activeVisit?.activeJobCategories?.slice(0, 2) ?? []}
+          additionalServices={Math.max(0, (activeVisit?.activeJobCategories?.length ?? 0) - 2)}
         />
 
         {/* ── Tab Bar ──────────────────────────────────────────────────── */}
@@ -739,20 +751,6 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
               </Text>
             </Accordion>
 
-            {/* Previous Services */}
-            <Accordion
-              title="Previous Services"
-              expanded={expandedSections.previousServices}
-              onToggle={() => toggleSection('previousServices')}>
-              <View style={styles.emptyAccordion}>
-                <Text style={styles.emptyAccordionText}>
-                  No previous services found
-                </Text>
-                <Text style={styles.emptyAccordionSub}>
-                  Service history will appear here
-                </Text>
-              </View>
-            </Accordion>
 
             {/* Jobs */}
             <Accordion
@@ -764,7 +762,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
                   <ActivityIndicator size="small" color="#e5383b" />
                   <Text style={styles.loadingText}>Loading jobs...</Text>
                 </View>
-              ) : jobCards.length === 0 ? (
+              ) : jobCards.filter(j => j.vehicleVisitId === activeVisit?.id).length === 0 ? (
                 <View style={styles.emptyAccordion}>
                   <Text style={styles.emptyAccordionText}>No jobs found</Text>
                   <Text style={styles.emptyAccordionSub}>
@@ -773,21 +771,23 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
                 </View>
               ) : (
                 <View style={styles.cardList}>
-                  {jobCards.map(job => (
-                    <JobCard
-                      key={job.id}
-                      id={job.id}
-                      jobCategory={job.jobCategory}
-                      assignedStaffNames={job.assignedStaffNames}
-                      remark={job.remark}
-                      audioUrl={job.audioUrl}
-                      images={job.images}
-                      videos={job.videos}
-                      createdAt={job.createdAt}
-                      status={job.status}
-                      onClick={() => console.log('Job card:', job.id)}
-                    />
-                  ))}
+                  {jobCards
+                    .filter(j => j.vehicleVisitId === activeVisit?.id)
+                    .map(job => (
+                      <JobCard
+                        key={job.id}
+                        id={job.id}
+                        jobCategory={job.jobCategory}
+                        assignedStaffNames={job.assignedStaffNames}
+                        remark={job.remark}
+                        audioUrl={job.audioUrl}
+                        images={job.images}
+                        videos={job.videos}
+                        createdAt={job.createdAt}
+                        status={job.status}
+                        onClick={() => console.log('Job card:', job.id)}
+                      />
+                    ))}
                 </View>
               )}
             </Accordion>
@@ -893,7 +893,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
                         expandedInquiryId === inquiry.id ? null : inquiry.id,
                       )
                     }
-                    onEdit={() => console.log('Edit inquiry:', inquiry.id)}
+                    onEdit={() => { if (inquiry.numericId) handleEditInquiry(inquiry.numericId); }}
                     onView={() => {
                       // Navigate to inquiry detail screen using numeric ID
                       if (inquiry.numericId) {
@@ -1040,6 +1040,14 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         onSubmit={handleRequestPartSubmit}
       />
 
+      <EditInquiryOverlay
+        isOpen={!!editInquiry}
+        onClose={() => setEditInquiry(null)}
+        inquiryId={editInquiry?.id ?? 0}
+        initialItems={editInquiry?.items ?? []}
+        onSuccess={() => { setEditInquiry(null); fetchInquiries(); }}
+      />
+
       <AppAlert
         isOpen={!!appAlert}
         type={appAlert?.type ?? 'info'}
@@ -1102,7 +1110,8 @@ const styles = StyleSheet.create({
   topBarBtn: {width: 32},
   topBarTitle: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: 'left',
+    marginLeft: 18,
     fontSize: 19,
     fontWeight: '600',
     color: '#e5383b',

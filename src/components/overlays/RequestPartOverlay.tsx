@@ -24,8 +24,6 @@ const SCREEN_H = Dimensions.get('window').height;
 const brandOptions = [
   {id: '1', name: 'OEM - Original Brands'},
   {id: '2', name: 'After Market'},
-  {id: '3', name: 'Generic'},
-  {id: '4', name: 'Premium'},
 ];
 
 const generateId = () =>
@@ -404,6 +402,7 @@ export default function RequestPartOverlay({
   /* Validation + submit */
   const handleSendRequest = () => {
     let valid = true;
+
     setParts(prev =>
       prev.map(p => {
         const hasErr =

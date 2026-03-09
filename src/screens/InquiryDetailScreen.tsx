@@ -12,16 +12,19 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/RootNavigator';
 import StatusBadge, {normalizeStatus} from '../components/ui/StatusBadge';
 import EditInquiryItemOverlay from '../components/overlays/EditInquiryItemOverlay';
+import EditInquiryOverlay from '../components/overlays/EditInquiryOverlay';
 import {
   getInquiryById,
   updateInquiryStatus,
   updateInquiryItem,
+  createInquiry,
   type InquiryResponse,
   type InquiryItemResponse,
 } from '../services/api';
 import Svg, {Path} from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import {useAuth} from '../context/AuthContext';
 
 type InquiryDetailRouteProp = RouteProp<RootStackParamList, 'InquiryDetail'>;
 type InquiryDetailNavigationProp = NativeStackNavigationProp<
@@ -61,12 +64,14 @@ export default function InquiryDetailScreen() {
   const navigation = useNavigation<InquiryDetailNavigationProp>();
   const route = useRoute<InquiryDetailRouteProp>();
   const {inquiryId} = route.params;
+  const {userRole, user} = useAuth();
 
   const [inquiry, setInquiry] = useState<InquiryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InquiryItemResponse | null>(null);
   const [showEditOverlay, setShowEditOverlay] = useState(false);
+  const [showEditInquiryOverlay, setShowEditInquiryOverlay] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   useEffect(() => {
@@ -130,14 +135,31 @@ export default function InquiryDetailScreen() {
         (async () => {
           try {
             setActionLoading(true);
-            const result = await updateInquiryStatus(inquiry.id, 'Open');
+            const isStaff = userRole === 'staff';
+            const result = await createInquiry({
+              vehicleId: inquiry.vehicleId,
+              vehicleVisitId: inquiry.vehicleVisitId ?? undefined,
+              workshopOwnerId: inquiry.workshopOwnerId,
+              requestedByStaffId: isStaff ? (user?.id ?? null) : null,
+              jobCategories: inquiry.jobCategories,
+              items: inquiry.items.map(item => ({
+                partName: item.partName,
+                preferredBrand: item.preferredBrand,
+                quantity: item.quantity,
+                remark: item.remark,
+                audioUrl: item.audioUrl ?? undefined,
+                audioDuration: item.audioDuration ?? undefined,
+                image1Url: item.image1Url ?? undefined,
+                image2Url: item.image2Url ?? undefined,
+                image3Url: item.image3Url ?? undefined,
+              })),
+            });
             if (result.success) {
-              setAppAlert({type: 'success', message: 'Inquiry re-requested successfully'});
-              // Refresh inquiry data
-              const updatedInquiry = await getInquiryById(inquiryId);
-              if (updatedInquiry.success && updatedInquiry.data) {
-                setInquiry(updatedInquiry.data);
-              }
+              setAppAlert({
+                type: 'success',
+                message: 'Inquiry re-requested successfully',
+                onDone: () => navigation.goBack(),
+              });
             } else {
               setAppAlert({type: 'error', message: result.error || 'Failed to re-request inquiry'});
             }
@@ -163,7 +185,7 @@ export default function InquiryDetailScreen() {
         (async () => {
           try {
             setActionLoading(true);
-            const result = await updateInquiryStatus(inquiry.id, 'Declined');
+            const result = await updateInquiryStatus(inquiry.id, 'Closed');
             if (result.success) {
               setAppAlert({type: 'success', message: 'Inquiry cancelled successfully'});
               // Refresh inquiry data
@@ -196,7 +218,7 @@ export default function InquiryDetailScreen() {
         (async () => {
           try {
             setActionLoading(true);
-            const result = await updateInquiryStatus(inquiry.id, 'Closed');
+            const result = await updateInquiryStatus(inquiry.id, 'open');
             if (result.success) {
               setAppAlert({type: 'success', message: 'Inquiry approved and sent successfully'});
               // Refresh inquiry data
@@ -229,7 +251,7 @@ export default function InquiryDetailScreen() {
         (async () => {
           try {
             setActionLoading(true);
-            const result = await updateInquiryStatus(inquiry.id, 'Declined');
+            const result = await updateInquiryStatus(inquiry.id, 'Closed');
             if (result.success) {
               setAppAlert({type: 'success', message: 'Inquiry declined successfully'});
               // Refresh inquiry data
@@ -252,6 +274,7 @@ export default function InquiryDetailScreen() {
   };
 
   const handleItemClick = (itemId: number) => {
+    if (status !== 'requested' && status !== 'open') return;
     const item = inquiry?.items.find(i => i.id === itemId);
     if (item) {
       setSelectedItem(item);
@@ -382,8 +405,10 @@ export default function InquiryDetailScreen() {
               </Text>
             </View>
             <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>Job Category: </Text>
-              <Text style={styles.metaValue}>{inquiry.jobCategory}</Text>
+              <Text style={styles.metaLabel}>Job Categories: </Text>
+              <Text style={styles.metaValue}>
+                {(inquiry.jobCategories ?? []).join(', ') || 'N/A'}
+              </Text>
             </View>
           </View>
         </View>
@@ -440,25 +465,21 @@ export default function InquiryDetailScreen() {
       {/* ════════════════════════════════════════
           BOTTOM FIXED CTA BUTTONS
           ════════════════════════════════════════ */}
-      {!isClosed && (
+      {(isOpen || isRequested || isDeclined || isClosed) && (
         <View style={styles.bottomCTA}>
           {/* Fade gradient */}
           <View style={styles.fadeGradient} />
 
           <View style={styles.buttonContainer}>
-            {/* ── Open status: RE REQUEST + CANCEL REQUEST ── */}
+            {/* ── Open status: EDIT + CANCEL REQUEST ── */}
             {isOpen && (
               <>
                 <TouchableOpacity
                   style={[styles.primaryButton, actionLoading && styles.buttonDisabled]}
-                  onPress={handleReRequest}
+                  onPress={() => setShowEditInquiryOverlay(true)}
                   disabled={actionLoading}
                   activeOpacity={0.8}>
-                  {actionLoading ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>RE REQUEST</Text>
-                  )}
+                  <Text style={styles.primaryButtonText}>EDIT</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.secondaryButton, actionLoading && styles.buttonDisabled]}
@@ -512,11 +533,42 @@ export default function InquiryDetailScreen() {
                 )}
               </TouchableOpacity>
             )}
+
+            {/* ── Closed status: RE REQUEST (full-width) ── */}
+            {isClosed && (
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  styles.fullWidthButton,
+                  actionLoading && styles.buttonDisabled,
+                ]}
+                onPress={handleReRequest}
+                disabled={actionLoading}
+                activeOpacity={0.8}>
+                {actionLoading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>RE REQUEST</Text>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       )}
 
       {/* Edit Inquiry Item Overlay */}
+      {inquiry && (
+        <EditInquiryOverlay
+          isOpen={showEditInquiryOverlay}
+          onClose={() => setShowEditInquiryOverlay(false)}
+          inquiryId={inquiry.id}
+          initialItems={inquiry.items}
+          onSuccess={async () => {
+            const updated = await getInquiryById(inquiryId);
+            if (updated.success && updated.data) setInquiry(updated.data);
+          }}
+        />
+      )}
       {selectedItem && (
         <EditInquiryItemOverlay
           isOpen={showEditOverlay}

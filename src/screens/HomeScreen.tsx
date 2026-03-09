@@ -29,6 +29,8 @@ import {
   getInquiriesByWorkshopOwnerId,
   createInquiryWithMedia,
   getStaffProfile,
+  getActiveVehicleVisit,
+  getJobCardsByVehicle,
   type VehicleResponse,
   type InquiryItemRequest,
   type StaffPermissions,
@@ -70,6 +72,7 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
     null,
   );
   const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo | null>(null);
+  const [activeVisitCategories, setActiveVisitCategories] = useState<string[]>([]);
 
   // Fetch dashboard data
   const fetchDashboardData = useCallback(async () => {
@@ -128,6 +131,29 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
   ) => {
     setSelectedVehicle(vehicle);
     setVehicleInfo(info);
+
+    // Fetch categories: owner uses active visit, staff uses assigned job cards
+    const user = await getStoredUser();
+    if (user) {
+      if (user.role === 'staff') {
+        const jobRes = await getJobCardsByVehicle(vehicle.id);
+        if (jobRes.success && jobRes.data) {
+          const cats = [
+            ...new Set(
+              jobRes.data.jobCards
+                .filter(j => j.assignedStaffIds?.includes(user.id))
+                .map(j => j.jobCategory)
+                .filter(Boolean),
+            ),
+          ];
+          setActiveVisitCategories(cats);
+        }
+      } else {
+        const visitRes = await getActiveVehicleVisit(vehicle.id);
+        setActiveVisitCategories(visitRes.data?.activeJobCategories ?? []);
+      }
+    }
+
     setShowRequestPart(true);
   };
 
@@ -171,15 +197,18 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
         };
       });
 
+      const staffProfileRes = await getStaffProfile();
+      const workshopOwnerId = staffProfileRes.data?.workshopOwnerId ?? user.id;
+
       const result = await createInquiryWithMedia(
         selectedVehicle.id,
-        user.id,
-        'Parts Request',
+        workshopOwnerId,
+        activeVisitCategories,
         items,
         audioFiles,
         imageFiles,
         undefined,
-        null,
+        user.id,
       );
 
       if (result.success) {
@@ -214,8 +243,10 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
                 value={vehiclesCount}
                 bgColor="#e5383b"
                 VectorIcon={VehicleVectorIcon}
-                vectorTop={15}
-                vectorOpacity={0.25}
+                vectorWidth={147}
+                vectorHeight={120}
+                vectorTop={30}
+                vectorRight={-65}
                 onPress={() => navigation?.navigate('Vehicle')}
               />
               <StatusCard
@@ -223,8 +254,10 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
                 value={`${approvedInquiriesCount}/${totalInquiriesCount}`}
                 bgColor="#2294F2"
                 VectorIcon={InquiryVectorIcon}
-                vectorTop={20}
-                vectorOpacity={0.2}
+                vectorWidth={110}
+                vectorHeight={110}
+                vectorTop={49}
+                vectorRight={-29}
                 onPress={() => navigation?.navigate('Inquiry')}
               />
             </View>

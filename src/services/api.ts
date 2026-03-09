@@ -3,8 +3,8 @@ import * as Keychain from 'react-native-keychain';
 // API Base URL
 // const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
 // export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-const API_BASE_URL = 'http://192.168.1.18:5196/api';
-export const SERVER_ORIGIN = 'http://192.168.1.18:5196';
+const API_BASE_URL = 'http://192.168.1.16:5196/api';
+export const SERVER_ORIGIN = 'http://192.168.1.16:5196';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -1385,7 +1385,7 @@ export interface CreateInquiryRequest {
   vehicleVisitId?: number;
   workshopOwnerId: number;
   requestedByStaffId: number | null;
-  jobCategory: string;
+  jobCategories: string[];
   items: InquiryItemRequest[];
 }
 
@@ -1410,7 +1410,7 @@ export interface InquiryResponse {
   workshopOwnerId: number;
   requestedByStaffId: number | null;
   inquiryNumber: string;
-  jobCategory: string;
+  jobCategories: string[];
   status: string;
   placedDate: string;
   closedDate: string | null;
@@ -1439,7 +1439,7 @@ export async function createInquiry(data: CreateInquiryRequest) {
 export async function createInquiryWithMedia(
   vehicleId: number,
   workshopOwnerId: number,
-  jobCategory: string,
+  jobCategories: string[],
   items: InquiryItemRequest[],
   audioFiles: RNFile[],
   imageFiles: RNFile[],
@@ -1453,7 +1453,7 @@ export async function createInquiryWithMedia(
     // Append basic fields
     formData.append('vehicleId', vehicleId.toString());
     formData.append('workshopOwnerId', workshopOwnerId.toString());
-    formData.append('jobCategory', jobCategory);
+    formData.append('jobCategoriesJson', JSON.stringify(jobCategories));
     formData.append('itemsJson', JSON.stringify(items));
 
     if (vehicleVisitId) {
@@ -1547,6 +1547,13 @@ export async function updateInquiryItem(itemId: number, data: Partial<InquiryIte
   return apiRequest<{ message: string }>(`/inquiry/item/${itemId}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
+  });
+}
+
+export async function updateInquiryItems(inquiryId: number, items: InquiryItemRequest[]) {
+  return apiRequest<{ message: string }>(`/inquiry/${inquiryId}/items`, {
+    method: 'PUT',
+    body: JSON.stringify({ items }),
   });
 }
 

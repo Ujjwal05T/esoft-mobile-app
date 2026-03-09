@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useRef} from 'react';
+import React, {useState, useEffect, useCallback, useRef, useMemo} from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import NewJobCardOverlay from '../components/overlays/NewJobCardOverlay';
 import RaiseDisputeOverlay from '../components/overlays/RaiseDisputeOverlay';
 import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import EditInquiryOverlay from '../components/overlays/EditInquiryOverlay';
 import {
   getVehicleById,
   getActiveVehicleVisit,
@@ -33,11 +34,13 @@ import {
   getStoredUser,
   createInquiryWithMedia,
   getStaffProfile,
+  getInquiryById,
   SERVER_ORIGIN,
   type VehicleResponse,
   type VehicleVisitResponse,
   type JobCardResponse,
   type InquiryResponse,
+  type InquiryItemResponse,
   type WorkshopOrderListItem,
   type DisputeListItemResponse,
   type InquiryItemRequest,
@@ -83,14 +86,14 @@ function mapApiInquiry(api: InquiryResponse, vehicle: VehicleResponse): InquiryW
     declinedDate: api.declinedDate ? formatDate(api.declinedDate) : undefined,
     status: api.status.toLowerCase() as Inquiry['status'],
     inquiryBy: api.requestedByName ?? 'Staff',
-    jobCategory: api.jobCategory,
+    jobCategories: api.jobCategories ?? [],
     items: api.items.map(item => ({
       id: item.id.toString(),
       itemName: item.partName,
       preferredBrand: item.preferredBrand,
       notes: item.remark,
       quantity: item.quantity,
-      imageUrl: item.image1Url ? `${SERVER_ORIGIN}${item.image1Url}` : undefined,
+      imageUrl: item.image1Url ? (item.image1Url.startsWith('http') ? item.image1Url : `${SERVER_ORIGIN}${item.image1Url}`) : undefined,
     })),
     media: [],
   };
@@ -216,6 +219,15 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
 
   // ── State ───────────────────────────────────────────────────────────────────
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
+  const [editInquiry, setEditInquiry] = useState<{id: number; items: InquiryItemResponse[]} | null>(null);
+
+  const handleEditInquiry = async (numericId: number) => {
+    const result = await getInquiryById(numericId);
+    if (result.success && result.data) {
+      setEditInquiry({id: numericId, items: result.data.items});
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('jobcard');
   const [expandedSections, setExpandedSections] = useState<Record<SectionKey, boolean>>({
     basicInfo: false,
@@ -242,6 +254,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
 
   // Staff permissions
   const [permissions, setPermissions] = useState<StaffPermissions | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   // Loading / error
   const [loadingVehicle, setLoadingVehicle] = useState(true);
@@ -250,6 +263,19 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingDisputes, setLoadingDisputes] = useState(false);
   const [vehicleError, setVehicleError] = useState(false);
+
+  // Categories from job cards assigned to this staff member
+  const staffCategories = useMemo(() => {
+    if (!currentUserId) return [];
+    return [
+      ...new Set(
+        jobCards
+          .filter(j => j.assignedStaffIds?.includes(currentUserId))
+          .map(j => j.jobCategory)
+          .filter(Boolean),
+      ),
+    ];
+  }, [jobCards, currentUserId]);
 
   // ── Fetch Helpers ───────────────────────────────────────────────────────────
 
@@ -371,6 +397,9 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
         setPermissions(res.data.permissions);
       }
     });
+    getStoredUser().then(user => {
+      if (user) setCurrentUserId(user.id);
+    });
   }, [fetchVehicle]);
 
   useEffect(() => {
@@ -474,15 +503,18 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
         };
       });
 
+      const staffProfileRes = await getStaffProfile();
+      const workshopOwnerId = staffProfileRes.data?.workshopOwnerId ?? user.id;
+
       const result = await createInquiryWithMedia(
         vehicleId,
-        user.id,
-        'Parts Request',
+        workshopOwnerId,
+        staffCategories,
         items,
         audioFiles,
         imageFiles,
         activeVisit?.id,
-        null,
+        user.id,
       );
 
       if (result.success) {
@@ -578,8 +610,8 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
           make={vehicle.brand ?? ''}
           model={vehicle.model ?? ''}
           specs={vehicle.specs ?? vehicle.variant ?? ''}
-          services={[]}
-          additionalServices={0}
+          services={activeVisit?.activeJobCategories?.slice(0, 2) ?? []}
+          additionalServices={Math.max(0, (activeVisit?.activeJobCategories?.length ?? 0) - 2)}
         />
 
         {/* ── Tab Bar ──────────────────────────────────────────────────── */}
@@ -626,16 +658,6 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
             </Accordion>
 
             <Accordion
-              title="Previous Services"
-              expanded={expandedSections.previousServices}
-              onToggle={() => toggleSection('previousServices')}>
-              <View style={styles.emptyAccordion}>
-                <Text style={styles.emptyAccordionText}>No previous services found</Text>
-                <Text style={styles.emptyAccordionSub}>Service history will appear here</Text>
-              </View>
-            </Accordion>
-
-            <Accordion
               title="Jobs"
               expanded={expandedSections.jobs}
               onToggle={() => toggleSection('jobs')}>
@@ -644,7 +666,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
                   <ActivityIndicator size="small" color="#e5383b" />
                   <Text style={styles.loadingText}>Loading jobs...</Text>
                 </View>
-              ) : jobCards.length === 0 ? (
+              ) : jobCards.filter(j => j.vehicleVisitId === activeVisit?.id).length === 0 ? (
                 <View style={styles.emptyAccordion}>
                   <Text style={styles.emptyAccordionText}>No jobs found</Text>
                   <Text style={styles.emptyAccordionSub}>
@@ -653,21 +675,23 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
                 </View>
               ) : (
                 <View style={styles.cardList}>
-                  {jobCards.map(job => (
-                    <JobCard
-                      key={job.id}
-                      id={job.id}
-                      jobCategory={job.jobCategory}
-                      assignedStaffNames={job.assignedStaffNames}
-                      remark={job.remark}
-                      audioUrl={job.audioUrl}
-                      images={job.images}
-                      videos={job.videos}
-                      createdAt={job.createdAt}
-                      status={job.status}
-                      onClick={() => console.log('Job card:', job.id)}
-                    />
-                  ))}
+                  {jobCards
+                    .filter(j => j.vehicleVisitId === activeVisit?.id)
+                    .map(job => (
+                      <JobCard
+                        key={job.id}
+                        id={job.id}
+                        jobCategory={job.jobCategory}
+                        assignedStaffNames={job.assignedStaffNames}
+                        remark={job.remark}
+                        audioUrl={job.audioUrl}
+                        images={job.images}
+                        videos={job.videos}
+                        createdAt={job.createdAt}
+                        status={job.status}
+                        onClick={() => console.log('Job card:', job.id)}
+                      />
+                    ))}
                 </View>
               )}
             </Accordion>
@@ -699,7 +723,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
                         expandedInquiryId === inquiry.id ? null : inquiry.id,
                       )
                     }
-                    onEdit={() => console.log('Edit inquiry:', inquiry.id)}
+                    onEdit={() => { if (inquiry.numericId) handleEditInquiry(inquiry.numericId); }}
                     onView={() => {
                       if (inquiry.numericId) {
                         navigation.navigate('InquiryDetail', {inquiryId: inquiry.numericId});
@@ -834,6 +858,14 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
         onSubmit={handleRequestPartSubmit}
       />
 
+      <EditInquiryOverlay
+        isOpen={!!editInquiry}
+        onClose={() => setEditInquiry(null)}
+        inquiryId={editInquiry?.id ?? 0}
+        initialItems={editInquiry?.items ?? []}
+        onSuccess={() => { setEditInquiry(null); fetchInquiries(); }}
+      />
+
       <AppAlert
         isOpen={!!appAlert}
         type={appAlert?.type ?? 'info'}
@@ -865,7 +897,7 @@ const styles = StyleSheet.create({
   backBtnText: {color: '#ffffff', fontSize: 14, fontWeight: '500'},
   topBar: {height: 48, backgroundColor: '#ffffff', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0'},
   topBarBtn: {width: 32},
-  topBarTitle: {flex: 1, textAlign: 'center', fontSize: 19, fontWeight: '600', color: '#e5383b', letterSpacing: -0.64},
+  topBarTitle: {flex: 1, textAlign: 'left',marginLeft: 18, fontSize: 19, fontWeight: '600', color: '#e5383b', letterSpacing: -0.64},
   scrollContent: {padding: 16, gap: 16},
   tabBar: {flexDirection: 'row', backgroundColor: '#e5e5e5', borderRadius: 8, overflow: 'hidden'},
   tabBarBtn: {flex: 1, height: 42, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e5e5e5'},

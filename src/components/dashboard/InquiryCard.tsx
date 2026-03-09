@@ -27,7 +27,7 @@ export interface Inquiry {
   declinedDate?: string;
   status: InquiryStatus;
   inquiryBy: string;
-  jobCategory: string;
+  jobCategories: string[];
   items: InquiryItem[];
   media?: {id: string; type: string; url: string}[];
 }
@@ -41,6 +41,7 @@ interface InquiryCardProps {
   onReRequest?: (id: string) => void;
   onApprove?: (id: string) => void;
   showNumberPlate?: boolean;
+  isOwner?: boolean;
   action?: InquiryAction;
   maxVisibleItems?: number;
 }
@@ -71,6 +72,7 @@ export default function InquiryCard({
   onReRequest,
   onApprove,
   showNumberPlate = true,
+  isOwner = false,
   action = 'edit',
   maxVisibleItems = 3,
 }: InquiryCardProps) {
@@ -80,8 +82,14 @@ export default function InquiryCard({
     (inquiry.items?.length || 0) - maxVisibleItems,
   );
 
-  const effectiveAction =
-    action === 'edit' && inquiry.status === 'declined' ? 're-request' : action;
+  const effectiveAction: InquiryAction = (() => {
+    if (isOwner && inquiry.status === 'requested') return 'approve';
+    if (inquiry.status === 'declined') return 're-request';
+    if (inquiry.status === 'closed') return 're-request';
+    if (inquiry.status === 'approved') return 'none';
+    if (action === 'none') return 'none';
+    return 'edit';
+  })();
 
   const getDateText = () => {
     if (inquiry.status === 'closed' && inquiry.closedDate) {
@@ -143,7 +151,15 @@ export default function InquiryCard({
             Inquiry by: <Text style={styles.metaRed}>{inquiry.inquiryBy}</Text>
           </Text>
           <Text style={styles.metaText}>
-            Job Category: <Text style={styles.metaRed}>{inquiry.jobCategory}</Text>
+            Job Category:{' '}
+            <Text style={styles.metaRed}>
+              {inquiry.jobCategories.length > 0
+                ? inquiry.jobCategories[0] +
+                  (inquiry.jobCategories.length > 1
+                    ? ` +${inquiry.jobCategories.length - 1}`
+                    : '')
+                : 'N/A'}
+            </Text>
           </Text>
         </View>
       </TouchableOpacity>

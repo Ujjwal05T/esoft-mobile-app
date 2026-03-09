@@ -122,7 +122,7 @@ export default function JobCard({
           {visibleImages.map((url, idx) => (
             <View key={idx} style={styles.mediaThumb}>
               <Image
-                source={{uri: `${SERVER_ORIGIN}${url}`}}
+                source={{uri: url.startsWith('http') ? url : `${SERVER_ORIGIN}${url}`}}
                 style={styles.mediaImage}
                 resizeMode="cover"
               />

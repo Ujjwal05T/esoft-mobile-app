@@ -24,6 +24,7 @@ import VehicleSelectionOverlay, {
 import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
 import RaiseDisputeOverlay from '../components/overlays/RaiseDisputeOverlay';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import EditInquiryOverlay from '../components/overlays/EditInquiryOverlay';
 import {
   getStoredUser,
   getInquiriesByWorkshopOwnerId,
@@ -33,7 +34,10 @@ import {
   createInquiryWithMedia,
   createDisputeWithFiles,
   getStaffProfile,
+  getJobCardsByVehicle,
+  getInquiryById,
   type InquiryResponse,
+  type InquiryItemResponse,
   type DisputeListItemResponse,
   type VehicleResponse,
   type WorkshopOrderListItem,
@@ -70,7 +74,7 @@ function mapApiInquiry(api: InquiryResponse): InquiryWithDate {
     declinedDate: api.declinedDate ? formatDate(api.declinedDate) : undefined,
     status: api.status.toLowerCase() as Inquiry['status'],
     inquiryBy: api.requestedByName ?? 'Owner',
-    jobCategory: api.jobCategory,
+    jobCategories: api.jobCategories ?? [],
     items: api.items.map(item => ({
       id: item.id.toString(),
       itemName: item.partName,
@@ -223,8 +227,17 @@ export default function StaffInquiryScreen() {
   const [showRaiseDispute, setShowRaiseDispute] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleResponse | null>(null);
   const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo | null>(null);
+  const [activeVisitCategories, setActiveVisitCategories] = useState<string[]>([]);
   const [vehicleOrders, setVehicleOrders] = useState<any[]>([]);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
+  const [editInquiry, setEditInquiry] = useState<{id: number; items: InquiryItemResponse[]} | null>(null);
+
+  const handleEditInquiry = async (numericId: number) => {
+    const result = await getInquiryById(numericId);
+    if (result.success && result.data) {
+      setEditInquiry({id: numericId, items: result.data.items});
+    }
+  };
 
   // ── Filter Functions ────────────────────────────────────────────────────────
 
@@ -360,6 +373,23 @@ export default function StaffInquiryScreen() {
     setSelectedVehicle(vehicle);
     setVehicleInfo(info);
 
+    // Fetch job cards assigned to this staff for the selected vehicle
+    const user = await getStoredUser();
+    if (user) {
+      const jobRes = await getJobCardsByVehicle(vehicle.id);
+      if (jobRes.success && jobRes.data) {
+        const categories = [
+          ...new Set(
+            jobRes.data.jobCards
+              .filter(j => j.assignedStaffIds?.includes(user.id))
+              .map(j => j.jobCategory)
+              .filter(Boolean),
+          ),
+        ];
+        setActiveVisitCategories(categories);
+      }
+    }
+
     // Fetch orders if raising dispute
     if (targetOverlay === 'raiseDispute') {
       try {
@@ -437,15 +467,18 @@ export default function StaffInquiryScreen() {
         };
       });
 
+      const staffProfileRes = await getStaffProfile();
+      const workshopOwnerId = staffProfileRes.data?.workshopOwnerId ?? user.id;
+
       const result = await createInquiryWithMedia(
         selectedVehicle.id,
-        user.id,
-        'Parts Request',
+        workshopOwnerId,
+        activeVisitCategories,
         items,
         audioFiles,
         imageFiles,
-        undefined, // vehicleVisitId
-        null, // requestedByStaffId
+        undefined,
+        user.id,
       );
 
       if (result.success) {
@@ -629,17 +662,16 @@ export default function StaffInquiryScreen() {
                       expandedInquiryId === inquiry.id ? null : inquiry.id,
                     )
                   }
-                  onEdit={() => console.log('Edit inquiry:', inquiry.id)}
+                  onEdit={() => { if (inquiry.numericId) handleEditInquiry(inquiry.numericId); }}
                   onView={() => {
                     // Navigate to inquiry detail screen using numeric ID
                     if (inquiry.numericId) {
                       navigation.navigate('InquiryDetail', {inquiryId: inquiry.numericId});
                     }
                   }}
-                  onApprove={() => console.log('Approve inquiry:', inquiry.id)}
                   onReRequest={() => console.log('Re-request inquiry:', inquiry.id)}
                   showNumberPlate={true}
-                  action="approve"
+                  isOwner={false}
                 />
               ))
             )}
@@ -757,6 +789,14 @@ export default function StaffInquiryScreen() {
           }}
         />
       )}
+
+      <EditInquiryOverlay
+        isOpen={!!editInquiry}
+        onClose={() => setEditInquiry(null)}
+        inquiryId={editInquiry?.id ?? 0}
+        initialItems={editInquiry?.items ?? []}
+        onSuccess={() => { setEditInquiry(null); fetchInquiries(); }}
+      />
 
       <AppAlert
         isOpen={!!appAlert}

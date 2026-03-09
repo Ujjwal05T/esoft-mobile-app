@@ -3,7 +3,7 @@
 import { getAuthToken, setAuthToken, setStoredUser, removeAuthToken } from './api';
 
 // const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
-const API_BASE_URL = 'http://192.168.1.18:5196/api';
+const API_BASE_URL = 'http://192.168.1.16:5196/api';
 
 export interface LoginResponse {
   success: boolean;

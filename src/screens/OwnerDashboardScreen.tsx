@@ -97,8 +97,9 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
               onPress={() => navigation?.navigate('Orders')}
               VectorIcon={VehicleVector}
               vectorWidth={147}
-              vectorHeight={130}
+              vectorHeight={120}
               vectorTop={25}
+              vectorRight={-65}
             />
             <StatusCard
               title="Pending Quotes"
@@ -106,10 +107,11 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
               bgColor="#2294f2"
               onPress={() => navigation?.navigate('Inquiry')}
               VectorIcon={InquiryVector}
-              vectorWidth={109}
-              vectorHeight={109}
-              vectorTop={46}
+              vectorWidth={110}
+              vectorHeight={110}
+              vectorTop={49}
               vectorOpacity={0.35}
+              vectorRight={-29}
             />
           </View>
           <View style={styles.statusRow}>
@@ -119,9 +121,10 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
               bgColor="#ffad2a"
               onPress={() => navigation?.navigate('Inquiry')}
               VectorIcon={ClockVector}
-              vectorWidth={147}
-              vectorHeight={130}
-              vectorTop={25}
+              vectorWidth={100}
+              vectorHeight={100}
+              vectorTop={40}
+              vectorRight={-5}
             />
             <StatusCard
               title="Raised Disputes"
@@ -129,9 +132,10 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
               bgColor="#e43cd3"
               onPress={() => navigation?.navigate('Inquiry')}
               VectorIcon={QuestionVector}
-              vectorWidth={147}
-              vectorHeight={130}
-              vectorTop={25}
+              vectorWidth={100}
+              vectorHeight={100}
+              vectorTop={40}
+              vectorRight={-5}
             />
           </View>
         </View>
