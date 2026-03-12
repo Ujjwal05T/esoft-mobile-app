@@ -50,7 +50,7 @@ const ArrowBackIcon = () => (
 export default function PaymentScreen() {
   const navigation = useNavigation<PaymentNavProp>();
   const route = useRoute<PaymentRouteProp>();
-  const {quoteId} = route.params;
+  const {quoteId, selectedItemIds} = route.params;
 
   const [quote, setQuote] = useState<QuoteApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,7 +84,16 @@ export default function PaymentScreen() {
       (quote.shippingCharges || 0)
     : 0;
 
-  const partsSubtotal = quote ? quote.totalAmount - additionalCharges : 0;
+  // If partial payment, calculate subtotal only for selected items
+  const partsSubtotal = quote
+    ? selectedItemIds.length > 0
+      ? quote.items
+          .filter(i => selectedItemIds.includes(i.id))
+          .reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
+      : quote.totalAmount - additionalCharges
+    : 0;
+
+  const grandTotal = partsSubtotal + additionalCharges;
 
   const getExpiresLabel = () => {
     if (!quote?.expiresAt) return null;
@@ -119,7 +128,10 @@ export default function PaymentScreen() {
         setSelectedMethod(method);
 
         console.log('[Payment] Creating order for quote:', quote.id, 'method:', method);
-        const orderResult = await createPaymentOrder(quote.id);
+        const orderResult = await createPaymentOrder(
+          quote.id,
+          selectedItemIds.length > 0 ? selectedItemIds : undefined,
+        );
         console.log('[Payment] Order result:', JSON.stringify(orderResult));
 
         if (!orderResult.success || !orderResult.data) {
@@ -156,6 +168,7 @@ export default function PaymentScreen() {
           razorpayOrderId: data.razorpay_order_id,
           razorpayPaymentId: data.razorpay_payment_id,
           razorpaySignature: data.razorpay_signature,
+          selectedItemIds: selectedItemIds.length > 0 ? selectedItemIds : undefined,
         });
         console.log('[Payment] Verify result:', JSON.stringify(verifyResult));
 
@@ -298,7 +311,7 @@ export default function PaymentScreen() {
             <View style={styles.grandTotalCol}>
               <Text style={styles.financialLabel}>Grand Total</Text>
               <Text style={styles.financialValue}>
-                {formatPrice(quote.totalAmount)}
+                {formatPrice(grandTotal)}
               </Text>
             </View>
           </View>

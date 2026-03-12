@@ -3,8 +3,8 @@ import * as Keychain from 'react-native-keychain';
 // API Base URL
 // const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
 // export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-const API_BASE_URL = 'http://192.168.1.16:5196/api';
-export const SERVER_ORIGIN = 'http://192.168.1.16:5196';
+const API_BASE_URL = 'http://192.168.137.1:5196/api';
+export const SERVER_ORIGIN = 'http://192.168.137.1:5196';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -1651,10 +1651,11 @@ export interface VerifyPaymentResponse {
 }
 
 // Create a Razorpay payment order for a quote
-export async function createPaymentOrder(quoteId: number) {
+// Pass selectedItemIds for partial payment (only charge for those items)
+export async function createPaymentOrder(quoteId: number, selectedItemIds?: number[]) {
   return apiRequest<CreatePaymentOrderResponse>('/payment/create-order', {
     method: 'POST',
-    body: JSON.stringify({ quoteId }),
+    body: JSON.stringify({ quoteId, selectedItemIds: selectedItemIds ?? null }),
   });
 }
 
@@ -1664,6 +1665,7 @@ export async function verifyPayment(data: {
   razorpayOrderId: string;
   razorpayPaymentId: string;
   razorpaySignature: string;
+  selectedItemIds?: number[];
 }) {
   return apiRequest<VerifyPaymentResponse>('/payment/verify', {
     method: 'POST',

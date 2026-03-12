@@ -27,7 +27,7 @@ export type RootStackParamList = {
   InquiryDetail: {inquiryId: number};
   QuoteDetail: {quoteId: number};
   OrderDetail: {orderId: number};
-  Payment: {quoteId: number};
+  Payment: {quoteId: number; selectedItemIds: number[]};
   Staff: undefined;
   Profile: undefined;
   StaffProfile: undefined;

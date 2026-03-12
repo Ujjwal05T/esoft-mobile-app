@@ -16,6 +16,8 @@ import StatusBadge from '../components/ui/StatusBadge';
 import {
   getQuoteById,
   updateQuoteStatus,
+  getInquiryById,
+  createInquiry,
   type QuoteApiResponse,
 } from '../services/api';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
@@ -59,6 +61,7 @@ export default function QuoteDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [declining, setDeclining] = useState(false);
+  const [reRequesting, setReRequesting] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   useEffect(() => {
@@ -113,6 +116,60 @@ export default function QuoteDetailScreen() {
       },
     });
   }, [quote]);
+
+  const handleReRequest = useCallback(() => {
+    if (!quote) return;
+    setAppAlert({
+      type: 'confirm',
+      title: 'Re-request',
+      message: 'Create a new inquiry with the same items?',
+      confirmText: 'Re-request',
+      onConfirm: () => {
+        (async () => {
+          try {
+            setReRequesting(true);
+            const inquiryResult = await getInquiryById(quote.inquiryId);
+            if (!inquiryResult.success || !inquiryResult.data) {
+              setAppAlert({type: 'error', message: 'Could not load original inquiry.'});
+              return;
+            }
+            const inq = inquiryResult.data;
+            const result = await createInquiry({
+              vehicleId: inq.vehicleId,
+              vehicleVisitId: inq.vehicleVisitId ?? undefined,
+              workshopOwnerId: inq.workshopOwnerId,
+              requestedByStaffId: null,
+              jobCategories: inq.jobCategories,
+              items: inq.items.map(item => ({
+                partName: item.partName,
+                preferredBrand: item.preferredBrand,
+                quantity: item.quantity,
+                remark: item.remark,
+                audioUrl: item.audioUrl ?? undefined,
+                audioDuration: item.audioDuration ?? undefined,
+                image1Url: item.image1Url ?? undefined,
+                image2Url: item.image2Url ?? undefined,
+                image3Url: item.image3Url ?? undefined,
+              })),
+            });
+            if (result.success) {
+              setAppAlert({
+                type: 'success',
+                message: 'Inquiry re-requested successfully.',
+                onDone: () => navigation.goBack(),
+              });
+            } else {
+              setAppAlert({type: 'error', message: 'Failed to re-request. Please try again.'});
+            }
+          } catch {
+            setAppAlert({type: 'error', message: 'Something went wrong. Please try again.'});
+          } finally {
+            setReRequesting(false);
+          }
+        })();
+      },
+    });
+  }, [quote, navigation]);
 
   const toggleItem = (itemId: number) => {
     setSelectedItems(prev => {
@@ -318,7 +375,7 @@ export default function QuoteDetailScreen() {
             ITEMS LIST
             ════════════════════════════════════════ */}
         <View style={styles.itemsList}>
-          {/* Active: available items with checkboxes */}
+          {/* Available items with checkboxes — shown when quote is not expired */}
           {!isExpired &&
             availableItems.map(item => (
               <TouchableOpacity
@@ -441,47 +498,66 @@ export default function QuoteDetailScreen() {
           BOTTOM CTA BAR
           ════════════════════════════════════════ */}
       <View style={styles.ctaBar}>
+        {/* Expired (or accepted+expired): RE-REQUEST */}
         {isExpired ? (
           <TouchableOpacity
             style={styles.primaryBtn}
-            onPress={() => console.log('Re-request quote:', quote.id)}
+            onPress={handleReRequest}
+            disabled={reRequesting}
             activeOpacity={0.85}>
-            <Text style={styles.primaryBtnText}>RE-REQUEST</Text>
+            {reRequesting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.primaryBtnText}>RE-REQUEST</Text>
+            )}
+          </TouchableOpacity>
+        ) : isAccepted ? (
+          /* Paid + not expired: REORDER */
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() =>
+              navigation.navigate('Payment', {
+                quoteId: quote.id,
+                selectedItemIds: Array.from(selectedItems),
+              })
+            }
+            activeOpacity={0.85}>
+            <Text style={styles.primaryBtnText}>REORDER</Text>
+          </TouchableOpacity>
+        ) : isDeclined ? (
+          /* Declined: disabled state */
+          <TouchableOpacity
+            style={[styles.approveBtn, styles.approveBtnDisabled]}
+            disabled
+            activeOpacity={1}>
+            <Text style={styles.approveBtnText}>DECLINED</Text>
           </TouchableOpacity>
         ) : (
+          /* Pending: APPROVE AND PAY + DECLINE */
           <>
             <TouchableOpacity
-              style={[
-                styles.approveBtn,
-                (isAccepted || isDeclined) && styles.approveBtnDisabled,
-              ]}
-              disabled={isAccepted || isDeclined}
+              style={[styles.approveBtn, selectedItems.size === 0 && styles.approveBtnDisabled]}
+              disabled={selectedItems.size === 0}
               onPress={() =>
-                navigation.navigate('Payment', {quoteId: quote.id})
+                navigation.navigate('Payment', {
+                  quoteId: quote.id,
+                  selectedItemIds: Array.from(selectedItems),
+                })
               }
               activeOpacity={0.85}>
-              <Text style={styles.approveBtnText}>
-                {isAccepted
-                  ? 'ORDER PLACED'
-                  : isDeclined
-                  ? 'DECLINED'
-                  : 'APPROVE AND PAY'}
-              </Text>
+              <Text style={styles.approveBtnText}>APPROVE AND PAY</Text>
             </TouchableOpacity>
-
-            {!isAccepted && !isDeclined && (
-              <TouchableOpacity
-                style={styles.declineBtn}
-                onPress={handleDecline}
-                disabled={declining}
-                activeOpacity={0.85}>
-                {declining ? (
-                  <ActivityIndicator size="small" color="#e5383b" />
-                ) : (
-                  <Text style={styles.declineBtnText}>DECLINE</Text>
-                )}
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.declineBtn}
+              onPress={handleDecline}
+              disabled={declining}
+              activeOpacity={0.85}>
+              {declining ? (
+                <ActivityIndicator size="small" color="#e5383b" />
+              ) : (
+                <Text style={styles.declineBtnText}>DECLINE</Text>
+              )}
+            </TouchableOpacity>
           </>
         )}
       </View>
