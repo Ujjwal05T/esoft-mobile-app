@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
@@ -17,6 +18,7 @@ import QuoteCard, {Quote} from '../components/dashboard/QuoteCard';
 import OrderCard, {Order} from '../components/dashboard/OrderCard';
 import DisputeCard, {Dispute} from '../components/dashboard/DisputeCard';
 import JobCard from '../components/dashboard/JobCard';
+import PreviousServiceCard from '../components/dashboard/PreviousServiceCard';
 import FloatingActionButton from '../components/dashboard/FloatingActionButton';
 import GateOutOverlay from '../components/overlays/GateOutOverlay';
 import EstimationOverlay from '../components/overlays/EstimationOverlay';
@@ -28,6 +30,7 @@ import EditInquiryOverlay from '../components/overlays/EditInquiryOverlay';
 import {
   getVehicleById,
   getActiveVehicleVisit,
+  getVehicleVisitsForVehicle,
   getJobCardsByVehicle,
   getInquiriesByVehicleId,
   getQuotesByVehicleId,
@@ -303,6 +306,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   // Data
   const [vehicle, setVehicle] = useState<VehicleResponse | null>(null);
   const [activeVisit, setActiveVisit] = useState<VehicleVisitResponse | null>(null);
+  const [previousVisits, setPreviousVisits] = useState<VehicleVisitResponse[]>([]);
   const [jobCards, setJobCards] = useState<JobCardResponse[]>([]);
   const [inquiries, setInquiries] = useState<InquiryWithNumericId[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -317,6 +321,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingDisputes, setLoadingDisputes] = useState(false);
   const [vehicleError, setVehicleError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // ── Fetch Helpers ───────────────────────────────────────────────────────────
 
@@ -340,15 +345,24 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   const fetchJobsAndVisit = useCallback(async () => {
     setLoadingJobs(true);
     try {
-      const [jobRes, visitRes] = await Promise.all([
+      const [jobRes, visitRes, allVisitsRes] = await Promise.all([
         getJobCardsByVehicle(vehicleId),
         getActiveVehicleVisit(vehicleId),
+        getVehicleVisitsForVehicle(vehicleId),
       ]);
       if (jobRes.success && jobRes.data) {
         setJobCards(jobRes.data.jobCards);
       }
       if (visitRes.success && visitRes.data) {
         setActiveVisit(visitRes.data);
+      }
+      if (allVisitsRes.success && allVisitsRes.data) {
+        const activeId = visitRes.success && visitRes.data ? visitRes.data.id : null;
+        setPreviousVisits(
+          allVisitsRes.data.visits.filter(
+            v => v.id !== activeId && v.status === 'Out',
+          ),
+        );
       }
     } catch (e) {
       console.error('Failed to fetch jobs/visit:', e);
@@ -450,6 +464,12 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
       setLoadingDisputes(false);
     }
   }, [orders]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchVehicle(), fetchJobsAndVisit(), fetchInquiries(), fetchQuotes(), fetchOrders()]);
+    setRefreshing(false);
+  }, [fetchVehicle, fetchJobsAndVisit, fetchInquiries, fetchQuotes, fetchOrders]);
 
   useEffect(() => {
     fetchVehicle();
@@ -691,7 +711,15 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         contentContainerStyle={[
           styles.scrollContent,
           {paddingBottom: insets.bottom + 120},
-        ]}>
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#e5383b']}
+            tintColor="#e5383b"
+          />
+        }>
 
         {/* ── Vehicle Card ─────────────────────────────────────────────── */}
         <VehicleCard
@@ -751,6 +779,33 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
               </Text>
             </Accordion>
 
+
+            {/* Previous Services */}
+            <Accordion
+              title="Previous Services"
+              expanded={expandedSections.previousServices}
+              onToggle={() => toggleSection('previousServices')}>
+              {previousVisits.length === 0 ? (
+                <View style={styles.emptyAccordion}>
+                  <Text style={styles.emptyAccordionText}>No previous visits</Text>
+                </View>
+              ) : (
+                <View style={styles.cardList}>
+                  {previousVisits.map(visit => {
+                    const visitJobCategories = jobCards
+                      .filter(j => j.vehicleVisitId === visit.id)
+                      .map(j => j.jobCategory);
+                    return (
+                      <PreviousServiceCard
+                        key={visit.id}
+                        visitDate={formatDate(visit.gateInDateTime)}
+                        jobCategories={visitJobCategories}
+                      />
+                    );
+                  })}
+                </View>
+              )}
+            </Accordion>
 
             {/* Jobs */}
             <Accordion
@@ -1028,9 +1083,6 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
           make: vehicle?.brand ?? '',
           model: vehicle?.model ?? '',
           specs: vehicle?.specs ?? vehicle?.variant ?? '',
-        }}
-        onChatWithUs={() => {
-          console.log('Chat with us clicked');
         }}
       />
 

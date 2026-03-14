@@ -1,9 +1,10 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
@@ -69,30 +70,37 @@ export default function InquiryDetailScreen() {
   const [inquiry, setInquiry] = useState<InquiryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InquiryItemResponse | null>(null);
   const [showEditOverlay, setShowEditOverlay] = useState(false);
   const [showEditInquiryOverlay, setShowEditInquiryOverlay] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
-  useEffect(() => {
-    async function fetchInquiry() {
-      try {
-        setLoading(true);
-        const result = await getInquiryById(inquiryId);
-        if (result.success && result.data) {
-          setInquiry(result.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch inquiry:', error);
-      } finally {
-        setLoading(false);
+  const fetchInquiry = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await getInquiryById(inquiryId);
+      if (result.success && result.data) {
+        setInquiry(result.data);
       }
+    } catch (error) {
+      console.error('Failed to fetch inquiry:', error);
+    } finally {
+      setLoading(false);
     }
+  }, [inquiryId]);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchInquiry()]);
+    setRefreshing(false);
+  }, [fetchInquiry]);
+
+  useEffect(() => {
     if (inquiryId) {
       fetchInquiry();
     }
-  }, [inquiryId]);
+  }, [inquiryId, fetchInquiry]);
 
   // Status helpers
   const status = inquiry?.status?.toLowerCase() || '';
@@ -364,7 +372,15 @@ export default function InquiryDetailScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#e5383b']}
+            tintColor="#e5383b"
+          />
+        }>
         {/* ════════════════════════════════════════
             INQUIRY INFO CARD
             ════════════════════════════════════════ */}

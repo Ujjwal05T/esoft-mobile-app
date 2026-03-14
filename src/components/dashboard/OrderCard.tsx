@@ -164,13 +164,13 @@ export default function OrderCard({
                 <TouchableOpacity
                   onPress={() => onTrackOrder?.(order.id)}
                   style={[styles.actionBtn, styles.flex1]}>
-                  <Text style={styles.actionBtnText}>Track order</Text>
+                  <Text style={styles.actionBtnText}>View Order</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
+                {/* <TouchableOpacity
                   onPress={() => onViewOrder?.(order.id)}
                   style={styles.trackIconBtn}>
                   <EyeIcon />
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </>
             )}
           </View>

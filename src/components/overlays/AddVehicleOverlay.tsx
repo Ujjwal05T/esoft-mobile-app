@@ -24,7 +24,7 @@ const SCREEN_H = Dimensions.get('screen').height;
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
 import VehicleCard from '../dashboard/VehicleCard';
-import {createVehicle, gateInVehicle, gateInVehicleWithMedia, scanRcCard, scanVehiclePlate, getCarBrands, getCarModels, getCarYears, getCarVariants} from '../../services/api';
+import {createVehicle, gateInVehicle, gateInVehicleWithMedia, scanRcCard, scanVehiclePlate, getCarBrands, getCarModels, getCarYears, getCarVariants, getVehicleByPlate} from '../../services/api';
 import CameraScannerOverlay, {ScanMode} from './CameraScannerOverlay';
 import AppAlert, {AlertState} from './AppAlert';
 
@@ -337,24 +337,77 @@ export default function AddVehicleOverlay({
     }
   }, [currentView, onClose]);
 
-  const handleSubmitPlate = () => {
-    if (plateNumber.trim()) {
-      setVehicleData({
-        plateNumber: plateNumber.trim(),
-        year: 2018,
-        make: 'Toyota',
-        model: 'Crysta',
-        specs: '2.4L ZX MT/Diesel',
-      });
-      setCurrentView('form');
+  const handleSubmitPlate = async () => {
+    const plate = plateNumber.trim();
+    if (!plate) return;
+
+    setIsLoading(true);
+    setApiError(null);
+    try {
+      const result = await getVehicleByPlate(plate);
+      if (result.success && result.data) {
+        // Vehicle already exists — skip creation, go straight to gate-in
+        const v = result.data;
+        setVehicleData({
+          plateNumber: v.plateNumber,
+          year: v.year ?? 0,
+          make: v.brand ?? 'Unknown',
+          model: v.model ?? 'Unknown',
+          specs: v.specs ?? v.variant ?? '',
+        });
+        setCreatedVehicleId(v.id);
+        setDriverContact(v.contactNumber ?? '');
+        setCurrentView('gatein');
+      } else {
+        // Vehicle not found — proceed to create flow
+        setVehicleData({
+          plateNumber: plate,
+          year: 0,
+          make: '',
+          model: '',
+          specs: '',
+        });
+        setCurrentView('form');
+      }
+    } catch {
+      setApiError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleManualNext = () => {
+  const handleManualNext = async () => {
     setHasAttemptedManual(true);
     if (!selectedBrand || !selectedModel || !selectedYear || !vehicleNumber.trim()) return;
+
+    const plate = vehicleNumber.trim();
+    setIsLoading(true);
+    setApiError(null);
+    try {
+      const result = await getVehicleByPlate(plate);
+      if (result.success && result.data) {
+        // Vehicle already exists — skip creation, go straight to gate-in
+        const v = result.data;
+        setVehicleData({
+          plateNumber: v.plateNumber,
+          year: v.year ?? parseInt(selectedYear),
+          make: v.brand ?? selectedBrand,
+          model: v.model ?? selectedModel,
+          specs: v.specs ?? v.variant ?? selectedVariant ?? '',
+        });
+        setCreatedVehicleId(v.id);
+        setDriverContact(v.contactNumber ?? '');
+        setCurrentView('gatein');
+        return;
+      }
+    } catch {
+      // If lookup fails, fall through to create flow
+    } finally {
+      setIsLoading(false);
+    }
+
     setVehicleData({
-      plateNumber: vehicleNumber.trim(),
+      plateNumber: plate,
       year: parseInt(selectedYear),
       make: selectedBrand,
       model: selectedModel,

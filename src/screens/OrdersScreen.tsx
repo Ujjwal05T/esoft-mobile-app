@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
@@ -51,6 +52,7 @@ export default function OrdersScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     setIsLoading(true);
@@ -111,6 +113,12 @@ export default function OrdersScreen() {
     }
   }, []);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchOrders()]);
+    setRefreshing(false);
+  }, [fetchOrders]);
+
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
@@ -162,7 +170,15 @@ export default function OrdersScreen() {
             styles.listContent,
             {paddingBottom: insets.bottom + 120},
           ]}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={['#e5383b']}
+              tintColor="#e5383b"
+            />
+          }>
           {orders.map(order => (
             <OrderCard
               key={order.id}

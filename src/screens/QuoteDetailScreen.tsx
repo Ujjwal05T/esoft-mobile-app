@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -63,29 +64,37 @@ export default function QuoteDetailScreen() {
   const [declining, setDeclining] = useState(false);
   const [reRequesting, setReRequesting] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchQuote = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await getQuoteById(quoteId);
+      if (result.success && result.data) {
+        setQuote(result.data);
+        const availableIds = new Set(
+          result.data.items
+            .filter(i => i.availability === 'in_stock')
+            .map(i => i.id),
+        );
+        setSelectedItems(availableIds);
+      }
+    } catch (e) {
+      console.error('Failed to fetch quote:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [quoteId]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchQuote()]);
+    setRefreshing(false);
+  }, [fetchQuote]);
 
   useEffect(() => {
-    async function fetchQuote() {
-      try {
-        setLoading(true);
-        const result = await getQuoteById(quoteId);
-        if (result.success && result.data) {
-          setQuote(result.data);
-          const availableIds = new Set(
-            result.data.items
-              .filter(i => i.availability === 'in_stock')
-              .map(i => i.id),
-          );
-          setSelectedItems(availableIds);
-        }
-      } catch (e) {
-        console.error('Failed to fetch quote:', e);
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchQuote();
-  }, [quoteId]);
+  }, [fetchQuote]);
 
   const handleDecline = useCallback(async () => {
     if (!quote) return;
@@ -290,7 +299,15 @@ export default function QuoteDetailScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#e5383b']}
+            tintColor="#e5383b"
+          />
+        }>
         {/* ════════════════════════════════════════
             QUOTE INFO CARD
             ════════════════════════════════════════ */}

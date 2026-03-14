@@ -8,9 +8,16 @@ import {
   ScrollView,
   TouchableWithoutFeedback,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Svg, {Path} from 'react-native-svg';
+import VehicleCard from '../dashboard/VehicleCard';
+import {
+  getCurrentVehicles,
+  type VehicleResponse,
+  type VehicleVisitResponse,
+} from '../../services/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -18,6 +25,7 @@ interface FiltersOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   onApply?: (filters: FilterData) => void;
+  onVehicleSelected?: (vehicleId: number) => void;
 }
 
 export interface FilterData {
@@ -181,6 +189,7 @@ export default function FiltersOverlay({
   isOpen,
   onClose,
   onApply,
+  onVehicleSelected,
 }: FiltersOverlayProps) {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<ActiveTab>('date');
@@ -208,14 +217,76 @@ export default function FiltersOverlay({
   // Sort state
   const [sortBy, setSortBy] = useState<FilterData['sortBy']>(null);
 
+  // Vehicle search state
+  const [plateNumber, setPlateNumber] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [foundVehicle, setFoundVehicle] = useState<VehicleResponse | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!isOpen) {
       setShowBrand(false);
       setShowModel(false);
       setShowAssignedTo(false);
       setShowAddedBy(false);
+      setPlateNumber('');
+      setFoundVehicle(null);
+      setSearchError(null);
     }
   }, [isOpen]);
+
+  const handleVehicleSearch = async () => {
+    if (!plateNumber.trim()) {
+      setSearchError('Please enter a plate number');
+      return;
+    }
+    setIsSearching(true);
+    setSearchError(null);
+    setFoundVehicle(null);
+    try {
+      const result = await getCurrentVehicles();
+      if (result.success && result.data) {
+        const foundVisit = result.data.visits.find(
+          (v: VehicleVisitResponse) =>
+            v.vehicle?.plateNumber.toLowerCase().trim() === plateNumber.toLowerCase().trim(),
+        );
+        if (foundVisit && foundVisit.vehicle) {
+          const vehicleData: VehicleResponse = {
+            id: foundVisit.vehicle.id,
+            plateNumber: foundVisit.vehicle.plateNumber,
+            brand: foundVisit.vehicle.brand,
+            model: foundVisit.vehicle.model,
+            year: foundVisit.vehicle.year,
+            variant: foundVisit.vehicle.variant,
+            chassisNumber: null,
+            specs: foundVisit.vehicle.specs,
+            registrationName: null,
+            ownerName: foundVisit.vehicle.ownerName,
+            contactNumber: foundVisit.vehicle.contactNumber,
+            email: null,
+            gstNumber: null,
+            insuranceProvider: null,
+            odometerReading: null,
+            observations: null,
+            observationsAudioUrl: null,
+            workshopOwnerId: foundVisit.workshopOwnerId,
+            status: 'Active',
+            createdAt: foundVisit.createdAt,
+            updatedAt: foundVisit.updatedAt,
+          };
+          setFoundVehicle(vehicleData);
+        } else {
+          setSearchError('Vehicle not found or not currently in the workshop');
+        }
+      } else {
+        setSearchError(result.error || 'Failed to search vehicles');
+      }
+    } catch {
+      setSearchError('Network error. Please try again.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   const handleClearAll = () => {
     setStartDate('');
@@ -445,102 +516,72 @@ export default function FiltersOverlay({
           {/* ── VEHICLE TAB ───────────────────────────────────────── */}
           {activeTab === 'vehicle' && (
             <View style={s.tabContent}>
-              <DropdownField
-                label="Brand"
-                value={brand}
-                isOpen={showBrand}
-                onToggle={() => {
-                  closeAllDropdowns();
-                  setShowBrand(v => !v);
-                }}
-                options={brandList}
-                onSelect={v => {
-                  setBrand(v);
-                  setShowBrand(false);
-                }}
-                isGrid
-              />
-
-              <DropdownField
-                label="Model"
-                value={model}
-                isOpen={showModel}
-                onToggle={() => {
-                  closeAllDropdowns();
-                  setShowModel(v => !v);
-                }}
-                options={modelList}
-                onSelect={v => {
-                  setModel(v);
-                  setShowModel(false);
-                }}
-              />
-
-              <View
-                style={[
-                  s.fieldWrap,
-                  s.inputFieldWrap,
-                  !!year && s.inputFieldWrapActive,
-                ]}>
-                {!!year && <Text style={s.floatLabel}>Year</Text>}
+              {/* Plate number search */}
+              <View style={s.plateInputRow}>
                 <TextInput
-                  value={year}
-                  onChangeText={setYear}
-                  placeholder="Year"
-                  placeholderTextColor="#828282"
-                  style={s.textInput}
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View
-                style={[
-                  s.fieldWrap,
-                  s.inputFieldWrap,
-                  !!vehicleNumber && s.inputFieldWrapActive,
-                ]}>
-                {!!vehicleNumber && (
-                  <Text style={s.floatLabel}>Vehicle Number</Text>
-                )}
-                <TextInput
-                  value={vehicleNumber}
-                  onChangeText={setVehicleNumber}
-                  placeholder="Vehicle Number"
-                  placeholderTextColor="#828282"
-                  style={s.textInput}
+                  value={plateNumber}
+                  onChangeText={text => {
+                    setPlateNumber(text.toUpperCase());
+                    setSearchError(null);
+                  }}
+                  placeholder="Enter plate number..."
+                  placeholderTextColor="#c4c4c4"
+                  style={[s.plateTextInput, !!plateNumber && s.plateTextInputFilled]}
                   autoCapitalize="characters"
+                  editable={!isSearching}
+                  onSubmitEditing={handleVehicleSearch}
                 />
+                <TouchableOpacity
+                  onPress={handleVehicleSearch}
+                  disabled={isSearching}
+                  style={[s.searchArrowBtn, plateNumber ? s.searchArrowBtnActive : s.searchArrowBtnInactive]}
+                  activeOpacity={0.8}>
+                  {isSearching ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M5 12H19M19 12L12 5M19 12L12 19"
+                        stroke="#fff"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  )}
+                </TouchableOpacity>
               </View>
 
-              <DropdownField
-                label="Assigned to"
-                value={assignedTo}
-                isOpen={showAssignedTo}
-                onToggle={() => {
-                  closeAllDropdowns();
-                  setShowAssignedTo(v => !v);
-                }}
-                options={assignedToList}
-                onSelect={v => {
-                  setAssignedTo(v);
-                  setShowAssignedTo(false);
-                }}
-              />
+              {/* Error */}
+              {!!searchError && (
+                <View style={s.searchErrorBox}>
+                  <Text style={s.searchErrorText}>{searchError}</Text>
+                </View>
+              )}
 
-              <DropdownField
-                label="Added by"
-                value={addedBy}
-                isOpen={showAddedBy}
-                onToggle={() => {
-                  closeAllDropdowns();
-                  setShowAddedBy(v => !v);
-                }}
-                options={addedByList}
-                onSelect={v => {
-                  setAddedBy(v);
-                  setShowAddedBy(false);
-                }}
-              />
+              {/* Found vehicle card */}
+              {foundVehicle && (
+                <TouchableOpacity
+                  onPress={() => {
+                    onVehicleSelected?.(foundVehicle.id);
+                    onClose();
+                  }}
+                  activeOpacity={0.9}
+                  style={s.vehicleCardWrapper}>
+                  <VehicleCard
+                    plateNumber={foundVehicle.plateNumber}
+                    year={foundVehicle.year ?? undefined}
+                    make={foundVehicle.brand ?? ''}
+                    model={foundVehicle.model ?? ''}
+                    specs={foundVehicle.specs ?? foundVehicle.variant ?? ''}
+                    services={[]}
+                    additionalServices={0}
+                  />
+                  <View style={s.tapHint}>
+                    <Text style={s.tapHintText}>Tap to view details</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
@@ -813,6 +854,53 @@ const s = StyleSheet.create({
   },
   checkboxActive: {borderColor: '#e5383b', backgroundColor: '#e5383b'},
   sortLabel: {fontSize: 15, color: '#000000'},
+  // Vehicle search
+  plateInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d3d3d3',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    backgroundColor: '#f5f3f4',
+  },
+  plateTextInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+    paddingVertical: 12,
+  },
+  plateTextInputFilled: {color: '#e5383b'},
+  searchArrowBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  searchArrowBtnActive: {backgroundColor: '#e5383b'},
+  searchArrowBtnInactive: {backgroundColor: '#828282'},
+  searchErrorBox: {
+    backgroundColor: '#fee',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#e5383b',
+  },
+  searchErrorText: {color: '#d32f2f', fontSize: 13},
+  vehicleCardWrapper: {position: 'relative'},
+  tapHint: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: '#e5383b',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  tapHintText: {color: '#fff', fontSize: 12, fontWeight: '600'},
   // Footer
   footer: {
     paddingHorizontal: 16,

@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
@@ -260,6 +261,7 @@ export default function InquiryScreen() {
   const [vehicleOrders, setVehicleOrders] = useState<any[]>([]);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
   const [editInquiry, setEditInquiry] = useState<{id: number; items: InquiryItemResponse[]} | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleEditInquiry = async (numericId: number) => {
     const result = await getInquiryById(numericId);
@@ -402,6 +404,12 @@ export default function InquiryScreen() {
       setLoadingDisputes(false);
     }
   }, [activeFilters, applyDisputeFilters]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchInquiries(), fetchQuotes(), fetchDisputes()]);
+    setRefreshing(false);
+  }, [fetchInquiries, fetchQuotes, fetchDisputes]);
 
   useEffect(() => {
     fetchInquiries();
@@ -625,7 +633,15 @@ export default function InquiryScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           {paddingBottom: insets.bottom + 120},
-        ]}>
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#e5383b']}
+            tintColor="#e5383b"
+          />
+        }>
 
         {/* ── Page Title ───────────────────────────────────────────────── */}
         <View style={styles.titleSection}>
@@ -884,6 +900,10 @@ export default function InquiryScreen() {
         isOpen={showFilters}
         onClose={() => setShowFilters(false)}
         onApply={handleApplyFilters}
+        onVehicleSelected={vehicleId => {
+          setShowFilters(false);
+          navigation.navigate('VehicleDetail', {vehicleId});
+        }}
       />
 
       {/* ── Floating Action Button ───────────────────────────────────── */}
@@ -924,9 +944,6 @@ export default function InquiryScreen() {
           orders={vehicleOrders}
           buttonText="SEND REQUEST"
           vehicleInfo={vehicleInfo}
-          onChatWithUs={() => {
-            console.log('Chat with us clicked');
-          }}
         />
       )}
 

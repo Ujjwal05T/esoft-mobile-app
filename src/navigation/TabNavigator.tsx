@@ -39,71 +39,47 @@ const iconMap: Record<string, SvgIcon> = {
 function TabBar({state, navigation}: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
-  // Dynamic tab width and icon size based on number of tabs
-  const tabCount = state.routes.length;
-  const getTabWidth = () => {
-    // 3 tabs (staff): wider tabs for better spacing
-    if (tabCount === 3) return 95;
-    // 4 tabs (owner): slightly narrower to fit all
-    if (tabCount === 4) return 82;
-    // Fallback
-    return 85;
-  };
-
-  const getIconSize = () => {
-    // 3 tabs (staff): larger icons to fill the space
-    if (tabCount === 3) return 20;
-    // 4 tabs (owner): slightly smaller icons
-    if (tabCount === 4) return 16;
-    // Fallback
-    return 18;
-  };
-
   return (
     <View style={[styles.container, {paddingBottom: insets.bottom + 6}]}>
       <View style={styles.row}>
-        {state.routes.map((route, index) => {
-          const isFocused = state.index === index;
-          const Icon = iconMap[route.name];
+        {/* Tabs — flex: 1 so they fill all space except the FAB */}
+        <View style={styles.tabsRow}>
+          {state.routes.map((route, index) => {
+            const isFocused = state.index === index;
+            const Icon = iconMap[route.name];
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
+            const onPress = () => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+              if (!isFocused && !event.defaultPrevented) {
+                navigation.navigate(route.name);
+              }
+            };
 
-          return (
-            <TouchableOpacity
-              key={route.key}
-              onPress={onPress}
-              style={[
-                styles.tabItem,
-                {maxWidth: getTabWidth()},
-                isFocused && styles.tabItemActive,
-              ]}
-              activeOpacity={0.8}>
-              {Icon && (
-                <Icon
-                  width={getIconSize()}
-                  height={getIconSize()}
-                  color={isFocused ? '#ffffff' : '#2b2b2b'}
-                />
-              )}
-              <Text
-                style={[
-                  styles.tabLabel,
-                  isFocused && styles.tabLabelActive,
-                ]}>
-                {route.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+            return (
+              <TouchableOpacity
+                key={route.key}
+                onPress={onPress}
+                style={[styles.tabItem, isFocused && styles.tabItemActive]}
+                activeOpacity={0.8}>
+                {Icon && (
+                  <Icon
+                    width={18}
+                    height={18}
+                    color={isFocused ? '#ffffff' : '#2b2b2b'}
+                  />
+                )}
+                <Text
+                  style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
+                  {route.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
         {/* FAB - AI Assistant */}
         <TouchableOpacity
@@ -167,11 +143,15 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  tabsRow: {
+    flex: 1,
+    flexDirection: 'row',
     gap: 6,
   },
   tabItem: {
     flex: 1,
-    // maxWidth is now dynamic - set inline based on tab count
     height: 70,
     borderRadius: 16,
     alignItems: 'center',

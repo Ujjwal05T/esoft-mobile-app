@@ -1,9 +1,10 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   Image,
   ActivityIndicator,
@@ -98,12 +99,9 @@ export default function StaffProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [personalOpen, setPersonalOpen] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     setLoading(true);
     const response = await getStaffProfile();
     if (response.success && response.data) {
@@ -118,7 +116,17 @@ export default function StaffProfileScreen() {
       setAppAlert({type: 'error', message: response.error || 'Failed to load profile'});
     }
     setLoading(false);
-  };
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchProfile()]);
+    setRefreshing(false);
+  }, [fetchProfile]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -220,7 +228,15 @@ export default function StaffProfileScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#e5383b']}
+            tintColor="#e5383b"
+          />
+        }>
         {/* Avatar Section */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarBox}>

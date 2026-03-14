@@ -4,9 +4,9 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   StatusBar,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -35,16 +35,14 @@ const LANGUAGES: LanguageOption[] = [
 
 const STORAGE_KEY = '@app_language_selected';
 const LANGUAGE_KEY = '@app_selected_language';
-
-// Calculate tile size for 3-column grid with gaps
-const {width} = Dimensions.get('window');
 const HORIZONTAL_PADDING = 16;
 const GAP = 16;
-const TILE_SIZE = (width - HORIZONTAL_PADDING * 2 - GAP * 2) / 3;
 
 const LanguageSelectionScreen: React.FC<LanguageSelectionScreenProps> = ({
   navigation,
 }) => {
+  const {width} = useWindowDimensions();
+  const TILE_SIZE = (width - HORIZONTAL_PADDING * 2 - GAP * 2) / 3;
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
 
   const handleLanguageSelect = async (languageId: string) => {
@@ -97,6 +95,7 @@ const LanguageSelectionScreen: React.FC<LanguageSelectionScreenProps> = ({
               key={language.id}
               style={[
                 styles.languageTile,
+                {width: TILE_SIZE, height: TILE_SIZE},
                 isSelected && styles.languageTileSelected,
               ]}
               onPress={() => handleLanguageSelect(language.id)}
@@ -148,8 +147,6 @@ const styles = StyleSheet.create({
     gap: GAP,
   },
   languageTile: {
-    width: TILE_SIZE,
-    height: TILE_SIZE,
     backgroundColor: '#ffffff',
     borderRadius: 10,
     borderWidth: 1,

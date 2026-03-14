@@ -64,7 +64,6 @@ interface RaiseDisputeOverlayProps {
   orders?: OrderWithParts[];
   reasons?: Reason[];
   buttonText?: 'CONFIRM' | 'SEND REQUEST';
-  onChatWithUs?: () => void;
 }
 
 // Icons
@@ -134,10 +133,6 @@ const PlusIcon = () => (
 const defaultReasons: Reason[] = [
   {id: '1', name: 'Wrong Part Delivered'},
   {id: '2', name: 'Damaged Part'},
-  {id: '3', name: 'Part Not Delivered'},
-  {id: '4', name: 'Quality Issue'},
-  {id: '5', name: 'Price Discrepancy'},
-  {id: '6', name: 'Other'},
 ];
 
 export default function RaiseDisputeOverlay({
@@ -148,7 +143,6 @@ export default function RaiseDisputeOverlay({
   orders = [],
   reasons = defaultReasons,
   buttonText = 'CONFIRM',
-  onChatWithUs,
 }: RaiseDisputeOverlayProps) {
   // Form state
   const [orderId, setOrderId] = useState('');
@@ -340,6 +334,7 @@ export default function RaiseDisputeOverlay({
                   styles.inputField,
                   !!orderId && {borderColor: '#e5383b'},
                   hasAttemptedSubmit && !orderId.trim() && styles.inputError,
+                  {marginTop:10}
                 ]}>
                 {!!orderId && <Text style={styles.floatLabel}>Order ID</Text>}
                 <TextInput
@@ -356,23 +351,24 @@ export default function RaiseDisputeOverlay({
               </View>
               {showOrderDropdown && filteredSuggestions.length > 0 && (
                 <View style={styles.dropdownList}>
-                  {filteredSuggestions.map(order => (
-                    <TouchableOpacity
-                      key={order.id}
-                      onPress={() => {
-                        setOrderId(order.orderId);
-                        setSelectedOrderId(order.id);
-                        setShowOrderDropdown(false);
-                        // Reset part selection when order changes
-                        setSelectedPart('');
-                        setSelectedPartId('');
-                      }}
-                      style={styles.dropdownItem}>
-                      <Text style={styles.dropdownItemText}>
-                        {order.orderId} - {order.date}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                    {filteredSuggestions.map(order => (
+                      <TouchableOpacity
+                        key={order.id}
+                        onPress={() => {
+                          setOrderId(order.orderId);
+                          setSelectedOrderId(order.id);
+                          setShowOrderDropdown(false);
+                          setSelectedPart('');
+                          setSelectedPartId('');
+                        }}
+                        style={styles.dropdownItem}>
+                        <Text style={styles.dropdownItemText}>
+                          {order.orderId} - {order.date}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 </View>
               )}
               {hasAttemptedSubmit && !orderId.trim() && (
@@ -402,18 +398,20 @@ export default function RaiseDisputeOverlay({
               </TouchableOpacity>
               {showPartDropdown && availableParts.length > 0 && (
                 <View style={styles.dropdownList}>
-                  {availableParts.map(p => (
-                    <TouchableOpacity
-                      key={p.id}
-                      onPress={() => {
-                        setSelectedPartId(p.id);
-                        setSelectedPart(p.name);
-                        setShowPartDropdown(false);
-                      }}
-                      style={styles.dropdownItem}>
-                      <Text style={styles.dropdownItemText}>{p.name}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                    {availableParts.map(p => (
+                      <TouchableOpacity
+                        key={p.id}
+                        onPress={() => {
+                          setSelectedPartId(p.id);
+                          setSelectedPart(p.name);
+                          setShowPartDropdown(false);
+                        }}
+                        style={styles.dropdownItem}>
+                        <Text style={styles.dropdownItemText}>{p.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 </View>
               )}
               {showPartDropdown && !selectedOrderId && (
@@ -461,17 +459,19 @@ export default function RaiseDisputeOverlay({
               </TouchableOpacity>
               {showReasonDropdown && reasons.length > 0 && (
                 <View style={styles.dropdownList}>
-                  {reasons.map(r => (
-                    <TouchableOpacity
-                      key={r.id}
-                      onPress={() => {
-                        setSelectedReason(r.name);
-                        setShowReasonDropdown(false);
-                      }}
-                      style={styles.dropdownItem}>
-                      <Text style={styles.dropdownItemText}>{r.name}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                    {reasons.map(r => (
+                      <TouchableOpacity
+                        key={r.id}
+                        onPress={() => {
+                          setSelectedReason(r.name);
+                          setShowReasonDropdown(false);
+                        }}
+                        style={styles.dropdownItem}>
+                        <Text style={styles.dropdownItemText}>{r.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 </View>
               )}
               {hasAttemptedSubmit && !selectedReason && (
@@ -572,12 +572,6 @@ export default function RaiseDisputeOverlay({
               <Text style={styles.confirmBtnText}>{buttonText}</Text>
             </TouchableOpacity>
 
-            {/* Chat With Us */}
-            {!!onChatWithUs && (
-              <TouchableOpacity onPress={onChatWithUs} style={styles.chatBtn}>
-                <Text style={styles.chatBtnText}>CHAT WITH US</Text>
-              </TouchableOpacity>
-            )}
           </View>
         </ScrollView>
 
@@ -716,7 +710,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginTop: 4,
     maxHeight: 200,
-    overflow: 'hidden',
   },
   dropdownItem: {
     paddingHorizontal: 16,
@@ -784,12 +777,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   confirmBtnText: {color: '#fff', fontSize: 16, fontWeight: '600', letterSpacing: 1},
-  chatBtn: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chatBtnText: {fontSize: 14, fontWeight: '600', color: '#e5383b', letterSpacing: 0.5},
   // Success overlay
   successOverlay: {
     position: 'absolute',

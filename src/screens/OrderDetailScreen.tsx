@@ -1,9 +1,10 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
@@ -213,14 +214,16 @@ const OrderSummaryCard = ({order, status}: {order: OrderDetailApiResponse; statu
 
       {/* Amounts row 2 */}
       <View style={styles.amountRow}>
-        <View style={[styles.amountColumn, {flex: 1}]}>
-          <Text style={styles.amountLabel}>
-            Additional Charges (Packing + Forwarding + Shipping)
-          </Text>
-          <Text style={styles.amountValue}>
-            Rs. {additionalCharges.toLocaleString('en-IN')}
-          </Text>
-        </View>
+        {additionalCharges > 0 && (
+          <View style={[styles.amountColumn, {flex: 1}]}>
+            <Text style={styles.amountLabel}>
+              Additional Charges (Packing + Forwarding + Shipping)
+            </Text>
+            <Text style={styles.amountValue}>
+              Rs. {additionalCharges.toLocaleString('en-IN')}
+            </Text>
+          </View>
+        )}
         <View style={[styles.amountColumnRight, {width: 80}]}>
           <Text style={styles.amountLabel}>Grand Total</Text>
           <Text style={styles.amountValue}>
@@ -336,29 +339,36 @@ export default function OrderDetailScreen() {
   const [selectedItem, setSelectedItem] = useState<OrderItemApiResponse | null>(null);
   const [showDisputeOverlay, setShowDisputeOverlay] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchOrder = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await getOrderById(orderId);
+      if (result.success && result.data) {
+        setOrder(result.data);
+      } else {
+        setError(result.error ?? 'Failed to load order.');
+      }
+    } catch (err) {
+      console.error('Failed to fetch order:', err);
+      setError('Failed to load order.');
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchOrder()]);
+    setRefreshing(false);
+  }, [fetchOrder]);
 
   useEffect(() => {
-    async function fetchOrder() {
-      try {
-        setLoading(true);
-        const result = await getOrderById(orderId);
-        if (result.success && result.data) {
-          setOrder(result.data);
-        } else {
-          setError(result.error ?? 'Failed to load order.');
-        }
-      } catch (err) {
-        console.error('Failed to fetch order:', err);
-        setError('Failed to load order.');
-      } finally {
-        setLoading(false);
-      }
-    }
-
     if (orderId) {
       fetchOrder();
     }
-  }, [orderId]);
+  }, [orderId, fetchOrder]);
 
   const status: OrderStatus = order ? mapStatus(order.status) : 'in-process';
 
@@ -432,7 +442,15 @@ export default function OrderDetailScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#e5383b']}
+            tintColor="#e5383b"
+          />
+        }>
         {/* Order Summary */}
         <OrderSummaryCard order={order} status={status} />
 

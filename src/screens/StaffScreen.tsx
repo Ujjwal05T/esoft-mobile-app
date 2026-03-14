@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
@@ -90,6 +91,7 @@ export default function StaffScreen() {
   const [staffList, setStaffList] = useState<WorkshopStaffResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch staff data from API
   const fetchStaffData = useCallback(async () => {
@@ -109,6 +111,12 @@ export default function StaffScreen() {
       setIsLoading(false);
     }
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchStaffData()]);
+    setRefreshing(false);
+  }, [fetchStaffData]);
 
   // Fetch data on mount
   useEffect(() => {
@@ -371,7 +379,15 @@ export default function StaffScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#e5383b']}
+            tintColor="#e5383b"
+          />
+        }>
         {isLoading ? (
           // Loading state
           <View style={styles.emptyState}>

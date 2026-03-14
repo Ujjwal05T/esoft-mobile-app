@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
@@ -65,6 +66,7 @@ export default function StaffVehicleScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<StaffPermissions | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchVehicles = useCallback(async () => {
     setIsLoading(true);
@@ -101,6 +103,12 @@ export default function StaffVehicleScreen() {
       setIsLoading(false);
     }
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchVehicles()]);
+    setRefreshing(false);
+  }, [fetchVehicles]);
 
   useFocusEffect(
     useCallback(() => {
@@ -160,7 +168,15 @@ export default function StaffVehicleScreen() {
             styles.listContent,
             {paddingBottom: insets.bottom + 120},
           ]}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={['#e5383b']}
+              tintColor="#e5383b"
+            />
+          }>
           {vehicles.map(vehicle => (
             <TouchableOpacity
               key={vehicle.id}

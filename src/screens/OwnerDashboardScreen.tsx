@@ -1,9 +1,10 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   StatusBar,
 } from 'react-native';
 
@@ -39,26 +40,33 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
   const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchDashboardStats = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    const response = await getDashboardStats();
+
+    if (response.success && response.data) {
+      setStats(response.data);
+    } else {
+      setError(response.error || 'Failed to load dashboard statistics');
+    }
+
+    setLoading(false);
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchDashboardStats()]);
+    setRefreshing(false);
+  }, [fetchDashboardStats]);
 
   // Fetch dashboard stats on component mount
   useEffect(() => {
-    async function fetchDashboardStats() {
-      setLoading(true);
-      setError(null);
-
-      const response = await getDashboardStats();
-
-      if (response.success && response.data) {
-        setStats(response.data);
-      } else {
-        setError(response.error || 'Failed to load dashboard statistics');
-      }
-
-      setLoading(false);
-    }
-
     fetchDashboardStats();
-  }, []);
+  }, [fetchDashboardStats]);
 
   const fabOptions = [
     {
@@ -85,7 +93,15 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
       {/* Main Scrollable Content */}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#e5383b']}
+            tintColor="#e5383b"
+          />
+        }>
 
         {/* ── Status Cards – 2-column grid ── */}
         <View style={styles.statusGrid}>
@@ -198,6 +214,10 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
         onApply={filters => {
           console.log('Filters applied:', filters);
           setFiltersOpen(false);
+        }}
+        onVehicleSelected={vehicleId => {
+          setFiltersOpen(false);
+          navigation?.navigate('VehicleDetail', {vehicleId});
         }}
       />
     </SafeAreaView>

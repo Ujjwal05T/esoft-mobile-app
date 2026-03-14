@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
@@ -15,6 +16,7 @@ import VehicleCard from '../components/dashboard/VehicleCard';
 import InquiryCard, {Inquiry} from '../components/dashboard/InquiryCard';
 import DisputeCard, {Dispute} from '../components/dashboard/DisputeCard';
 import JobCard from '../components/dashboard/JobCard';
+import PreviousServiceCard from '../components/dashboard/PreviousServiceCard';
 import FloatingActionButton from '../components/dashboard/FloatingActionButton';
 import GateOutOverlay from '../components/overlays/GateOutOverlay';
 import NewJobCardOverlay from '../components/overlays/NewJobCardOverlay';
@@ -26,6 +28,7 @@ import {
   getVehicleById,
   getActiveVehicleVisit,
   getJobCardsByVehicle,
+  getVehicleVisitsForVehicle,
   getInquiriesByVehicleId,
   getOrdersByVehicleId,
   getOrderById,
@@ -251,6 +254,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
   const [inquiries, setInquiries] = useState<InquiryWithNumericId[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [previousVisits, setPreviousVisits] = useState<VehicleVisitResponse[]>([]);
 
   // Staff permissions
   const [permissions, setPermissions] = useState<StaffPermissions | null>(null);
@@ -263,6 +267,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingDisputes, setLoadingDisputes] = useState(false);
   const [vehicleError, setVehicleError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Categories from job cards assigned to this staff member
   const staffCategories = useMemo(() => {
@@ -299,12 +304,19 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
   const fetchJobsAndVisit = useCallback(async () => {
     setLoadingJobs(true);
     try {
-      const [jobRes, visitRes] = await Promise.all([
+      const [jobRes, visitRes, allVisitsRes] = await Promise.all([
         getJobCardsByVehicle(vehicleId),
         getActiveVehicleVisit(vehicleId),
+        getVehicleVisitsForVehicle(vehicleId),
       ]);
       if (jobRes.success && jobRes.data) setJobCards(jobRes.data.jobCards);
       if (visitRes.success && visitRes.data) setActiveVisit(visitRes.data);
+      if (allVisitsRes.success && allVisitsRes.data) {
+        const activeId = visitRes.success && visitRes.data ? visitRes.data.id : null;
+        setPreviousVisits(
+          allVisitsRes.data.visits.filter((v: VehicleVisitResponse) => v.id !== activeId && v.status === 'Out'),
+        );
+      }
     } catch (e) {
       console.error('Failed to fetch jobs/visit:', e);
     } finally {
@@ -389,6 +401,12 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
       setLoadingDisputes(false);
     }
   }, [orders]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchVehicle(), fetchJobsAndVisit(), fetchInquiries(), fetchOrders()]);
+    setRefreshing(false);
+  }, [fetchVehicle, fetchJobsAndVisit, fetchInquiries, fetchOrders]);
 
   useEffect(() => {
     fetchVehicle();
@@ -601,7 +619,15 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 120}]}>
+        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 120}]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#e5383b']}
+            tintColor="#e5383b"
+          />
+        }>
 
         {/* ── Vehicle Card ─────────────────────────────────────────────── */}
         <VehicleCard
@@ -655,6 +681,32 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
               <Text style={styles.problemText}>
                 {activeVisit?.gateInProblemShared || 'No problems shared for this visit'}
               </Text>
+            </Accordion>
+
+            <Accordion
+              title="Previous Services"
+              expanded={expandedSections.previousServices}
+              onToggle={() => toggleSection('previousServices')}>
+              {previousVisits.length === 0 ? (
+                <View style={styles.emptyAccordion}>
+                  <Text style={styles.emptyAccordionText}>No previous visits</Text>
+                </View>
+              ) : (
+                <View style={styles.cardList}>
+                  {previousVisits.map(visit => {
+                    const visitJobCategories = jobCards
+                      .filter(j => j.vehicleVisitId === visit.id)
+                      .map(j => j.jobCategory);
+                    return (
+                      <PreviousServiceCard
+                        key={visit.id}
+                        visitDate={formatDate(visit.gateInDateTime)}
+                        jobCategories={visitJobCategories}
+                      />
+                    );
+                  })}
+                </View>
+              )}
             </Accordion>
 
             <Accordion
@@ -846,9 +898,6 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
           make: vehicle?.brand ?? '',
           model: vehicle?.model ?? '',
           specs: vehicle?.specs ?? vehicle?.variant ?? '',
-        }}
-        onChatWithUs={() => {
-          console.log('Chat with us clicked');
         }}
       />
 

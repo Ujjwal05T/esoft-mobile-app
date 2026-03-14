@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
@@ -53,6 +54,8 @@ interface HomeScreenProps {
 
 const HomeScreen: React.FC<HomeScreenProps> = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
+
+  const [refreshing, setRefreshing] = useState(false);
 
   // State for dynamic data
   const [vehiclesCount, setVehiclesCount] = useState(0);
@@ -117,6 +120,12 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
       setIsLoading(false);
     }
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchDashboardData()]);
+    setRefreshing(false);
+  }, [fetchDashboardData]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
@@ -227,7 +236,15 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#e5383b']}
+            tintColor="#e5383b"
+          />
+        }>
         {/* Loading State */}
         {isLoading ? (
           <View style={styles.loadingContainer}>

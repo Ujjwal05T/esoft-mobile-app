@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
@@ -140,6 +141,7 @@ export default function VehicleScreen() {
   const [filteredRequestedVehicles, setFilteredRequestedVehicles] = useState<DisplayVehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeFilters, setActiveFilters] = useState<FilterData>({
     startDate: '',
     endDate: '',
@@ -267,6 +269,12 @@ export default function VehicleScreen() {
     }
   }, [activeFilters, applyFilters]);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchVehicles()]);
+    setRefreshing(false);
+  }, [fetchVehicles]);
+
   useFocusEffect(
     useCallback(() => {
       fetchVehicles();
@@ -383,7 +391,15 @@ export default function VehicleScreen() {
             styles.listContent,
             {paddingBottom: insets.bottom + 120},
           ]}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={['#e5383b']}
+              tintColor="#e5383b"
+            />
+          }>
           {displayVehicles.map(vehicle => (
             <TouchableOpacity
               key={vehicle.id}
@@ -432,6 +448,10 @@ export default function VehicleScreen() {
         isOpen={showFilters}
         onClose={() => setShowFilters(false)}
         onApply={handleApplyFilters}
+        onVehicleSelected={vehicleId => {
+          setShowFilters(false);
+          navigation.navigate('VehicleDetail', {vehicleId});
+        }}
       />
     </View>
   );

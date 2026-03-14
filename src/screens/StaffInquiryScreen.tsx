@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
@@ -231,6 +232,7 @@ export default function StaffInquiryScreen() {
   const [vehicleOrders, setVehicleOrders] = useState<any[]>([]);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
   const [editInquiry, setEditInquiry] = useState<{id: number; items: InquiryItemResponse[]} | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleEditInquiry = async (numericId: number) => {
     const result = await getInquiryById(numericId);
@@ -328,6 +330,12 @@ export default function StaffInquiryScreen() {
       setLoadingDisputes(false);
     }
   }, [activeFilters, applyDisputeFilters]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchInquiries(), fetchDisputes()]);
+    setRefreshing(false);
+  }, [fetchInquiries, fetchDisputes]);
 
   useEffect(() => {
     fetchInquiries();
@@ -558,7 +566,15 @@ export default function StaffInquiryScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           {paddingBottom: insets.bottom + 120},
-        ]}>
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#e5383b']}
+            tintColor="#e5383b"
+          />
+        }>
 
         {/* ── Page Title ───────────────────────────────────────────────── */}
         <View style={styles.titleSection}>
@@ -736,6 +752,10 @@ export default function StaffInquiryScreen() {
         isOpen={showFilters}
         onClose={() => setShowFilters(false)}
         onApply={handleApplyFilters}
+        onVehicleSelected={vehicleId => {
+          setShowFilters(false);
+          navigation.navigate('StaffVehicleDetail', {vehicleId});
+        }}
       />
 
       {/* ── Floating Action Button ───────────────────────────────────── */}
