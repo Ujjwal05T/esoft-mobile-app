@@ -3,8 +3,8 @@ import * as Keychain from 'react-native-keychain';
 // API Base URL
 // const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
 // export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-const API_BASE_URL = 'https://max-toward-summaries-budget.trycloudflare.com/api';
-export const SERVER_ORIGIN = 'https://max-toward-summaries-budget.trycloudflare.com';
+const API_BASE_URL = 'https://wife-franchise-traveller-enquiries.trycloudflare.com/api';
+export const SERVER_ORIGIN = 'https://infinite-gps-shadows-leo.trycloudflare.com';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -594,6 +594,8 @@ export interface VehicleResponse {
   email: string | null;
   gstNumber: string | null;
   insuranceProvider: string | null;
+  rcCardFrontUrl: string | null;
+  rcCardBackUrl: string | null;
   odometerReading: string | null;
   observations: string | null;
   observationsAudioUrl: string | null;
@@ -648,6 +650,39 @@ export async function createVehicleWithAudio(data: CreateVehicleData, audioFile?
   } catch (error) {
     console.error('API Error:', error);
     return { success: false, error: 'Network error. Please try again.' };
+  }
+}
+
+// Create vehicle with RC card images (and optional audio)
+export async function createVehicleWithMedia(
+  data: CreateVehicleData,
+  rcFrontImage?: RNFile,
+  rcBackImage?: RNFile,
+  audioFile?: RNFile,
+) {
+  const formData = new FormData();
+  Object.entries(data).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      formData.append(key, String(value));
+    }
+  });
+  if (rcFrontImage) formData.append('rcFrontImage', rcFrontImage as unknown as Blob);
+  if (rcBackImage)  formData.append('rcBackImage',  rcBackImage  as unknown as Blob);
+  if (audioFile)    formData.append('audioFile',    audioFile    as unknown as Blob);
+
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/vehicle/with-media`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    const result = await response.json();
+    if (!response.ok) return {success: false, error: result.message || 'Failed to create vehicle'};
+    return {success: true, data: result as VehicleResponse};
+  } catch (error) {
+    console.error('API Error:', error);
+    return {success: false, error: 'Network error. Please try again.'};
   }
 }
 
@@ -879,6 +914,13 @@ export async function getAllVehicleVisits() {
 // Get vehicles currently in workshop (active visits)
 export async function getCurrentVehicles() {
   return apiRequest<VehicleVisitListResponse>('/vehiclevisit/current', {
+    method: 'GET',
+  });
+}
+
+// Search active vehicle visits by plate number
+export async function searchActiveVehicleVisits(query: string) {
+  return apiRequest<VehicleVisitListResponse>(`/vehiclevisit/search?q=${encodeURIComponent(query)}`, {
     method: 'GET',
   });
 }
@@ -1527,9 +1569,22 @@ export async function getInquiriesByVehicleId(vehicleId: number) {
   });
 }
 
+export async function getInquiriesByVehicleVisitId(vehicleVisitId: number) {
+  return apiRequest<InquiryListResponse>(`/inquiry/vehiclevisit/${vehicleVisitId}`, {
+    method: 'GET',
+  });
+}
+
 // Get inquiries by workshop owner ID
 export async function getInquiriesByWorkshopOwnerId(workshopOwnerId: number) {
   return apiRequest<InquiryListResponse>(`/inquiry/workshop/${workshopOwnerId}`, {
+    method: 'GET',
+  });
+}
+
+// Get inquiries created by a specific staff member
+export async function getInquiriesByStaffId(staffId: number) {
+  return apiRequest<InquiryListResponse>(`/inquiry/staff/${staffId}`, {
     method: 'GET',
   });
 }
@@ -1612,6 +1667,12 @@ export interface QuoteListApiResponse {
 // Get quotes by vehicle ID
 export async function getQuotesByVehicleId(vehicleId: number) {
   return apiRequest<QuoteListApiResponse>(`/quote/vehicle/${vehicleId}`, {
+    method: 'GET',
+  });
+}
+
+export async function getQuotesByVehicleVisitId(vehicleVisitId: number) {
+  return apiRequest<QuoteListApiResponse>(`/quote/vehiclevisit/${vehicleVisitId}`, {
     method: 'GET',
   });
 }
@@ -1723,6 +1784,12 @@ export async function getOrdersByVehicleId(vehicleId: number) {
   });
 }
 
+export async function getOrdersByVehicleVisitId(vehicleVisitId: number) {
+  return apiRequest<WorkshopOrderListResponse>(`/order/vehiclevisit/${vehicleVisitId}`, {
+    method: 'GET',
+  });
+}
+
 export interface OrderItemApiResponse {
   id: number;
   quoteItemId: number | null;
@@ -1827,6 +1894,21 @@ export interface DisputeDetailResponse {
 export async function getDisputesByWorkshopOwner(workshopOwnerId: number) {
   return apiRequest<DisputeListItemResponse[]>(
     `/disputes/workshop-owner/${workshopOwnerId}`,
+    {method: 'GET'}
+  );
+}
+
+export async function getDisputesByVehicleVisitId(vehicleVisitId: number) {
+  return apiRequest<DisputeListItemResponse[]>(
+    `/disputes/vehiclevisit/${vehicleVisitId}`,
+    {method: 'GET'}
+  );
+}
+
+// Get disputes raised by a specific staff member (or workshop owner)
+export async function getDisputesByRaisedById(userId: number) {
+  return apiRequest<DisputeListItemResponse[]>(
+    `/disputes/raised-by/${userId}`,
     {method: 'GET'}
   );
 }

@@ -32,12 +32,12 @@ import {
   getActiveVehicleVisit,
   getVehicleVisitsForVehicle,
   getJobCardsByVehicle,
-  getInquiriesByVehicleId,
-  getQuotesByVehicleId,
-  getOrdersByVehicleId,
+  getInquiriesByVehicleVisitId,
+  getQuotesByVehicleVisitId,
+  getOrdersByVehicleVisitId,
   getOrderById,
   createDisputeWithFiles,
-  getDisputesByWorkshopOwner,
+  getDisputesByVehicleVisitId,
   getStoredUser,
   createInquiryWithMedia,
   getInquiryById,
@@ -372,23 +372,25 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   }, [vehicleId]);
 
   const fetchInquiries = useCallback(async () => {
+    if (!activeVisit) return;
     setLoadingInquiries(true);
     try {
-      const res = await getInquiriesByVehicleId(vehicleId);
+      const res = await getInquiriesByVehicleVisitId(activeVisit.id);
       if (res.success && res.data && vehicle) {
-        setInquiries(res.data.inquiries.map(i => mapApiInquiry(i, vehicle)));
+        setInquiries(res.data.inquiries.map((i: InquiryResponse) => mapApiInquiry(i, vehicle)));
       }
     } catch (e) {
       console.error('Failed to fetch inquiries:', e);
     } finally {
       setLoadingInquiries(false);
     }
-  }, [vehicleId, vehicle]);
+  }, [activeVisit, vehicle]);
 
   const fetchQuotes = useCallback(async () => {
+    if (!activeVisit) return;
     setLoadingQuotes(true);
     try {
-      const res = await getQuotesByVehicleId(vehicleId);
+      const res = await getQuotesByVehicleVisitId(activeVisit.id);
       if (res.success && res.data) {
         setQuotes(res.data.quotes.map(mapApiQuote));
       }
@@ -397,12 +399,13 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     } finally {
       setLoadingQuotes(false);
     }
-  }, [vehicleId]);
+  }, [activeVisit]);
 
   const fetchOrders = useCallback(async () => {
+    if (!activeVisit) return;
     setLoadingOrders(true);
     try {
-      const listRes = await getOrdersByVehicleId(vehicleId);
+      const listRes = await getOrdersByVehicleVisitId(activeVisit.id);
       if (listRes.success && listRes.data) {
         const detailResults = await Promise.all(
           listRes.data.orders.map((o: WorkshopOrderListItem) => getOrderById(o.id)),
@@ -410,7 +413,8 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         const mapped: Order[] = listRes.data.orders.map(
           (o: WorkshopOrderListItem, idx: number) => {
             const detail = detailResults[idx];
-            const items = detail.success && detail.data ? detail.data.items : [];
+            const items: Array<{id: number; partName: string; brand: string; unitPrice: number; quantity: number}> =
+              detail.success && detail.data ? detail.data.items : [];
             const deliveryDate =
               detail.success && detail.data?.estimatedDeliveryDate
                 ? formatDate(detail.data.estimatedDeliveryDate)
@@ -441,35 +445,31 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     } finally {
       setLoadingOrders(false);
     }
-  }, [vehicleId]);
+  }, [activeVisit]);
 
   const fetchDisputes = useCallback(async () => {
+    if (!activeVisit) return;
     setLoadingDisputes(true);
     try {
-      const user = await getStoredUser();
-      if (!user) return;
-
-      const res = await getDisputesByWorkshopOwner(user.id);
+      const res = await getDisputesByVehicleVisitId(activeVisit.id);
       if (res.success && res.data) {
-        // Filter disputes to only show those related to this vehicle's orders
-        const vehicleOrderNumbers = orders.map(o => o.orderId);
-        const vehicleDisputes = res.data.filter(dispute =>
-          vehicleOrderNumbers.includes(dispute.orderNumber)
-        );
-        setDisputes(vehicleDisputes.map(mapApiDispute));
+        setDisputes(res.data.map((d: DisputeListItemResponse) => mapApiDispute(d)));
       }
     } catch (e) {
       console.error('Failed to fetch disputes:', e);
     } finally {
       setLoadingDisputes(false);
     }
-  }, [orders]);
+  }, [activeVisit]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchVehicle(), fetchJobsAndVisit(), fetchInquiries(), fetchQuotes(), fetchOrders()]);
+    await Promise.all([fetchVehicle(), fetchJobsAndVisit()]);
+    if (activeVisit) {
+      await Promise.all([fetchInquiries(), fetchQuotes(), fetchOrders(), fetchDisputes()]);
+    }
     setRefreshing(false);
-  }, [fetchVehicle, fetchJobsAndVisit, fetchInquiries, fetchQuotes, fetchOrders]);
+  }, [fetchVehicle, fetchJobsAndVisit, fetchInquiries, fetchQuotes, fetchOrders, fetchDisputes, activeVisit]);
 
   useEffect(() => {
     fetchVehicle();
@@ -478,18 +478,17 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   useEffect(() => {
     if (vehicle) {
       fetchJobsAndVisit();
+    }
+  }, [vehicle, fetchJobsAndVisit]);
+
+  useEffect(() => {
+    if (activeVisit) {
       fetchInquiries();
       fetchQuotes();
       fetchOrders();
-    }
-  }, [vehicle, fetchJobsAndVisit, fetchInquiries, fetchQuotes, fetchOrders]);
-
-  // Fetch disputes after orders are loaded (since we filter by order numbers)
-  useEffect(() => {
-    if (orders.length > 0) {
       fetchDisputes();
     }
-  }, [orders, fetchDisputes]);
+  }, [activeVisit, fetchInquiries, fetchQuotes, fetchOrders, fetchDisputes]);
 
   const toggleSection = (key: SectionKey) => {
     setExpandedSections(prev => ({...prev, [key]: !prev[key]}));
@@ -608,6 +607,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         return {
           partName: part.partName,
           preferredBrand: part.preferredBrand,
+          afterMarketBrandName: part.preferredBrand === 'After Market' ? part.afterMarketBrandName : undefined,
           quantity: parseInt(part.quantity, 10) || 1,
           remark: part.remark,
           audioDuration: part.audioDuration || undefined,

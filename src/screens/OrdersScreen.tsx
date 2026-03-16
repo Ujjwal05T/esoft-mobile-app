@@ -54,8 +54,8 @@ export default function OrdersScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchOrders = useCallback(async () => {
-    setIsLoading(true);
+  const fetchOrders = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setIsLoading(true);
     setError(null);
     try {
       const user = await getStoredUser();
@@ -115,7 +115,7 @@ export default function OrdersScreen() {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchOrders()]);
+    await fetchOrders(true);
     setRefreshing(false);
   }, [fetchOrders]);
 
@@ -125,73 +125,68 @@ export default function OrdersScreen() {
 
   return (
     <View style={[styles.container, {paddingTop: insets.top}]}>
-      {/* ── Header ───────────────────────────────────────────────────── */}
-      {/* <Header /> */}
-
       {/* ── Title Bar ────────────────────────────────────────────────── */}
       <View style={styles.titleBar}>
         <Text style={styles.title}>My Orders</Text>
-        {/* <Text style={styles.subtitle}>Track and manage your orders</Text> */}
       </View>
 
-      {/* ── Loading State ─────────────────────────────────────────────── */}
-      {isLoading && (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#e5383b" />
-          <Text style={styles.loadingText}>Loading orders...</Text>
-        </View>
-      )}
+      <ScrollView
+        contentContainerStyle={[
+          styles.listContent,
+          {paddingBottom: insets.bottom + 120},
+        ]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#e5383b']}
+            tintColor="#e5383b"
+          />
+        }>
 
-      {/* ── Error State ───────────────────────────────────────────────── */}
-      {error !== null && !isLoading && (
-        <View style={styles.stateCard}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryBtn}
-            onPress={fetchOrders}
-            activeOpacity={0.8}>
-            <Text style={styles.retryBtnText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+        {/* ── Loading State ─────────────────────────────────────────── */}
+        {isLoading && (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#e5383b" />
+            <Text style={styles.loadingText}>Loading orders...</Text>
+          </View>
+        )}
 
-      {/* ── Empty State ───────────────────────────────────────────────── */}
-      {!isLoading && error === null && orders.length === 0 && (
-        <View style={styles.stateCard}>
-          <Text style={styles.emptyTitle}>No Orders Found</Text>
-          <Text style={styles.emptySubtitle}>Your orders will appear here</Text>
-        </View>
-      )}
+        {/* ── Error State ───────────────────────────────────────────── */}
+        {error !== null && !isLoading && (
+          <View style={styles.stateCard}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity
+              style={styles.retryBtn}
+              onPress={() => fetchOrders()}
+              activeOpacity={0.8}>
+              <Text style={styles.retryBtnText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      {/* ── Orders List ───────────────────────────────────────────────── */}
-      {!isLoading && error === null && orders.length > 0 && (
-        <ScrollView
-          contentContainerStyle={[
-            styles.listContent,
-            {paddingBottom: insets.bottom + 120},
-          ]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={['#e5383b']}
-              tintColor="#e5383b"
-            />
-          }>
-          {orders.map(order => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              onTrackOrder={orderId =>
-                navigation.navigate('OrderDetail', {orderId: parseInt(orderId)})
-              }
-              onDownloadInvoice={orderId => console.log('Invoice:', orderId)}
-              onViewOrder={orderId => navigation.navigate('OrderDetail', {orderId: parseInt(orderId)})}
-            />
-          ))}
-        </ScrollView>
-      )}
+        {/* ── Empty State ───────────────────────────────────────────── */}
+        {!isLoading && error === null && orders.length === 0 && (
+          <View style={styles.stateCard}>
+            <Text style={styles.emptyTitle}>No Orders Found</Text>
+            <Text style={styles.emptySubtitle}>Your orders will appear here</Text>
+          </View>
+        )}
+
+        {/* ── Orders List ───────────────────────────────────────────── */}
+        {!isLoading && error === null && orders.length > 0 && orders.map(order => (
+          <OrderCard
+            key={order.id}
+            order={order}
+            onTrackOrder={orderId =>
+              navigation.navigate('OrderDetail', {orderId: parseInt(orderId)})
+            }
+            onDownloadInvoice={orderId => console.log('Invoice:', orderId)}
+            onViewOrder={orderId => navigation.navigate('OrderDetail', {orderId: parseInt(orderId)})}
+          />
+        ))}
+      </ScrollView>
     </View>
   );
 }

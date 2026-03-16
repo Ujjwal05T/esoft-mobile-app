@@ -147,13 +147,7 @@ export default function OrderCard({
           )}
 
           <View style={styles.actionRow}>
-            {order.status === 'delivered' ? (
-              <TouchableOpacity
-                onPress={() => onDownloadInvoice?.(order.id)}
-                style={styles.actionBtn}>
-                <Text style={styles.actionBtnText}>Download Invoice</Text>
-              </TouchableOpacity>
-            ) : order.status === 'shipped' ? (
+            {order.status === 'delivered' || order.status === 'shipped' ? (
               <TouchableOpacity
                 onPress={() => onTrackOrder?.(order.id)}
                 style={styles.actionBtn}>

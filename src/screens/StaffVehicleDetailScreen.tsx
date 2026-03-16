@@ -29,11 +29,11 @@ import {
   getActiveVehicleVisit,
   getJobCardsByVehicle,
   getVehicleVisitsForVehicle,
-  getInquiriesByVehicleId,
-  getOrdersByVehicleId,
+  getInquiriesByVehicleVisitId,
+  getOrdersByVehicleVisitId,
+  getDisputesByVehicleVisitId,
   getOrderById,
   createDisputeWithFiles,
-  getDisputesByWorkshopOwner,
   getStoredUser,
   createInquiryWithMedia,
   getStaffProfile,
@@ -324,10 +324,10 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
     }
   }, [vehicleId]);
 
-  const fetchInquiries = useCallback(async () => {
+  const fetchInquiries = useCallback(async (visitId: number) => {
     setLoadingInquiries(true);
     try {
-      const res = await getInquiriesByVehicleId(vehicleId);
+      const res = await getInquiriesByVehicleVisitId(visitId);
       if (res.success && res.data && vehicle) {
         setInquiries(res.data.inquiries.map(i => mapApiInquiry(i, vehicle)));
       }
@@ -336,12 +336,12 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
     } finally {
       setLoadingInquiries(false);
     }
-  }, [vehicleId, vehicle]);
+  }, [vehicle]);
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (visitId: number) => {
     setLoadingOrders(true);
     try {
-      const listRes = await getOrdersByVehicleId(vehicleId);
+      const listRes = await getOrdersByVehicleVisitId(visitId);
       if (listRes.success && listRes.data) {
         const detailResults = await Promise.all(
           listRes.data.orders.map((o: WorkshopOrderListItem) => getOrderById(o.id)),
@@ -380,33 +380,35 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
     } finally {
       setLoadingOrders(false);
     }
-  }, [vehicleId]);
+  }, []);
 
-  const fetchDisputes = useCallback(async () => {
+  const fetchDisputes = useCallback(async (visitId: number) => {
     setLoadingDisputes(true);
     try {
-      const user = await getStoredUser();
-      if (!user) return;
-      const res = await getDisputesByWorkshopOwner(user.id);
+      const res = await getDisputesByVehicleVisitId(visitId);
       if (res.success && res.data) {
-        const vehicleOrderNumbers = orders.map(o => o.orderId);
-        const vehicleDisputes = res.data.filter(d =>
-          vehicleOrderNumbers.includes(d.orderNumber),
-        );
-        setDisputes(vehicleDisputes.map(mapApiDispute));
+        setDisputes(res.data.map(mapApiDispute));
       }
     } catch (e) {
       console.error('Failed to fetch disputes:', e);
     } finally {
       setLoadingDisputes(false);
     }
-  }, [orders]);
+  }, []);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchVehicle(), fetchJobsAndVisit(), fetchInquiries(), fetchOrders()]);
+    await fetchVehicle();
+    await fetchJobsAndVisit();
+    if (activeVisit) {
+      await Promise.all([
+        fetchInquiries(activeVisit.id),
+        fetchOrders(activeVisit.id),
+        fetchDisputes(activeVisit.id),
+      ]);
+    }
     setRefreshing(false);
-  }, [fetchVehicle, fetchJobsAndVisit, fetchInquiries, fetchOrders]);
+  }, [fetchVehicle, fetchJobsAndVisit, fetchInquiries, fetchOrders, fetchDisputes, activeVisit]);
 
   useEffect(() => {
     fetchVehicle();
@@ -423,16 +425,17 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
   useEffect(() => {
     if (vehicle) {
       fetchJobsAndVisit();
-      fetchInquiries();
-      fetchOrders();
     }
-  }, [vehicle, fetchJobsAndVisit, fetchInquiries, fetchOrders]);
+  }, [vehicle, fetchJobsAndVisit]);
 
   useEffect(() => {
-    if (orders.length > 0) {
-      fetchDisputes();
+    if (activeVisit && vehicle) {
+      fetchInquiries(activeVisit.id);
+      fetchOrders(activeVisit.id);
+      fetchDisputes(activeVisit.id);
     }
-  }, [orders, fetchDisputes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeVisit?.id]);
 
   const toggleSection = (key: SectionKey) => {
     setExpandedSections(prev => ({...prev, [key]: !prev[key]}));
@@ -476,8 +479,8 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
         imageFiles[2],
       );
 
-      if (result.success) {
-        fetchDisputes();
+      if (result.success && activeVisit) {
+        fetchDisputes(activeVisit.id);
       }
     } catch (error) {
       console.error('Error creating dispute:', error);
@@ -515,6 +518,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
         return {
           partName: part.partName,
           preferredBrand: part.preferredBrand,
+          afterMarketBrandName: part.preferredBrand === 'After Market' ? part.afterMarketBrandName : undefined,
           quantity: parseInt(part.quantity, 10) || 1,
           remark: part.remark,
           audioDuration: part.audioDuration || undefined,
@@ -540,7 +544,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
           type: 'success',
           message: `Inquiry created successfully!\n\nInquiry Number: ${result.data?.inquiryNumber || 'N/A'}`,
           onDone: () => {
-            fetchInquiries();
+            if (activeVisit) fetchInquiries(activeVisit.id);
             setActiveTab('inquiry');
           },
         });
@@ -912,7 +916,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
         onClose={() => setEditInquiry(null)}
         inquiryId={editInquiry?.id ?? 0}
         initialItems={editInquiry?.items ?? []}
-        onSuccess={() => { setEditInquiry(null); fetchInquiries(); }}
+        onSuccess={() => { setEditInquiry(null); if (activeVisit) fetchInquiries(activeVisit.id); }}
       />
 
       <AppAlert

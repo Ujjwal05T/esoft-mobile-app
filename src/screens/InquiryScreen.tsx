@@ -536,6 +536,7 @@ export default function InquiryScreen() {
         return {
           partName: part.partName,
           preferredBrand: part.preferredBrand,
+          afterMarketBrandName: part.preferredBrand === 'After Market' ? part.afterMarketBrandName : undefined,
           quantity: parseInt(part.quantity, 10) || 1,
           remark: part.remark,
           audioDuration: part.audioDuration || undefined,

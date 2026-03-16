@@ -28,8 +28,8 @@ import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import EditInquiryOverlay from '../components/overlays/EditInquiryOverlay';
 import {
   getStoredUser,
-  getInquiriesByWorkshopOwnerId,
-  getDisputesByWorkshopOwner,
+  getInquiriesByStaffId,
+  getDisputesByRaisedById,
   getOrdersByVehicleId,
   getOrderById,
   createInquiryWithMedia,
@@ -300,7 +300,7 @@ export default function StaffInquiryScreen() {
     try {
       const user = await getStoredUser();
       if (!user) return;
-      const res = await getInquiriesByWorkshopOwnerId(user.id);
+      const res = await getInquiriesByStaffId(user.id);
       if (res.success && res.data) {
         const mapped = res.data.inquiries.map(mapApiInquiry);
         setInquiries(mapped);
@@ -318,7 +318,7 @@ export default function StaffInquiryScreen() {
     try {
       const user = await getStoredUser();
       if (!user) return;
-      const res = await getDisputesByWorkshopOwner(user.id);
+      const res = await getDisputesByRaisedById(user.id);
       if (res.success && res.data) {
         const mapped = res.data.map(mapApiDispute);
         setDisputes(mapped);
@@ -469,6 +469,7 @@ export default function StaffInquiryScreen() {
         return {
           partName: part.partName,
           preferredBrand: part.preferredBrand,
+          afterMarketBrandName: part.preferredBrand === 'After Market' ? part.afterMarketBrandName : undefined,
           quantity: parseInt(part.quantity, 10) || 1,
           remark: part.remark,
           audioDuration: part.audioDuration || undefined,

@@ -17,6 +17,7 @@ import {
   Easing,
 } from 'react-native';
 import {launchImageLibrary} from 'react-native-image-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import RNFS from 'react-native-fs';
 
@@ -24,7 +25,7 @@ const SCREEN_H = Dimensions.get('screen').height;
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
 import VehicleCard from '../dashboard/VehicleCard';
-import {createVehicle, gateInVehicle, gateInVehicleWithMedia, scanRcCard, scanVehiclePlate, getCarBrands, getCarModels, getCarYears, getCarVariants, getVehicleByPlate} from '../../services/api';
+import {createVehicle, createVehicleWithMedia, gateInVehicle, gateInVehicleWithMedia, scanRcCard, scanVehiclePlate, getCarBrands, getCarModels, getCarYears, getCarVariants, getVehicleByPlate} from '../../services/api';
 import CameraScannerOverlay, {ScanMode} from './CameraScannerOverlay';
 import AppAlert, {AlertState} from './AppAlert';
 
@@ -191,10 +192,16 @@ export default function AddVehicleOverlay({
   const [insuranceProvider, setInsuranceProvider] = useState('');
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
+  // RC Card Images (collected in manual step)
+  const [rcFrontImage, setRcFrontImage] = useState<{uri: string; name: string; type: string} | null>(null);
+  const [rcBackImage, setRcBackImage] = useState<{uri: string; name: string; type: string} | null>(null);
+
   // Gate In
   const [driverName, setDriverName] = useState('');
   const [driverContact, setDriverContact] = useState('');
-  const [gateInDateTime, setGateInDateTime] = useState('');
+  const [gateInDate, setGateInDate] = useState<Date>(new Date());
+  const [showGateInPicker, setShowGateInPicker] = useState(false);
+  const [gateInPickerMode, setGateInPickerMode] = useState<'date' | 'time'>('date');
   const [odometerReading, setOdometerReading] = useState('');
   const [fuelLevel, setFuelLevel] = useState(0);
   const [fuelTrackWidth, setFuelTrackWidth] = useState(0);
@@ -239,10 +246,13 @@ export default function AddVehicleOverlay({
     setHasAttemptedSubmit(false);
     setDriverName('');
     setDriverContact('');
-    setGateInDateTime('');
+    setGateInDate(new Date());
+    setShowGateInPicker(false);
     setOdometerReading('');
     setFuelLevel(0);
     setProblemShared('');
+    setRcFrontImage(null);
+    setRcBackImage(null);
     setVehicleImages([]);
     setIsRecording(false);
     setRecordedAudioPath(null);
@@ -443,7 +453,7 @@ export default function AddVehicleOverlay({
 
     setIsLoading(true);
     try {
-      const result = await createVehicle({
+      const vehiclePayload = {
         plateNumber: vehicleData.plateNumber,
         brand: selectedBrand || vehicleData.make || undefined,
         model: selectedModel || vehicleData.model || undefined,
@@ -457,7 +467,11 @@ export default function AddVehicleOverlay({
         email: email || undefined,
         gstNumber: gstNumber || undefined,
         insuranceProvider: insuranceProvider || undefined,
-      });
+      };
+
+      const result = (rcFrontImage || rcBackImage)
+        ? await createVehicleWithMedia(vehiclePayload, rcFrontImage ?? undefined, rcBackImage ?? undefined)
+        : await createVehicle(vehiclePayload);
 
       if (!result.success) {
         setApiError(result.error || 'Failed to create vehicle');
@@ -499,7 +513,7 @@ export default function AddVehicleOverlay({
     try {
       const visitData = {
         vehicleId: createdVehicleId,
-        gateInDateTime: new Date().toISOString(),
+        gateInDateTime: gateInDate.toISOString(),
         gateInDriverName: driverName,
         gateInDriverContact: driverContact,
         gateInOdometerReading: odometerReading || undefined,
@@ -562,6 +576,17 @@ export default function AddVehicleOverlay({
             type: a.type || 'image/jpeg',
           }));
         setVehicleImages(prev => [...prev, ...newImages]);
+      }
+    });
+  };
+
+  const handlePickRcImage = (side: 'front' | 'back') => {
+    launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 1}, response => {
+      if (!response.didCancel && !response.errorCode && response.assets?.[0]?.uri) {
+        const a = response.assets[0];
+        const file = {uri: a.uri!, name: a.fileName || `rc_${side}_${Date.now()}.jpg`, type: a.type || 'image/jpeg'};
+        if (side === 'front') setRcFrontImage(file);
+        else setRcBackImage(file);
       }
     });
   };
@@ -848,6 +873,60 @@ export default function AddVehicleOverlay({
                 wrapperStyle={{marginBottom: 8}}
               />
 
+              {/* RC Card Images */}
+              <Text style={styles.rcSectionLabel}>RC Card Images (Optional)</Text>
+              <View style={styles.rcRow}>
+                <TouchableOpacity
+                  onPress={() => handlePickRcImage('front')}
+                  style={styles.rcImageBox}
+                  activeOpacity={0.8}>
+                  {rcFrontImage ? (
+                    <>
+                      <Image source={{uri: rcFrontImage.uri}} style={styles.rcImageFull} resizeMode="cover" />
+                      <TouchableOpacity
+                        style={styles.rcRemoveBtn}
+                        onPress={() => setRcFrontImage(null)}
+                        hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
+                        <Text style={styles.rcRemoveX}>✕</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+                        <Rect x={3} y={3} width={18} height={18} rx={2} stroke="#d3d3d3" strokeWidth={2} />
+                        <Path d="M12 8v8M8 12h8" stroke="#e5383b" strokeWidth={2} strokeLinecap="round" />
+                      </Svg>
+                      <Text style={styles.rcImageLabel}>RC Front</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handlePickRcImage('back')}
+                  style={styles.rcImageBox}
+                  activeOpacity={0.8}>
+                  {rcBackImage ? (
+                    <>
+                      <Image source={{uri: rcBackImage.uri}} style={styles.rcImageFull} resizeMode="cover" />
+                      <TouchableOpacity
+                        style={styles.rcRemoveBtn}
+                        onPress={() => setRcBackImage(null)}
+                        hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
+                        <Text style={styles.rcRemoveX}>✕</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+                        <Rect x={3} y={3} width={18} height={18} rx={2} stroke="#d3d3d3" strokeWidth={2} />
+                        <Path d="M12 8v8M8 12h8" stroke="#e5383b" strokeWidth={2} strokeLinecap="round" />
+                      </Svg>
+                      <Text style={styles.rcImageLabel}>RC Back</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
               <TouchableOpacity
                 onPress={handleManualNext}
                 style={[
@@ -1011,6 +1090,7 @@ export default function AddVehicleOverlay({
                 onChange={setDriverName}
                 required
                 containerStyle={{borderRadius: 8}}
+                wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 1}}
               />
               {hasAttemptedGateIn && !driverName.trim() && (
                 <Text style={styles.errorText}>Please enter driver's name</Text>
@@ -1023,27 +1103,57 @@ export default function AddVehicleOverlay({
                 keyboardType="phone-pad"
                 required
                 containerStyle={{borderRadius: 8}}
+                wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 8}}
               />
               {hasAttemptedGateIn && !driverContact.trim() && (
                 <Text style={styles.errorText}>Please enter driver's contact number</Text>
               )}
 
               {/* Gate In Date and Time */}
-              <View style={[styles.dropdownWrap, styles.dropdown, !!gateInDateTime && styles.dropdownActive]}>
-                {!!gateInDateTime && (
-                  <Text style={styles.dropdownFloatLabel}>Gate In Date and time</Text>
-                )}
-                <TextInput
-                  value={gateInDateTime || new Date().toLocaleDateString('en-IN', {
+              <TouchableOpacity
+                style={[styles.dropdownWrap, styles.dropdown, styles.dropdownActive]}
+                onPress={() => {
+                  setGateInPickerMode('date');
+                  setShowGateInPicker(true);
+                }}
+                activeOpacity={0.7}>
+                <Text style={styles.dropdownFloatLabel}>Gate In Date and Time</Text>
+                <Text style={styles.gateInDateInput}>
+                  {gateInDate.toLocaleDateString('en-IN', {
                     day: 'numeric', month: 'long', year: 'numeric',
                     hour: 'numeric', minute: '2-digit', hour12: true,
                   })}
-                  onChangeText={setGateInDateTime}
-                  placeholder="Gate In Date and time"
-                  placeholderTextColor="#828282"
-                  style={styles.gateInDateInput}
+                </Text>
+                <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                  <Path d="M6 9L12 15L18 9" stroke="#E5383B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </Svg>
+              </TouchableOpacity>
+
+              {showGateInPicker && (
+                <DateTimePicker
+                  value={gateInDate}
+                  mode={gateInPickerMode}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(_, selected) => {
+                    if (!selected) { setShowGateInPicker(false); return; }
+                    if (Platform.OS === 'android') {
+                      if (gateInPickerMode === 'date') {
+                        const next = new Date(selected);
+                        next.setHours(gateInDate.getHours(), gateInDate.getMinutes());
+                        setGateInDate(next);
+                        setGateInPickerMode('time');
+                      } else {
+                        const next = new Date(gateInDate);
+                        next.setHours(selected.getHours(), selected.getMinutes());
+                        setGateInDate(next);
+                        setShowGateInPicker(false);
+                      }
+                    } else {
+                      setGateInDate(selected);
+                    }
+                  }}
                 />
-              </View>
+              )}
 
               <FloatingInput
                 label="Odometer Reading"
@@ -1621,4 +1731,33 @@ const styles = StyleSheet.create({
   },
   audioChipText: {fontSize: 12, color: '#16a34a', fontWeight: '500'},
   audioChipRemove: {fontSize: 12, color: '#16a34a', fontWeight: '700'},
+  rcSectionLabel: {fontSize: 13, fontWeight: '600', color: '#828282', marginBottom: 8},
+  rcRow: {flexDirection: 'row', gap: 12, marginBottom: 8},
+  rcImageBox: {
+    flex: 1,
+    height: 100,
+    borderWidth: 1.5,
+    borderColor: '#d3d3d3',
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fafafa',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  rcImageFull: {width: '100%', height: '100%'},
+  rcImageLabel: {fontSize: 12, color: '#828282', marginTop: 6},
+  rcRemoveBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    backgroundColor: '#e5383b',
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rcRemoveX: {color: '#fff', fontSize: 10, fontWeight: '700'},
 });

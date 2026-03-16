@@ -33,6 +33,7 @@ interface PartItem {
   id: string;
   partName: string;
   preferredBrand: string;
+  afterMarketBrandName: string;
   quantity: string;
   remark: string;
   isExpanded: boolean;
@@ -47,6 +48,7 @@ const createEmptyPart = (): PartItem => ({
   id: generateId(),
   partName: '',
   preferredBrand: '',
+  afterMarketBrandName: '',
   quantity: '',
   remark: '',
   isExpanded: true,
@@ -408,6 +410,7 @@ export default function RequestPartOverlay({
         const hasErr =
           !p.partName.trim() ||
           !p.preferredBrand ||
+          (p.preferredBrand === 'After Market' && !p.afterMarketBrandName.trim()) ||
           !p.quantity.trim() ||
           (!p.remark.trim() && !p.audioPath);
         if (hasErr) valid = false;
@@ -536,6 +539,7 @@ export default function RequestPartOverlay({
                       onPress={() =>
                         updatePart(part.id, {
                           preferredBrand: opt.name,
+                          afterMarketBrandName: opt.name !== 'After Market' ? '' : part.afterMarketBrandName,
                           isBrandDropdownOpen: false,
                         })
                       }
@@ -549,6 +553,34 @@ export default function RequestPartOverlay({
                 <Text style={styles.errorMsg}>Please select preferred brand</Text>
               )}
             </View>
+
+            {/* After Market Brand Name */}
+            {part.preferredBrand === 'After Market' && (
+              <View style={styles.fieldWrap}>
+                <View
+                  style={[
+                    styles.inputBorder,
+                    !!part.afterMarketBrandName && styles.inputFilled,
+                    part.hasAttemptedSubmit &&
+                      !part.afterMarketBrandName.trim() &&
+                      styles.inputError,
+                  ]}>
+                  {!!part.afterMarketBrandName && (
+                    <Text style={styles.floatLabel}>Brand Name</Text>
+                  )}
+                  <TextInput
+                    value={part.afterMarketBrandName}
+                    onChangeText={v => updatePart(part.id, {afterMarketBrandName: v})}
+                    placeholder="Brand Name"
+                    placeholderTextColor="#828282"
+                    style={styles.inputText}
+                  />
+                </View>
+                {part.hasAttemptedSubmit && !part.afterMarketBrandName.trim() && (
+                  <Text style={styles.errorMsg}>Please enter the brand name</Text>
+                )}
+              </View>
+            )}
 
             {/* Quantity */}
             <View style={styles.fieldWrap}>

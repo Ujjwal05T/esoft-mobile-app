@@ -3,7 +3,7 @@
 import { getAuthToken, setAuthToken, setStoredUser, removeAuthToken } from './api';
 
 // const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
-const API_BASE_URL = 'https://max-toward-summaries-budget.trycloudflare.com/api';
+const API_BASE_URL = 'https://infinite-gps-shadows-leo.trycloudflare.com/api';
 
 export interface LoginResponse {
   success: boolean;

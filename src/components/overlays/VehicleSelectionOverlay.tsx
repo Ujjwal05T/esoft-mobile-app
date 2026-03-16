@@ -1,38 +1,4 @@
-/**
- * VehicleSelectionOverlay - Intermediate overlay for selecting a vehicle by plate number
- *
- * Use this when you need to open overlays (NewJobCardOverlay, EstimationOverlay, etc.)
- * from outside VehicleDetailScreen where you don't have vehicle context.
- *
- * Usage Example:
- * ```tsx
- * const [showVehicleSelection, setShowVehicleSelection] = useState(false);
- * const [showNewJob, setShowNewJob] = useState(false);
- * const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
- * const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo | null>(null);
- *
- * // Step 1: Open vehicle selection
- * <VehicleSelectionOverlay
- *   isOpen={showVehicleSelection}
- *   onClose={() => setShowVehicleSelection(false)}
- *   onVehicleSelected={(vehicle, info) => {
- *     setSelectedVehicleId(vehicle.id);
- *     setVehicleInfo(info);
- *     setShowNewJob(true); // Open target overlay
- *   }}
- *   title="Select Vehicle for New Job"
- * />
- *
- * // Step 2: Target overlay opens with vehicle data
- * <NewJobCardOverlay
- *   isOpen={showNewJob}
- *   onClose={() => setShowNewJob(false)}
- *   vehicleId={selectedVehicleId!}
- * />
- * ```
- */
-
-import React, {useState} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {
   View,
   Text,
@@ -42,12 +8,13 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
+  FlatList,
   Dimensions,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import VehicleCard from '../dashboard/VehicleCard';
 import {
-  getCurrentVehicles,
+  searchActiveVehicleVisits,
   type VehicleResponse,
   type VehicleVisitResponse,
 } from '../../services/api';
@@ -69,7 +36,6 @@ interface VehicleSelectionOverlayProps {
   title?: string;
 }
 
-// Close icon
 const CloseIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
     <Path
@@ -82,7 +48,6 @@ const CloseIcon = () => (
   </Svg>
 );
 
-// Arrow Right icon
 const ArrowRightIcon = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
     <Path
@@ -101,94 +66,103 @@ export default function VehicleSelectionOverlay({
   onVehicleSelected,
   title = 'Select Vehicle',
 }: VehicleSelectionOverlayProps) {
-  const [plateNumber, setPlateNumber] = useState('');
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<VehicleVisitResponse[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [vehicle, setVehicle] = useState<VehicleResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedVisit, setSelectedVisit] = useState<VehicleVisitResponse | null>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleSearch = async () => {
-    if (!plateNumber.trim()) {
-      setError('Please enter a plate number');
+  const search = useCallback(async (text: string) => {
+    if (text.length < 2) {
+      setSuggestions([]);
       return;
     }
-
     setIsSearching(true);
-    setError(null);
-    setVehicle(null);
-
     try {
-      const result = await getCurrentVehicles();
-      if (result.success && result.data) {
-        // Search only within currently gated-in vehicles
-        const foundVisit = result.data.visits.find(
-          (v: VehicleVisitResponse) =>
-            v.vehicle?.plateNumber.toLowerCase().trim() ===
-            plateNumber.toLowerCase().trim(),
-        );
-
-        if (foundVisit && foundVisit.vehicle) {
-          // Reconstruct as VehicleResponse shape for compatibility
-          const vehicleData: VehicleResponse = {
-            id: foundVisit.vehicle.id,
-            plateNumber: foundVisit.vehicle.plateNumber,
-            brand: foundVisit.vehicle.brand,
-            model: foundVisit.vehicle.model,
-            year: foundVisit.vehicle.year,
-            variant: foundVisit.vehicle.variant,
-            chassisNumber: null,
-            specs: foundVisit.vehicle.specs,
-            registrationName: null,
-            ownerName: foundVisit.vehicle.ownerName,
-            contactNumber: foundVisit.vehicle.contactNumber,
-            email: null,
-            gstNumber: null,
-            insuranceProvider: null,
-            odometerReading: null,
-            observations: null,
-            observationsAudioUrl: null,
-            workshopOwnerId: foundVisit.workshopOwnerId,
-            status: 'Active',
-            createdAt: foundVisit.createdAt,
-            updatedAt: foundVisit.updatedAt,
-          };
-          setVehicle(vehicleData);
-          setError(null);
-        } else {
-          setError('Vehicle not found or not currently in the workshop');
-          setVehicle(null);
-        }
+      const res = await searchActiveVehicleVisits(text);
+      if (res.success && res.data) {
+        setSuggestions(res.data.visits);
       } else {
-        setError(result.error || 'Failed to search vehicles');
-        setVehicle(null);
+        setSuggestions([]);
       }
-    } catch (err) {
-      setError('Network error. Please try again.');
-      setVehicle(null);
+    } catch {
+      setSuggestions([]);
     } finally {
       setIsSearching(false);
     }
-  };
+  }, []);
 
-  const handleVehicleSelect = () => {
-    if (vehicle && onVehicleSelected) {
-      const vehicleInfo: VehicleInfo = {
-        plateNumber: vehicle.plateNumber,
-        year: vehicle.year ?? 0,
-        make: vehicle.brand ?? '',
-        model: vehicle.model ?? '',
-        specs: vehicle.specs ?? vehicle.variant ?? '',
-      };
-      onVehicleSelected(vehicle, vehicleInfo);
-      handleClose();
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    if (query.length < 2) {
+      setSuggestions([]);
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    debounceTimer.current = setTimeout(() => search(query), 300);
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [query, search]);
+
+  const handleSelect = (visit: VehicleVisitResponse) => {
+    setSelectedVisit(visit);
+    setSuggestions([]);
+    if (visit.vehicle) {
+      setQuery(visit.vehicle.plateNumber);
     }
   };
 
+  const handleConfirm = () => {
+    if (!selectedVisit?.vehicle || !onVehicleSelected) return;
+    const v = selectedVisit.vehicle;
+    const vehicleData: VehicleResponse = {
+      id: v.id,
+      plateNumber: v.plateNumber,
+      brand: v.brand,
+      model: v.model,
+      year: v.year,
+      variant: v.variant,
+      chassisNumber: null,
+      specs: v.specs,
+      registrationName: null,
+      ownerName: v.ownerName,
+      contactNumber: v.contactNumber,
+      email: null,
+      gstNumber: null,
+      insuranceProvider: null,
+      rcCardFrontUrl: null,
+      rcCardBackUrl: null,
+      odometerReading: null,
+      observations: null,
+      observationsAudioUrl: null,
+      workshopOwnerId: selectedVisit.workshopOwnerId,
+      status: 'Active',
+      createdAt: selectedVisit.createdAt,
+      updatedAt: selectedVisit.updatedAt,
+    };
+    const vehicleInfo: VehicleInfo = {
+      plateNumber: v.plateNumber,
+      year: v.year ?? 0,
+      make: v.brand ?? '',
+      model: v.model ?? '',
+      specs: v.specs ?? v.variant ?? '',
+    };
+    onVehicleSelected(vehicleData, vehicleInfo);
+    handleClose();
+  };
+
   const handleClose = () => {
-    setPlateNumber('');
-    setVehicle(null);
-    setError(null);
+    setQuery('');
+    setSuggestions([]);
+    setSelectedVisit(null);
+    setIsSearching(false);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
     onClose();
   };
+
+  const showDropdown = suggestions.length > 0 && !selectedVisit;
 
   return (
     <Modal
@@ -202,87 +176,109 @@ export default function VehicleSelectionOverlay({
           <View style={styles.dragHandle} />
 
           {/* Close Button */}
-          <TouchableOpacity
-            onPress={handleClose}
-            activeOpacity={0.7}
-            style={styles.closeBtn}>
+          <TouchableOpacity onPress={handleClose} activeOpacity={0.7} style={styles.closeBtn}>
             <CloseIcon />
           </TouchableOpacity>
 
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>{title}</Text>
-          </View>
+          <Text style={styles.headerTitle}>{title}</Text>
 
           <ScrollView
             contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}>
-            {/* Search Section */}
-            <View style={styles.section}>
-              <View style={styles.plateInput}>
-                <TextInput
-                  value={plateNumber}
-                  onChangeText={text => {
-                    setPlateNumber(text.toUpperCase());
-                    setError(null);
-                  }}
-                  placeholder="MP 09 GL 5656"
-                  placeholderTextColor="#c4c4c4"
-                  style={[
-                    styles.plateTextInput,
-                    plateNumber ? styles.plateTextInputFilled : null,
-                  ]}
-                  autoCapitalize="characters"
-                  editable={!isSearching}
-                  onSubmitEditing={handleSearch}
-                />
-                <TouchableOpacity
-                  onPress={handleSearch}
-                  disabled={isSearching}
-                  style={[
-                    styles.arrowBtn,
-                    plateNumber ? styles.arrowBtnActive : styles.arrowBtnInactive,
-                  ]}>
-                  {isSearching ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <ArrowRightIcon />
-                  )}
-                </TouchableOpacity>
-              </View>
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled">
 
-              {/* Error Message */}
-              {error && (
-                <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              )}
+            {/* Search Input */}
+            <View style={styles.plateInput}>
+              <TextInput
+                value={query}
+                onChangeText={text => {
+                  setQuery(text.toUpperCase());
+                  if (selectedVisit) setSelectedVisit(null);
+                }}
+                placeholder="MP 09 GL 5656"
+                placeholderTextColor="#c4c4c4"
+                style={[styles.plateTextInput, query ? styles.plateTextInputFilled : null]}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                onPress={() => query.length >= 2 ? undefined : undefined}
+                disabled={false}
+                style={[styles.arrowBtn, query ? styles.arrowBtnActive : styles.arrowBtnInactive]}>
+                {isSearching ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <ArrowRightIcon />
+                )}
+              </TouchableOpacity>
             </View>
 
-            {/* Vehicle Card */}
-            {vehicle && (
-              <View style={styles.section}>
-                <TouchableOpacity
-                  onPress={handleVehicleSelect}
-                  activeOpacity={0.9}
-                  style={styles.vehicleCardWrapper}>
-                  <VehicleCard
-                    plateNumber={vehicle.plateNumber}
-                    year={vehicle.year ?? undefined}
-                    make={vehicle.brand ?? ''}
-                    model={vehicle.model ?? ''}
-                    specs={vehicle.specs ?? vehicle.variant ?? ''}
-                    services={[]}
-                    additionalServices={0}
-                  />
-                  <View style={styles.tapHint}>
-                    <Text style={styles.tapHintText}>Tap to select</Text>
-                  </View>
-                </TouchableOpacity>
+            {/* Hint */}
+            {query.length === 0 && (
+              <Text style={styles.hint}>Type at least 2 characters to search active vehicles</Text>
+            )}
+
+            {/* Dropdown Suggestions */}
+            {showDropdown && (
+              <View style={styles.dropdown}>
+                <FlatList
+                  data={suggestions}
+                  keyExtractor={item => String(item.id)}
+                  scrollEnabled={false}
+                  ItemSeparatorComponent={() => <View style={styles.separator} />}
+                  renderItem={({item}) => {
+                    const v = item.vehicle;
+                    const name = v
+                      ? [v.brand, v.model].filter(Boolean).join(' ')
+                      : '';
+                    return (
+                      <TouchableOpacity
+                        style={styles.suggestionItem}
+                        onPress={() => handleSelect(item)}
+                        activeOpacity={0.7}>
+                        <View style={styles.suggestionLeft}>
+                          <Text style={styles.suggestionPlate}>{v?.plateNumber ?? '—'}</Text>
+                          {name ? <Text style={styles.suggestionName}>{name}</Text> : null}
+                        </View>
+                        <View style={styles.suggestionBadge}>
+                          <Text style={styles.suggestionBadgeText}>Active</Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
               </View>
             )}
 
-            
+            {/* No results */}
+            {query.length >= 2 && !isSearching && suggestions.length === 0 && !selectedVisit && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyTitle}>No active vehicles found</Text>
+                <Text style={styles.emptySubtitle}>No vehicles matching "{query}" are currently in the workshop</Text>
+              </View>
+            )}
+
+            {/* Selected Vehicle Card */}
+            {selectedVisit?.vehicle && (
+              <TouchableOpacity
+                onPress={handleConfirm}
+                activeOpacity={0.9}
+                style={styles.vehicleCardWrapper}>
+                <VehicleCard
+                  plateNumber={selectedVisit.vehicle.plateNumber}
+                  year={selectedVisit.vehicle.year ?? undefined}
+                  make={selectedVisit.vehicle.brand ?? ''}
+                  model={selectedVisit.vehicle.model ?? ''}
+                  specs={selectedVisit.vehicle.specs ?? selectedVisit.vehicle.variant ?? ''}
+                  services={[]}
+                  additionalServices={0}
+                />
+                <View style={styles.tapHint}>
+                  <Text style={styles.tapHintText}>Tap to select</Text>
+                </View>
+              </TouchableOpacity>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -293,7 +289,7 @@ export default function VehicleSelectionOverlay({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   sheet: {
@@ -301,7 +297,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: SCREEN_H * 0.85,
-    paddingBottom: 51,
+    paddingBottom: 40,
     paddingTop: 16,
     paddingHorizontal: 18,
     shadowColor: '#e5383b',
@@ -318,19 +314,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 34,
   },
-  header: {
-    // alignItems: 'center',
-    paddingLeft: 8,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: 'rgba(0, 0, 0, 0.25)',
-    marginBottom: 24,
-    lineHeight: 34,
-    letterSpacing: -1,
-    paddingTop: 8,
-  },
   closeBtn: {
     position: 'absolute',
     top: 16,
@@ -338,22 +321,22 @@ const styles = StyleSheet.create({
     padding: 4,
     zIndex: 10,
   },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: 'rgba(0,0,0,0.25)',
+    marginBottom: 24,
+    paddingLeft: 8,
+    lineHeight: 34,
+    letterSpacing: -1,
+    paddingTop: 8,
+  },
   scrollContent: {
-    gap: 20,
-  },
-  section: {
     gap: 12,
+    paddingBottom: 12,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#2b2b2b',
-    marginBottom: 4,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
+
+  // Input
   plateInput: {
     flex: 1,
     flexDirection: 'row',
@@ -388,66 +371,168 @@ const styles = StyleSheet.create({
   arrowBtnInactive: {
     backgroundColor: '#828282',
   },
-  inputWrapper: {
+  hint: {
+    fontSize: 12,
+    color: '#b0b8c8',
+    paddingHorizontal: 4,
+  },
+
+  // Dropdown
+  dropdown: {
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+    maxHeight: 260,
+  },
+  suggestionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f3f4',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#d3d3d3',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-    minHeight: 72,
-    width: '100%',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#fff',
   },
-  input: {
+  separator: {
+    height: 1,
+    backgroundColor: '#f0f0f0',
+    marginHorizontal: 16,
+  },
+  suggestionLeft: {
     flex: 1,
-    fontSize: 20,
+    gap: 2,
+  },
+  suggestionPlate: {
+    fontSize: 15,
     fontWeight: '700',
-    color: 'rgba(0, 0, 0, 0.16)',
-    paddingVertical: 0,
+    color: '#1a1a1a',
+    letterSpacing: 0.5,
   },
-  inputFilled: {
-    color: '#000',
+  suggestionName: {
+    fontSize: 12,
+    color: '#7a8499',
+    fontWeight: '400',
   },
-  searchBtn: {
-    backgroundColor: '#e5383b',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 90,
-    minHeight: 52,
+  suggestionBadge: {
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  searchBtnDisabled: {
-    opacity: 0.6,
-  },
-  searchBtnText: {
-    color: '#fff',
-    fontSize: 16,
+  suggestionBadgeText: {
+    fontSize: 11,
     fontWeight: '600',
+    color: '#2e7d32',
   },
-  errorBox: {
-    backgroundColor: '#fee',
-    padding: 12,
-    borderRadius: 8,
-    borderLeftColor: '#e5383b',
+
+  // Empty
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    gap: 6,
   },
-  errorText: {
-    color: '#d32f2f',
-    fontSize: 13,
-  },
-  sectionTitle: {
-    fontSize: 16,
+  emptyTitle: {
+    fontSize: 15,
     fontWeight: '600',
     color: '#2b2b2b',
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#99a2b6',
+    textAlign: 'center',
+    paddingHorizontal: 16,
+  },
+
+  // Selected card
+  selectedCard: {
+    borderWidth: 1.5,
+    borderColor: '#e5383b',
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+  },
+  selectedCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 8,
+  },
+  selectedCardLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#99a2b6',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  changeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#e5383b',
+  },
+  selectedCardBody: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 6,
+  },
+  selectedPlateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  plateBadge: {
+    backgroundColor: '#f5f3f4',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  plateBadgeText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    letterSpacing: 1,
+  },
+  activeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#4caf50',
+  },
+  activeLabel: {
+    fontSize: 12,
+    color: '#4caf50',
+    fontWeight: '600',
+  },
+  selectedVehicleName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  selectedOwner: {
+    fontSize: 13,
+    color: '#7a8499',
+  },
+  confirmBtn: {
+    backgroundColor: '#e5383b',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  confirmBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
   },
   vehicleCardWrapper: {
     position: 'relative',
@@ -465,20 +550,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    gap: 8,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2b2b2b',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#99a2b6',
-    textAlign: 'center',
   },
 });

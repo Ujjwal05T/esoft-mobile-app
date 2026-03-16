@@ -11,7 +11,9 @@ import {
   Animated,
   Easing,
   Dimensions,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import Svg, {Path} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
 import VehicleCard from '../dashboard/VehicleCard';
@@ -53,7 +55,9 @@ export default function GateOutOverlay({
 }: GateOutOverlayProps) {
   const [driverName, setDriverName] = useState('');
   const [driverContact, setDriverContact] = useState('');
-  const [gateOutDateTime, setGateOutDateTime] = useState('');
+  const [gateOutDate, setGateOutDate] = useState<Date>(new Date());
+  const [showGateOutPicker, setShowGateOutPicker] = useState(false);
+  const [gateOutPickerMode, setGateOutPickerMode] = useState<'date' | 'time'>('date');
   const [odometerReading, setOdometerReading] = useState('');
   const [fuelLevel, setFuelLevel] = useState(0);
   const [fuelTrackWidth, setFuelTrackWidth] = useState(0);
@@ -84,7 +88,8 @@ export default function GateOutOverlay({
     if (!isOpen) {
       setDriverName('');
       setDriverContact('');
-      setGateOutDateTime('');
+      setGateOutDate(new Date());
+      setShowGateOutPicker(false);
       setOdometerReading('');
       setFuelLevel(0);
       setHasAttemptedSubmit(false);
@@ -173,7 +178,7 @@ export default function GateOutOverlay({
       const result = await gateOutVehicle(activeVisitId, {
         gateOutDriverName: driverName,
         gateOutDriverContact: driverContact,
-        gateOutDateTime: gateOutDateTime || undefined,
+        gateOutDateTime: gateOutDate.toISOString(),
         gateOutOdometerReading: odometerReading || undefined,
         gateOutFuelLevel: fuelLevel > 0 ? fuelLevel : undefined,
       });
@@ -186,7 +191,7 @@ export default function GateOutOverlay({
       onComplete?.({
         driverName,
         driverContact,
-        gateOutDateTime: gateOutDateTime || new Date().toISOString(),
+        gateOutDateTime: gateOutDate.toISOString(),
         odometerReading,
         fuelLevel,
       });
@@ -279,26 +284,23 @@ export default function GateOutOverlay({
               )}
 
               {/* Gate Out Date and Time */}
-              <View
-                style={[
-                  styles.dateField,
-                  gateOutDateTime ? styles.dateFieldActive : null,
-                ]}>
-                {!!gateOutDateTime && (
-                  <Text style={styles.dateFloatLabel}>
-                    Gate Out Date and time
-                  </Text>
-                )}
+              <TouchableOpacity
+                style={[styles.dateField, styles.dateFieldActive]}
+                onPress={() => {
+                  setGateOutPickerMode('date');
+                  setShowGateOutPicker(true);
+                }}
+                activeOpacity={0.7}>
+                <Text style={styles.dateFloatLabel}>Gate Out Date and Time</Text>
                 <Text style={styles.dateText}>
-                  {gateOutDateTime ||
-                    new Date().toLocaleDateString('en-IN', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true,
-                    })}
+                  {gateOutDate.toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                  })}
                 </Text>
                 <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
                   <Path
@@ -309,7 +311,33 @@ export default function GateOutOverlay({
                     strokeLinejoin="round"
                   />
                 </Svg>
-              </View>
+              </TouchableOpacity>
+
+              {showGateOutPicker && (
+                <DateTimePicker
+                  value={gateOutDate}
+                  mode={gateOutPickerMode}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(_, selected) => {
+                    if (!selected) { setShowGateOutPicker(false); return; }
+                    if (Platform.OS === 'android') {
+                      if (gateOutPickerMode === 'date') {
+                        const next = new Date(selected);
+                        next.setHours(gateOutDate.getHours(), gateOutDate.getMinutes());
+                        setGateOutDate(next);
+                        setGateOutPickerMode('time');
+                      } else {
+                        const next = new Date(gateOutDate);
+                        next.setHours(selected.getHours(), selected.getMinutes());
+                        setGateOutDate(next);
+                        setShowGateOutPicker(false);
+                      }
+                    } else {
+                      setGateOutDate(selected);
+                    }
+                  }}
+                />
+              )}
 
               {/* Odometer Reading */}
               <FloatingInput
@@ -469,6 +497,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     position: 'relative',
+    marginTop: 8,
   },
   dateFieldActive: {borderColor: '#e5383b'},
   dateFloatLabel: {
