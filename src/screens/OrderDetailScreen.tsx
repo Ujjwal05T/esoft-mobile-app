@@ -14,13 +14,16 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/RootNavigator';
 import StatusBadge from '../components/ui/StatusBadge';
 import OrderItemDisputeOverlay from '../components/overlays/OrderItemDisputeOverlay';
+import RaiseDisputeOverlay, {DisputeFormData} from '../components/overlays/RaiseDisputeOverlay';
 import {
   getOrderById,
+  createDisputeWithFiles,
   type OrderDetailApiResponse,
   type OrderItemApiResponse,
 } from '../services/api';
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import {useAuth} from '../context/AuthContext';
 
 type OrderDetailRouteProp = RouteProp<RootStackParamList, 'OrderDetail'>;
 type OrderDetailNavigationProp = NativeStackNavigationProp<
@@ -332,12 +335,14 @@ export default function OrderDetailScreen() {
   const navigation = useNavigation<OrderDetailNavigationProp>();
   const route = useRoute<OrderDetailRouteProp>();
   const {orderId} = route.params;
+  const {user} = useAuth();
 
   const [order, setOrder] = useState<OrderDetailApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<OrderItemApiResponse | null>(null);
   const [showDisputeOverlay, setShowDisputeOverlay] = useState(false);
+  const [showRaiseDisputeOverlay, setShowRaiseDisputeOverlay] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -386,10 +391,34 @@ export default function OrderDetailScreen() {
   };
 
   const handleRaiseDispute = (item: OrderItemApiResponse) => {
-    // TODO: Call raise dispute API
-    setAppAlert({type: 'info', title: 'Raise Dispute', message: `Dispute raised for ${item.partName}!\n\nThis will be connected to the API soon.`});
     setShowDisputeOverlay(false);
-    setSelectedItem(null);
+    // Small delay so the first overlay closes before the second opens
+    setTimeout(() => setShowRaiseDisputeOverlay(true), 300);
+  };
+
+  const handleDisputeConfirm = async (data: DisputeFormData) => {
+    if (!order || !user) return;
+    const images = data.images.filter(Boolean);
+    const result = await createDisputeWithFiles(
+      order.id,
+      user.id,
+      data.partName,
+      data.reason,
+      data.remark,
+      data.partId ? Number(data.partId) : undefined,
+      data.audioPath ? {uri: data.audioPath, name: 'audio.m4a', type: 'audio/m4a'} : undefined,
+      images[0] ? {uri: images[0].uri, name: images[0].name, type: 'image/jpeg'} : undefined,
+      images[1] ? {uri: images[1].uri, name: images[1].name, type: 'image/jpeg'} : undefined,
+      images[2] ? {uri: images[2].uri, name: images[2].name, type: 'image/jpeg'} : undefined,
+      user.role === 'staff' ? user.id : undefined,
+    );
+    if (result.success) {
+      setShowRaiseDisputeOverlay(false);
+      setSelectedItem(null);
+      setAppAlert({type: 'success', title: 'Dispute Raised', message: `Your dispute for ${data.partName} has been submitted.`});
+    } else {
+      setAppAlert({type: 'error', title: 'Failed', message: result.error ?? 'Could not raise dispute. Please try again.'});
+    }
   };
 
   // ── Loading ─────────────────────────────────────────────────
@@ -523,6 +552,31 @@ export default function OrderDetailScreen() {
           onRaiseDispute={handleRaiseDispute}
         />
       )}
+
+      {/* Raise Dispute Overlay — pre-filled from selected item */}
+      <RaiseDisputeOverlay
+        isOpen={showRaiseDisputeOverlay}
+        onClose={() => {
+          setShowRaiseDisputeOverlay(false);
+          setSelectedItem(null);
+        }}
+        onConfirm={handleDisputeConfirm}
+        buttonText={user?.role === 'staff' ? 'SEND REQUEST' : 'CONFIRM'}
+        orders={
+          order
+            ? [{
+                id: String(order.id),
+                orderId: order.orderNumber,
+                date: order.createdAt,
+                parts: order.items.map(i => ({id: String(i.id), name: i.partName})),
+              }]
+            : []
+        }
+        initialOrderId={order ? String(order.id) : undefined}
+        initialOrderDisplay={order?.orderNumber}
+        initialPartId={selectedItem ? String(selectedItem.id) : undefined}
+        initialPartName={selectedItem?.partName}
+      />
       <AppAlert
         isOpen={!!appAlert}
         type={appAlert?.type ?? 'info'}

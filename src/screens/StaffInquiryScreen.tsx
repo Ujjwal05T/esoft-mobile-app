@@ -24,6 +24,8 @@ import VehicleSelectionOverlay, {
 } from '../components/overlays/VehicleSelectionOverlay';
 import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
 import RaiseDisputeOverlay from '../components/overlays/RaiseDisputeOverlay';
+import type {DisputeFormData} from '../components/overlays/RaiseDisputeOverlay';
+import DisputeCommentsOverlay from '../components/overlays/DisputeCommentsOverlay';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import EditInquiryOverlay from '../components/overlays/EditInquiryOverlay';
 import {
@@ -34,6 +36,7 @@ import {
   getOrderById,
   createInquiryWithMedia,
   createDisputeWithFiles,
+  updateDisputeStatus,
   getStaffProfile,
   getJobCardsByVehicle,
   getInquiryById,
@@ -52,7 +55,7 @@ type ActiveTab = 'inquiries' | 'disputes';
 
 // Extended types with rawDate for filtering
 type InquiryWithDate = Inquiry & {rawDate?: string; numericId?: number};
-type DisputeWithDate = Dispute & {rawDate?: string};
+type DisputeWithDate = Dispute & {rawDate?: string; numericId?: number; partName?: string; remark?: string; orderNumber?: string};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -92,18 +95,15 @@ function mapApiInquiry(api: InquiryResponse): InquiryWithDate {
 function mapApiDispute(api: DisputeListItemResponse): DisputeWithDate {
   const mapStatus = (backendStatus: string): Dispute['status'] => {
     switch (backendStatus) {
-      case 'Resolved':
-        return 'closed';
-      case 'Pending':
-      case 'Acknowledged':
-      case 'Investigating':
-      default:
-        return 'open';
+      case 'Resolved': return 'closed';
+      case 'Requested': return 'requested';
+      default: return 'open';
     }
   };
-
+  const isRequested = api.status === 'Requested';
   return {
     id: api.disputeNumber,
+    numericId: api.id,
     vehicleName: '',
     plateNumber: '',
     receivedDate: formatDate(api.date),
@@ -111,8 +111,11 @@ function mapApiDispute(api: DisputeListItemResponse): DisputeWithDate {
     disputeRaised: api.issue,
     resolutionStatus: api.status === 'Resolved' ? 'Resolved' : api.status === 'Investigating' ? 'Under Investigation' : undefined,
     showVehicleInfo: false,
-    action: api.status === 'Pending' ? 'accept' : 'chat',
+    action: isRequested ? 'edit' : 'chat',
     rawDate: api.date,
+    partName: api.partName,
+    remark: api.remark,
+    orderNumber: api.orderNumber,
   };
 }
 
@@ -233,6 +236,8 @@ export default function StaffInquiryScreen() {
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
   const [editInquiry, setEditInquiry] = useState<{id: number; items: InquiryItemResponse[]} | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [disputeCommentsId, setDisputeCommentsId] = useState<number | null>(null);
+  const [editDisputeItem, setEditDisputeItem] = useState<DisputeWithDate | null>(null);
 
   const handleEditInquiry = async (numericId: number) => {
     const result = await getInquiryById(numericId);
@@ -534,9 +539,12 @@ export default function StaffInquiryScreen() {
           }
         : undefined;
 
+      const staffProfileRes = await getStaffProfile();
+      const workshopOwnerId = staffProfileRes.data?.workshopOwnerId ?? user.id;
+
       const result = await createDisputeWithFiles(
         numericOrderId,
-        user.id,
+        workshopOwnerId,
         formData.partName,
         formData.reason,
         formData.remark,
@@ -545,6 +553,7 @@ export default function StaffInquiryScreen() {
         imageFiles[0],
         imageFiles[1],
         imageFiles[2],
+        user.id,
       );
 
       if (result.success) {
@@ -555,6 +564,30 @@ export default function StaffInquiryScreen() {
     } catch (error) {
       console.error('Error creating dispute:', error);
       setAppAlert({type: 'error', message: 'An error occurred while creating the dispute'});
+    }
+  };
+
+  const handleDisputeEditConfirm = async (data: DisputeFormData) => {
+    if (!editDisputeItem?.numericId) return;
+    const user = await getStoredUser();
+    if (!user) return;
+    const images = data.images.filter(Boolean);
+    const result = await createDisputeWithFiles(
+      Number(data.orderId),
+      user.id,
+      data.partName,
+      data.reason,
+      data.remark,
+      data.partId ? Number(data.partId) : undefined,
+      data.audioPath ? {uri: data.audioPath, name: 'audio.m4a', type: 'audio/m4a'} : undefined,
+      images[0] ? {uri: images[0].uri, name: images[0].name, type: 'image/jpeg'} : undefined,
+      images[1] ? {uri: images[1].uri, name: images[1].name, type: 'image/jpeg'} : undefined,
+      images[2] ? {uri: images[2].uri, name: images[2].name, type: 'image/jpeg'} : undefined,
+      user.id,
+    );
+    if (result.success) {
+      setEditDisputeItem(null);
+      fetchDisputes();
     }
   };
 
@@ -737,10 +770,13 @@ export default function StaffInquiryScreen() {
                 <DisputeCard
                   key={dispute.id}
                   dispute={dispute}
-                  onEdit={id => console.log('Edit dispute:', id)}
-                  onAccept={id => console.log('Accept dispute:', id)}
-                  onView={id => console.log('View dispute:', id)}
-                  onChat={id => console.log('Chat dispute:', id)}
+                  onEdit={_id => setEditDisputeItem(dispute)}
+                  onView={dispute.status === 'requested' ? _id => setEditDisputeItem(dispute) : undefined}
+                  onChat={_id => {
+                    if (dispute.status === 'open' && dispute.numericId) {
+                      setDisputeCommentsId(dispute.numericId);
+                    }
+                  }}
                 />
               ))
             )}
@@ -757,6 +793,26 @@ export default function StaffInquiryScreen() {
           setShowFilters(false);
           navigation.navigate('StaffVehicleDetail', {vehicleId});
         }}
+      />
+
+      {/* ── Dispute Comments Overlay ─────────────────────────────────── */}
+      <DisputeCommentsOverlay
+        isOpen={disputeCommentsId !== null}
+        onClose={() => setDisputeCommentsId(null)}
+        disputeId={disputeCommentsId ?? 0}
+      />
+
+      {/* ── Edit Requested Dispute Overlay ───────────────────────────── */}
+      <RaiseDisputeOverlay
+        isOpen={editDisputeItem !== null}
+        onClose={() => setEditDisputeItem(null)}
+        onConfirm={handleDisputeEditConfirm}
+        buttonText="SEND REQUEST"
+        initialOrderId={editDisputeItem?.orderNumber}
+        initialOrderDisplay={editDisputeItem?.orderNumber}
+        initialPartName={editDisputeItem?.partName}
+        initialReason={editDisputeItem?.disputeRaised}
+        initialRemark={editDisputeItem?.remark}
       />
 
       {/* ── Floating Action Button ───────────────────────────────────── */}
@@ -805,9 +861,6 @@ export default function StaffInquiryScreen() {
           orders={vehicleOrders}
           buttonText="SEND REQUEST"
           vehicleInfo={vehicleInfo}
-          onChatWithUs={() => {
-            console.log('Chat with us clicked');
-          }}
         />
       )}
 

@@ -25,8 +25,10 @@ import VehicleSelectionOverlay, {
   type VehicleInfo,
 } from '../components/overlays/VehicleSelectionOverlay';
 import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
-import RaiseDisputeOverlay from '../components/overlays/RaiseDisputeOverlay';
+import RaiseDisputeOverlay, {DisputeFormData} from '../components/overlays/RaiseDisputeOverlay';
+import DisputeCommentsOverlay from '../components/overlays/DisputeCommentsOverlay';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import {useAuth} from '../context/AuthContext';
 import EditInquiryOverlay from '../components/overlays/EditInquiryOverlay';
 import {
   getStoredUser,
@@ -37,6 +39,8 @@ import {
   getOrderById,
   createInquiryWithMedia,
   createDisputeWithFiles,
+  updateDisputeStatus,
+  acceptDispute,
   updateInquiryStatus,
   getActiveVehicleVisit,
   getInquiryById,
@@ -56,7 +60,7 @@ type ActiveTab = 'inquiries' | 'quotes' | 'disputes';
 // Extended types with rawDate for filtering
 type InquiryWithDate = Inquiry & {rawDate?: string; numericId?: number};
 type QuoteWithDate = Quote & {rawDate?: string};
-type DisputeWithDate = Dispute & {rawDate?: string};
+type DisputeWithDate = Dispute & {rawDate?: string; numericId?: number; partName?: string; remark?: string; orderNumber?: string};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -116,30 +120,34 @@ function mapApiQuote(api: QuoteApiResponse): QuoteWithDate {
 }
 
 function mapApiDispute(api: DisputeListItemResponse): DisputeWithDate {
-  // Map backend status to frontend status
   const mapStatus = (backendStatus: string): Dispute['status'] => {
     switch (backendStatus) {
-      case 'Resolved':
-        return 'closed';
+      case 'Resolved': return 'closed';
+      case 'Requested': return 'requested';
       case 'Pending':
       case 'Acknowledged':
       case 'Investigating':
-      default:
-        return 'open';
+      default: return 'open';
     }
   };
 
+  const isRequested = api.status === 'Requested';
+
   return {
     id: api.disputeNumber,
-    vehicleName: '', // Not shown when showVehicleInfo is false
-    plateNumber: '', // Not shown when showVehicleInfo is false
+    numericId: api.id,
+    vehicleName: '',
+    plateNumber: '',
     receivedDate: formatDate(api.date),
     status: mapStatus(api.status),
     disputeRaised: api.issue,
     resolutionStatus: api.status === 'Resolved' ? 'Resolved' : api.status === 'Investigating' ? 'Under Investigation' : undefined,
     showVehicleInfo: false,
-    action: api.status === 'Pending' ? 'accept' : 'chat',
+    action: isRequested ? 'accept' : 'chat',
     rawDate: api.date,
+    partName: api.partName,
+    remark: api.remark,
+    orderNumber: api.orderNumber,
   };
 }
 
@@ -224,6 +232,7 @@ export default function InquiryScreen() {
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const {user} = useAuth();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('inquiries');
   const [inquiries, setInquiries] = useState<InquiryWithDate[]>([]);
@@ -262,6 +271,8 @@ export default function InquiryScreen() {
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
   const [editInquiry, setEditInquiry] = useState<{id: number; items: InquiryItemResponse[]} | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [disputeCommentsId, setDisputeCommentsId] = useState<number | null>(null);
+  const [editDisputeItem, setEditDisputeItem] = useState<DisputeWithDate | null>(null);
 
   const handleEditInquiry = async (numericId: number) => {
     const result = await getInquiryById(numericId);
@@ -404,6 +415,44 @@ export default function InquiryScreen() {
       setLoadingDisputes(false);
     }
   }, [activeFilters, applyDisputeFilters]);
+
+  const handleAcceptDispute = (dispute: DisputeWithDate) => {
+    if (!dispute.numericId || user?.role === 'staff') return;
+    setAppAlert({
+      type: 'confirm',
+      title: 'Accept Dispute',
+      message: `Accept the dispute request for "${dispute.disputeRaised}"? It will be moved to Pending status.`,
+      confirmText: 'Accept',
+      onConfirm: async () => {
+        if (!user?.id) return;
+        const res = await acceptDispute(dispute.numericId!, user.id);
+        if (res.success) fetchDisputes();
+        else setAppAlert({type: 'error', message: 'Failed to accept dispute. Please try again.'});
+      },
+    });
+  };
+
+  const handleDisputeEditConfirm = async (data: DisputeFormData) => {
+    if (!editDisputeItem?.numericId || !user) return;
+    const images = data.images.filter(Boolean);
+    const result = await createDisputeWithFiles(
+      Number(data.orderId),
+      user.id,
+      data.partName,
+      data.reason,
+      data.remark,
+      data.partId ? Number(data.partId) : undefined,
+      data.audioPath ? {uri: data.audioPath, name: 'audio.m4a', type: 'audio/m4a'} : undefined,
+      images[0] ? {uri: images[0].uri, name: images[0].name, type: 'image/jpeg'} : undefined,
+      images[1] ? {uri: images[1].uri, name: images[1].name, type: 'image/jpeg'} : undefined,
+      images[2] ? {uri: images[2].uri, name: images[2].name, type: 'image/jpeg'} : undefined,
+      user.role === 'staff' ? user.id : undefined,
+    );
+    if (result.success) {
+      setEditDisputeItem(null);
+      fetchDisputes();
+    }
+  };
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -884,11 +933,19 @@ export default function InquiryScreen() {
               filteredDisputes.map(dispute => (
                 <DisputeCard
                   key={dispute.id}
-                  dispute={dispute}
-                  onEdit={id => console.log('Edit dispute:', id)}
-                  onAccept={id => console.log('Accept dispute:', id)}
-                  onView={id => console.log('View dispute:', id)}
-                  onChat={id => console.log('Chat dispute:', id)}
+                  dispute={{
+                    ...dispute,
+                    // Only owners see Accept Dispute; staff see Edit instead
+                    action: dispute.action === 'accept' && user?.role === 'staff' ? 'edit' : dispute.action,
+                  }}
+                  onEdit={_id => setEditDisputeItem(dispute)}
+                  onAccept={_id => handleAcceptDispute(dispute)}
+                  onView={dispute.status === 'requested' ? _id => setEditDisputeItem(dispute) : undefined}
+                  onChat={_id => {
+                    if (dispute.status === 'open' && dispute.numericId) {
+                      setDisputeCommentsId(dispute.numericId);
+                    }
+                  }}
                 />
               ))
             )}
@@ -905,6 +962,26 @@ export default function InquiryScreen() {
           setShowFilters(false);
           navigation.navigate('VehicleDetail', {vehicleId});
         }}
+      />
+
+      {/* ── Dispute Comments Overlay ─────────────────────────────────── */}
+      <DisputeCommentsOverlay
+        isOpen={disputeCommentsId !== null}
+        onClose={() => setDisputeCommentsId(null)}
+        disputeId={disputeCommentsId ?? 0}
+      />
+
+      {/* ── Edit Requested Dispute Overlay ───────────────────────────── */}
+      <RaiseDisputeOverlay
+        isOpen={editDisputeItem !== null}
+        onClose={() => setEditDisputeItem(null)}
+        onConfirm={handleDisputeEditConfirm}
+        buttonText={user?.role === 'staff' ? 'SEND REQUEST' : 'CONFIRM'}
+        initialOrderId={editDisputeItem?.orderNumber}
+        initialOrderDisplay={editDisputeItem?.orderNumber}
+        initialPartName={editDisputeItem?.partName}
+        initialReason={editDisputeItem?.disputeRaised}
+        initialRemark={editDisputeItem?.remark}
       />
 
       {/* ── Floating Action Button ───────────────────────────────────── */}

@@ -64,6 +64,12 @@ interface RaiseDisputeOverlayProps {
   orders?: OrderWithParts[];
   reasons?: Reason[];
   buttonText?: 'CONFIRM' | 'SEND REQUEST';
+  initialOrderId?: string;      // pre-fill order (matches OrderWithParts.id)
+  initialOrderDisplay?: string; // text shown in the order input field
+  initialPartId?: string;
+  initialPartName?: string;
+  initialReason?: string;
+  initialRemark?: string;
 }
 
 // Icons
@@ -143,6 +149,12 @@ export default function RaiseDisputeOverlay({
   orders = [],
   reasons = defaultReasons,
   buttonText = 'CONFIRM',
+  initialOrderId,
+  initialOrderDisplay,
+  initialPartId,
+  initialPartName,
+  initialReason,
+  initialRemark,
 }: RaiseDisputeOverlayProps) {
   // Form state
   const [orderId, setOrderId] = useState('');
@@ -202,9 +214,18 @@ export default function RaiseDisputeOverlay({
     }
   }, [showSuccess]);
 
-  // Reset when overlay closes
+  // Seed / reset form when overlay opens or closes
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      if (initialOrderId) {
+        setSelectedOrderId(initialOrderId);
+        setOrderId(initialOrderDisplay ?? initialOrderId);
+      }
+      if (initialPartId) setSelectedPartId(initialPartId);
+      if (initialPartName) setSelectedPart(initialPartName);
+      if (initialReason) setSelectedReason(initialReason);
+      if (initialRemark) setRemark(initialRemark);
+    } else {
       setOrderId('');
       setSelectedOrderId('');
       setSelectedPartId('');
@@ -364,7 +385,12 @@ export default function RaiseDisputeOverlay({
                         }}
                         style={styles.dropdownItem}>
                         <Text style={styles.dropdownItemText}>
-                          {order.orderId} - {order.date}
+                          {order.orderId} -{' '}
+                          {new Date(order.date).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
                         </Text>
                       </TouchableOpacity>
                     ))}

@@ -3,8 +3,8 @@ import * as Keychain from 'react-native-keychain';
 // API Base URL
 // const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
 // export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-const API_BASE_URL = 'https://wife-franchise-traveller-enquiries.trycloudflare.com/api';
-export const SERVER_ORIGIN = 'https://infinite-gps-shadows-leo.trycloudflare.com';
+const API_BASE_URL = 'https://specials-institutions-arm-qty.trycloudflare.com/api';
+export const SERVER_ORIGIN = 'https://specials-institutions-arm-qty.trycloudflare.com';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -1442,6 +1442,7 @@ export interface InquiryItemResponse {
   id: number;
   partName: string;
   preferredBrand: string;
+  afterMarketBrandName?: string | null;
   quantity: number;
   remark: string;
   audioUrl: string | null;
@@ -1617,6 +1618,50 @@ export async function updateInquiryItems(inquiryId: number, items: InquiryItemRe
     method: 'PUT',
     body: JSON.stringify({ items }),
   });
+}
+
+export interface UpdateInquiryItemWithFilesData {
+  id?: number;
+  partName: string;
+  preferredBrand: string;
+  afterMarketBrandName?: string;
+  quantity: number;
+  remark: string;
+  audioDuration?: number;
+  hasNewAudio: boolean;
+  audioUrl?: string;
+  hasNewImage1: boolean;
+  image1Url?: string;
+  hasNewImage2: boolean;
+  image2Url?: string;
+  hasNewImage3: boolean;
+  image3Url?: string;
+}
+
+export async function updateInquiryItemsWithFiles(
+  inquiryId: number,
+  items: UpdateInquiryItemWithFilesData[],
+  audioFiles: RNFile[],
+  imageFiles: RNFile[],
+) {
+  try {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append('itemsJson', JSON.stringify(items));
+    audioFiles.forEach(f => formData.append('audioFiles', f as any));
+    imageFiles.forEach(f => formData.append('imageFiles', f as any));
+    const response = await fetch(`${API_BASE_URL}/inquiry/${inquiryId}/items/with-files`, {
+      method: 'PUT',
+      headers: token ? {Authorization: `Bearer ${token}`} : {},
+      body: formData,
+    });
+    const data = await response.json();
+    if (!response.ok) return {success: false, error: data.message || 'Failed to update'};
+    return {success: true, data};
+  } catch (error) {
+    console.error('API Error (updateInquiryItemsWithFiles):', error);
+    return {success: false, error: 'Network error. Please try again.'};
+  }
 }
 
 // ==========================================
@@ -1848,6 +1893,8 @@ export interface DisputeListItemResponse {
   status: string;
   date: string;
   assignedTo: string | null;
+  partName: string;
+  remark: string;
 }
 
 export interface DisputeCommentResponse {
@@ -1879,6 +1926,8 @@ export interface DisputeDetailResponse {
   category: string;
   subject: string;
   description: string;
+  reason: string;
+  partName: string;
   priority: string;
   status: string;
   assignedTo: string | null;
@@ -1888,6 +1937,9 @@ export interface DisputeDetailResponse {
   resolvedBy: string | null;
   resolutionDetails: string | null;
   attachments: DisputeAttachmentResponse[];
+  unitPrice: number | null;
+  quantity: number | null;
+  brand: string | null;
 }
 
 // Get disputes by workshop owner
@@ -1938,7 +1990,8 @@ export async function createDisputeWithFiles(
   audioFile?: RNFile,
   image1?: RNFile,
   image2?: RNFile,
-  image3?: RNFile
+  image3?: RNFile,
+  raisedByStaffId?: number
 ) {
   try {
     const token = await getAuthToken();
@@ -1952,6 +2005,9 @@ export async function createDisputeWithFiles(
     formData.append('remark', remark);
     if (partId) {
       formData.append('partId', partId.toString());
+    }
+    if (raisedByStaffId) {
+      formData.append('raisedByStaffId', raisedByStaffId.toString());
     }
 
     // Append files
@@ -2103,5 +2159,38 @@ export async function updateProfile(data: UpdateProfileData) {
   return apiRequest<{ success: boolean; message: string }>('/workshop/profile', {
     method: 'PUT',
     body: JSON.stringify(data),
+  });
+}
+
+// Update dispute status (e.g. accept: Requested → Pending)
+export async function updateDisputeStatus(
+  disputeId: number,
+  status: 'Requested' | 'Pending' | 'Acknowledged' | 'Investigating' | 'Resolved',
+) {
+  return apiRequest<{ success: boolean; message: string }>(`/disputes/${disputeId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+// Accept a staff-raised dispute (owner only) — moves Requested → Pending
+export async function acceptDispute(disputeId: number, workshopOwnerId: number) {
+  return apiRequest<{ success: boolean; message: string }>(`/disputes/${disputeId}/accept`, {
+    method: 'POST',
+    body: JSON.stringify({ workshopOwnerId }),
+  });
+}
+
+// Add a comment to a dispute
+export async function addDisputeComment(
+  disputeId: number,
+  message: string,
+  isInternal: boolean = false,
+  senderName?: string,
+  senderRole?: string,
+) {
+  return apiRequest<{ success: boolean; message: string }>(`/disputes/${disputeId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ message, isInternal, senderName, senderRole }),
   });
 }

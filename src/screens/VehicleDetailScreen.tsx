@@ -17,6 +17,7 @@ import InquiryCard, {Inquiry} from '../components/dashboard/InquiryCard';
 import QuoteCard, {Quote} from '../components/dashboard/QuoteCard';
 import OrderCard, {Order} from '../components/dashboard/OrderCard';
 import DisputeCard, {Dispute} from '../components/dashboard/DisputeCard';
+import DisputeCommentsOverlay from '../components/overlays/DisputeCommentsOverlay';
 import JobCard from '../components/dashboard/JobCard';
 import PreviousServiceCard from '../components/dashboard/PreviousServiceCard';
 import FloatingActionButton from '../components/dashboard/FloatingActionButton';
@@ -37,6 +38,8 @@ import {
   getOrdersByVehicleVisitId,
   getOrderById,
   createDisputeWithFiles,
+  updateDisputeStatus,
+  acceptDispute,
   getDisputesByVehicleVisitId,
   getStoredUser,
   createInquiryWithMedia,
@@ -126,35 +129,31 @@ function mapApiQuote(api: QuoteApiResponse): Quote {
   };
 }
 
-function mapApiDispute(api: DisputeListItemResponse): Dispute {
-  // Map backend status to frontend status
+type DisputeWithExtras = Dispute & {numericId?: number; partName?: string; remark?: string; orderNumber?: string};
+
+function mapApiDispute(api: DisputeListItemResponse): DisputeWithExtras {
   const mapStatus = (backendStatus: string): Dispute['status'] => {
     switch (backendStatus) {
-      case 'Resolved':
-        return 'closed';
-      case 'Pending':
-      case 'Acknowledged':
-      case 'Investigating':
-      default:
-        return 'open';
+      case 'Resolved': return 'closed';
+      case 'Requested': return 'requested';
+      default: return 'open';
     }
   };
-
+  const isRequested = api.status === 'Requested';
   return {
     id: api.disputeNumber,
-    vehicleName: '', // Not shown when showVehicleInfo is false
-    plateNumber: '', // Not shown when showVehicleInfo is false
+    numericId: api.id,
+    vehicleName: '',
+    plateNumber: '',
     receivedDate: formatDate(api.date),
     status: mapStatus(api.status),
     disputeRaised: api.issue,
-    resolutionStatus:
-      api.status === 'Resolved'
-        ? 'Resolved'
-        : api.status === 'Investigating'
-        ? 'Under Investigation'
-        : undefined,
+    resolutionStatus: api.status === 'Resolved' ? 'Resolved' : api.status === 'Investigating' ? 'Under Investigation' : undefined,
     showVehicleInfo: false,
-    action: api.status === 'Pending' ? 'accept' : 'chat',
+    action: isRequested ? 'accept' : 'chat',
+    partName: api.partName,
+    remark: api.remark,
+    orderNumber: api.orderNumber,
   };
 }
 
@@ -302,6 +301,8 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   const [showNewJob, setShowNewJob] = useState(false);
   const [showRaiseDispute, setShowRaiseDispute] = useState(false);
   const [showRequestPart, setShowRequestPart] = useState(false);
+  const [disputeCommentsId, setDisputeCommentsId] = useState<number | null>(null);
+  const [editDisputeItem, setEditDisputeItem] = useState<DisputeWithExtras | null>(null);
 
   // Data
   const [vehicle, setVehicle] = useState<VehicleResponse | null>(null);
@@ -453,7 +454,10 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     try {
       const res = await getDisputesByVehicleVisitId(activeVisit.id);
       if (res.success && res.data) {
-        setDisputes(res.data.map((d: DisputeListItemResponse) => mapApiDispute(d)));
+        setDisputes(res.data.map((d: DisputeListItemResponse) => ({
+          ...mapApiDispute(d),
+          numericId: d.id,
+        })));
       }
     } catch (e) {
       console.error('Failed to fetch disputes:', e);
@@ -566,6 +570,23 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     } catch (error) {
       console.error('Error creating dispute:', error);
     }
+  };
+
+  const handleAcceptDispute = (dispute: DisputeWithExtras) => {
+    if (!dispute.numericId) return;
+    setAppAlert({
+      type: 'confirm',
+      title: 'Accept Dispute',
+      message: `Accept the dispute request for "${dispute.disputeRaised}"? It will be moved to Pending status.`,
+      confirmText: 'Accept',
+      onConfirm: async () => {
+        const u = await getStoredUser();
+        if (!u) return;
+        const res = await acceptDispute(dispute.numericId!, u.id);
+        if (res.success) fetchDisputes();
+        else setAppAlert({type: 'error', message: 'Failed to accept dispute. Please try again.'});
+      },
+    });
   };
 
   // Handle request part form submission
@@ -991,10 +1012,12 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
                   <DisputeCard
                     key={dispute.id}
                     dispute={dispute}
-                    onEdit={id => console.log('Edit dispute:', id)}
-                    onAccept={id => console.log('Accept dispute:', id)}
-                    onView={id => console.log('View dispute:', id)}
-                    onChat={id => console.log('Chat dispute:', id)}
+                    onAccept={_id => handleAcceptDispute(dispute)}
+                    onChat={_id => {
+                      if (dispute.status === 'open' && (dispute as any).numericId) {
+                        setDisputeCommentsId((dispute as any).numericId);
+                      }
+                    }}
                   />
                 ))}
               </View>
@@ -1069,6 +1092,12 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         vehicleId={vehicleId}
         vehicleVisitId={activeVisit?.id}
         onAddJob={() => fetchJobsAndVisit()}
+      />
+
+      <DisputeCommentsOverlay
+        isOpen={disputeCommentsId !== null}
+        onClose={() => setDisputeCommentsId(null)}
+        disputeId={disputeCommentsId ?? 0}
       />
 
       <RaiseDisputeOverlay

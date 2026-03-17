@@ -3,7 +3,7 @@ import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import StatusBadge, {StatusType} from '../ui/StatusBadge';
 
-export type DisputeStatus = Extract<StatusType, 'open' | 'closed' | 'declined'>;
+export type DisputeStatus = Extract<StatusType, 'open' | 'closed' | 'declined' | 'requested'>;
 export type DisputeAction = 'edit' | 'accept' | 'chat';
 
 export interface DisputeMedia {
@@ -129,7 +129,7 @@ export default function DisputeCard({
               <Text style={styles.mainActionText}>
                 {dispute.newMessages && dispute.newMessages > 0
                   ? `${dispute.newMessages} New Message${dispute.newMessages > 1 ? 's' : ''}`
-                  : 'Messages'}
+                  : 'CHAT WITH US'}
               </Text>
             </TouchableOpacity>
           )}
