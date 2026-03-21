@@ -14,6 +14,7 @@ import StaffCard, {StaffMember} from '../components/dashboard/StaffCard';
 import AddStaffOverlay, {StaffFormData} from '../components/overlays/AddStaffOverlay';
 import EditStaffOverlay, {EditStaffFormData} from '../components/overlays/EditStaffOverlay';
 import ViewStaffOverlay from '../components/overlays/ViewStaffOverlay';
+import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import {useNavigation} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {
@@ -85,6 +86,7 @@ export default function StaffScreen() {
   const [showAddOverlay, setShowAddOverlay] = useState(false);
   const [showEditOverlay, setShowEditOverlay] = useState(false);
   const [showViewOverlay, setShowViewOverlay] = useState(false);
+  const [alert, setAlert] = useState<AlertState | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<EditStaffFormData | null>(null);
 
   // API data states
@@ -155,6 +157,7 @@ export default function StaffScreen() {
         id: String(staff.id),
         name: staff.name,
         contactNumber: staff.phoneNumber,
+        email: staff.email || '',
         address: staff.address || '',
         role: staff.role,
         photo: staff.photoUrl || null,
@@ -187,12 +190,11 @@ export default function StaffScreen() {
     setShowAddOverlay(true);
   };
 
-  const handleStaffSubmit = async (staffData: StaffFormData) => {
-    console.log('New staff data:', staffData);
-
+  const handleStaffSubmit = async (staffData: StaffFormData): Promise<{success: boolean; error?: string}> => {
     const createData: CreateStaffData = {
       name: staffData.name,
       phoneNumber: staffData.contactNumber,
+      email: staffData.email || undefined,
       role: staffData.role,
       address: staffData.address,
       jobCategories: staffData.jobCategories,
@@ -209,7 +211,6 @@ export default function StaffScreen() {
 
     let response;
 
-    // If photo is provided, use createStaffWithPhoto
     if (staffData.photoUri) {
       const photo: RNFile = {
         uri: staffData.photoUri,
@@ -224,17 +225,18 @@ export default function StaffScreen() {
     if (response.success) {
       setShowAddOverlay(false);
       fetchStaffData();
+      setAlert({type: 'success', message: 'Staff member added successfully.'});
+      return {success: true};
     } else {
-      console.error('Failed to create staff:', response.error);
+      return {success: false, error: response.error || 'Failed to add staff'};
     }
   };
 
-  const handleStaffUpdate = async (updatedStaff: EditStaffFormData) => {
-    console.log('Updated staff data:', updatedStaff);
-
+  const handleStaffUpdate = async (updatedStaff: EditStaffFormData): Promise<{success: boolean; error?: string}> => {
     const updateData: UpdateStaffData = {
       name: updatedStaff.name,
       phoneNumber: updatedStaff.contactNumber,
+      email: updatedStaff.email || undefined,
       address: updatedStaff.address,
       role: updatedStaff.role,
       canApproveVehicles: updatedStaff.permissions.vehicleApprovals,
@@ -248,10 +250,8 @@ export default function StaffScreen() {
       canCreateInquiry: updatedStaff.permissions.createInquiry,
     };
 
-    // First update the staff details
     const response = await updateStaff(parseInt(updatedStaff.id), updateData);
 
-    // If photo was changed, upload the new photo
     if (response.success && updatedStaff.photoUri) {
       const photo: RNFile = {
         uri: updatedStaff.photoUri,
@@ -264,8 +264,10 @@ export default function StaffScreen() {
     if (response.success) {
       setShowEditOverlay(false);
       fetchStaffData();
+      setAlert({type: 'success', message: 'Staff details updated successfully.'});
+      return {success: true};
     } else {
-      console.error('Failed to update staff:', response.error);
+      return {success: false, error: response.error || 'Failed to update staff'};
     }
   };
 
@@ -478,6 +480,13 @@ export default function StaffScreen() {
         isOpen={showViewOverlay}
         onClose={() => setShowViewOverlay(false)}
         staff={null}
+      />
+
+      <AppAlert
+        isOpen={!!alert}
+        type={alert?.type ?? 'info'}
+        message={alert?.message ?? ''}
+        onClose={() => setAlert(null)}
       />
     </SafeAreaView>
   );

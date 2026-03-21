@@ -3,8 +3,8 @@ import * as Keychain from 'react-native-keychain';
 // API Base URL
 // const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
 // export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-const API_BASE_URL = 'https://specials-institutions-arm-qty.trycloudflare.com/api';
-export const SERVER_ORIGIN = 'https://specials-institutions-arm-qty.trycloudflare.com';
+const API_BASE_URL = 'https://brian-treasurer-oxide-enhancement.trycloudflare.com/api';
+export const SERVER_ORIGIN = 'https://brian-treasurer-oxide-enhancement.trycloudflare.com';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -209,6 +209,22 @@ export async function verifyRegistrationOtp(phoneNumber: string, otp: string) {
       method: 'POST',
       body: JSON.stringify({ phoneNumber, otp }),
     }
+  );
+}
+
+// Send OTP to email for registration
+export async function sendRegistrationOtpByEmail(email: string) {
+  return apiRequest<{success: boolean; message: string; expiresInSeconds: number}>(
+    '/workshop/register/send-otp-email',
+    {method: 'POST', body: JSON.stringify({email})},
+  );
+}
+
+// Verify email OTP during registration
+export async function verifyRegistrationOtpByEmail(email: string, otp: string) {
+  return apiRequest<{success: boolean; message: string; token: string | null}>(
+    '/workshop/register/verify-otp-email',
+    {method: 'POST', body: JSON.stringify({email, otp})},
   );
 }
 

@@ -3,7 +3,7 @@
 import { getAuthToken, setAuthToken, setStoredUser, removeAuthToken } from './api';
 
 // const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
-const API_BASE_URL = 'https://specials-institutions-arm-qty.trycloudflare.com/api';
+const API_BASE_URL = 'https://brian-treasurer-oxide-enhancement.trycloudflare.com/api';
 
 export interface LoginResponse {
   success: boolean;
@@ -88,6 +88,42 @@ export async function verifyOtp(phoneNumber: string, otp: string) {
       success: false,
       error: 'Network error. Please try again.',
     };
+  }
+}
+
+// Send OTP to email
+export async function sendOtpByEmail(email: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/send-otp-email`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email}),
+    });
+    const data = await response.json();
+    if (!response.ok) return {success: false, error: data.message || 'Failed to send OTP'};
+    return {success: true, data};
+  } catch {
+    return {success: false, error: 'Network error. Please try again.'};
+  }
+}
+
+// Verify email OTP and login
+export async function verifyOtpByEmail(email: string, otp: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-otp-email`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, otp}),
+    });
+    const data = await response.json();
+    if (!response.ok) return {success: false, error: data.message || 'Invalid OTP'};
+    if (data.token && data.user) {
+      await setAuthToken(data.token);
+      await setStoredUser(data.user);
+    }
+    return {success: true, data};
+  } catch {
+    return {success: false, error: 'Network error. Please try again.'};
   }
 }
 

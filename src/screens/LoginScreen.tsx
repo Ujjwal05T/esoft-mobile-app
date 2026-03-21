@@ -13,11 +13,11 @@ import {
   Image,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {sendOtp, verifyOtp} from '../services/otpAuth';
+import {sendOtpByEmail, verifyOtpByEmail} from '../services/otpAuth';
 import FloatingInput from '../components/ui/FloatingInput';
 import {useAuth} from '../context/AuthContext';
 
-type LoginStep = 'enter-mobile' | 'verify-otp';
+type LoginStep = 'enter-email' | 'verify-otp';
 
 const OTP_LENGTH = 6;
 
@@ -27,8 +27,8 @@ interface LoginScreenProps {
 
 const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
   const {signIn} = useAuth();
-  const [currentStep, setCurrentStep] = useState<LoginStep>('enter-mobile');
-  const [mobileNumber, setMobileNumber] = useState('');
+  const [currentStep, setCurrentStep] = useState<LoginStep>('enter-email');
+  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +37,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [resendTimer, setResendTimer] = useState(0);
 
-  const isMobileValid = mobileNumber.length >= 10;
+  const isEmailValid = email.includes('@') && email.includes('.');
   const isOtpComplete = otp.every(d => d !== '');
 
   useEffect(() => {
@@ -60,10 +60,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
   };
 
   const handleGetOTP = async () => {
-    if (!isMobileValid) return;
+    if (!isEmailValid) return;
     setError('');
     setLoading(true);
-    const result = await sendOtp(mobileNumber);
+    const result = await sendOtpByEmail(email);
     setLoading(false);
     if (!result.success) {
       setError(result.error || 'Failed to send OTP. Please try again.');
@@ -78,7 +78,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     if (!isOtpComplete) return;
     setError('');
     setLoading(true);
-    const result = await verifyOtp(mobileNumber, otp.join(''));
+    const result = await verifyOtpByEmail(email, otp.join(''));
     setLoading(false);
     if (!result.success) {
       setError(result.error || 'Invalid OTP. Please try again.');
@@ -92,7 +92,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
 
   const handleBack = () => {
     if (currentStep === 'verify-otp') {
-      setCurrentStep('enter-mobile');
+      setCurrentStep('enter-email');
       setOtp(Array(OTP_LENGTH).fill(''));
       setError('');
     } else {
@@ -105,7 +105,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     setOtp(Array(OTP_LENGTH).fill(''));
     setError('');
     setLoading(true);
-    const result = await sendOtp(mobileNumber);
+    const result = await sendOtpByEmail(email);
     setLoading(false);
     if (result.success) {
       startResendTimer();
@@ -160,20 +160,19 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled">
 
-          {/* Step 1: Enter Mobile Number */}
-          {currentStep === 'enter-mobile' && (
+          {/* Step 1: Enter Email */}
+          {currentStep === 'enter-email' && (
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Enter Mobile Number</Text>
+              <Text style={styles.stepTitle}>Enter Email</Text>
               <FloatingInput
-                label="Enter Mobile Number"
-                value={mobileNumber}
-                onChange={setMobileNumber}
-                keyboardType="phone-pad"
-                maxLength={10}
+                label="Enter Email Address"
+                value={email}
+                onChange={setEmail}
+                keyboardType="email-address"
                 required
               />
               <Text style={styles.helperText}>
-                We'll send you an OTP via WhatsApp to verify your number
+                We'll send you a 6-digit OTP to verify your email
               </Text>
 
               {/* Error message below form */}
@@ -190,7 +189,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             <View style={styles.stepContent}>
               <Text style={styles.stepTitle}>Verify OTP</Text>
               <Text style={styles.otpSubtitle}>
-                Enter the 6-digit code sent to your WhatsApp ({mobileNumber})
+                Enter the 6-digit code sent to {email}
               </Text>
 
               {/* OTP Boxes */}
@@ -226,14 +225,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                 </Text>
               </TouchableOpacity>
 
-              {/* Demo hint for bypass number (Play Store verification) */}
-              {(mobileNumber === '7024316744' || mobileNumber === '7024316755') && (
-                <View style={styles.demoBox}>
-                  <Text style={styles.demoText}>
-                    <Text style={styles.demoBold}>Test Mode:</Text> You can use any 6-digit code (e.g., <Text style={styles.demoBold}>111111</Text>) for verification
-                  </Text>
-                </View>
-              )}
 
               {/* Error message below form */}
               {!!error && (
@@ -248,14 +239,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
         {/* ── Fixed Bottom Section ── */}
         <View style={styles.bottomSection}>
           {/* Action Button */}
-          {currentStep === 'enter-mobile' && (
+          {currentStep === 'enter-email' && (
             <TouchableOpacity
               style={[
                 styles.actionButton,
-                !(isMobileValid && !loading) && styles.actionButtonDisabled,
+                !(isEmailValid && !loading) && styles.actionButtonDisabled,
               ]}
               onPress={handleGetOTP}
-              disabled={!isMobileValid || loading}>
+              disabled={!isEmailValid || loading}>
               {loading ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (

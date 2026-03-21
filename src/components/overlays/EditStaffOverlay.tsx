@@ -9,6 +9,7 @@ import {
   TouchableWithoutFeedback,
   TextInput,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import {launchImageLibrary} from 'react-native-image-picker';
@@ -16,7 +17,7 @@ import {launchImageLibrary} from 'react-native-image-picker';
 interface EditStaffOverlayProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpdate?: (staffData: EditStaffFormData) => void;
+  onUpdate?: (staffData: EditStaffFormData) => Promise<{success: boolean; error?: string}>;
   onToggleActive?: (staffId: string, isActive: boolean) => void;
   onDelete?: (staffId: string) => void;
   staffData: EditStaffFormData | null;
@@ -26,6 +27,7 @@ export interface EditStaffFormData {
   id: string;
   name: string;
   contactNumber: string;
+  email: string;
   address: string;
   role: string;
   photo: string | null;
@@ -75,6 +77,7 @@ const ToggleSwitch = ({enabled, onChange}: {enabled: boolean; onChange: (value: 
 export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleActive, onDelete, staffData}: EditStaffOverlayProps) {
   const [name, setName] = useState('');
   const [contactNumber, setContactNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [role, setRole] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
@@ -95,11 +98,14 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
   const [showPermissions, setShowPermissions] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'inactive' | 'active' | 'delete'>('inactive');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen && staffData) {
       setName(staffData.name);
       setContactNumber(staffData.contactNumber);
+      setEmail(staffData.email);
       setAddress(staffData.address);
       setRole(staffData.role);
       setPhoto(staffData.photo);
@@ -113,6 +119,8 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
     if (!isOpen) {
       setShowPermissions(false);
       setShowConfirmDialog(false);
+      setLoading(false);
+      setError('');
     }
   }, [isOpen]);
 
@@ -159,16 +167,22 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
   const hasChanges = staffData && (
     name !== staffData.name ||
     contactNumber !== staffData.contactNumber ||
+    email !== staffData.email ||
     address !== staffData.address ||
     role !== staffData.role ||
     photo !== staffData.photo ||
     hasPermissionsChanged
   );
 
-  const handleUpdate = () => {
-    if (!staffData) return;
-    onUpdate?.({...staffData, name, contactNumber, address, role, photo, photoUri, isActive, permissions});
-    onClose();
+  const handleUpdate = async () => {
+    if (!staffData || loading) return;
+    setError('');
+    setLoading(true);
+    const result = await onUpdate?.({...staffData, name, contactNumber, email, address, role, photo, photoUri, isActive, permissions});
+    setLoading(false);
+    if (result?.success === false) {
+      setError(result.error || 'Failed to update staff. Please try again.');
+    }
   };
 
   const handleConfirmAction = () => {
@@ -305,6 +319,10 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
               <TextInput value={contactNumber} onChangeText={setContactNumber} keyboardType="phone-pad" style={styles.input} />
             </View>
             <View style={styles.inputWrapper}>
+              <Text style={styles.floatingLabel}>Email</Text>
+              <TextInput value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" style={styles.input} />
+            </View>
+            <View style={styles.inputWrapper}>
               <Text style={styles.floatingLabel}>Address</Text>
               <TextInput value={address} onChangeText={setAddress} style={styles.input} />
             </View>
@@ -313,9 +331,18 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
               <TextInput value={role} onChangeText={setRole} style={styles.input} />
             </View>
           </View>
+          {!!error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
           <View style={styles.buttons}>
-            <TouchableOpacity onPress={handleUpdate} disabled={!hasChanges} style={[styles.updateBtn, !hasChanges && styles.updateBtnDisabled]} activeOpacity={0.8}>
-              <Text style={styles.updateBtnText}>UPDATE DETAILS</Text>
+            <TouchableOpacity onPress={handleUpdate} disabled={!hasChanges || loading} style={[styles.updateBtn, (!hasChanges || loading) && styles.updateBtnDisabled]} activeOpacity={0.8}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.updateBtnText}>UPDATE DETAILS</Text>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => {
@@ -365,7 +392,9 @@ const styles = StyleSheet.create({
   inputWrapper: {position: 'relative'},
   floatingLabel: {position: 'absolute', top: -8, left: 12, backgroundColor: '#fff', paddingHorizontal: 4, fontSize: 10, color: '#828282', zIndex: 10},
   input: {borderWidth: 1, borderColor: '#d3d3d3', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: '#000'},
-  buttons: {marginTop: 24, gap: 12},
+  errorBox: {marginTop: 16, padding: 12, backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', borderRadius: 8},
+  errorText: {fontSize: 14, color: '#dc2626'},
+  buttons: {marginTop: 12, gap: 12},
   updateBtn: {height: 56, backgroundColor: '#e5383b', borderRadius: 8, alignItems: 'center', justifyContent: 'center'},
   updateBtnDisabled: {backgroundColor: '#d3d3d3'},
   updateBtnText: {fontSize: 15, fontWeight: '500', color: '#fff', letterSpacing: 0.5},

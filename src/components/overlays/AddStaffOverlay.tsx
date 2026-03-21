@@ -10,6 +10,7 @@ import {
   TouchableWithoutFeedback,
   TextInput,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import {launchImageLibrary} from 'react-native-image-picker';
@@ -17,7 +18,7 @@ import {launchImageLibrary} from 'react-native-image-picker';
 interface AddStaffOverlayProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit?: (staffData: StaffFormData) => void;
+  onSubmit?: (staffData: StaffFormData) => Promise<{success: boolean; error?: string}>;
 }
 
 export interface StaffFormData {
@@ -25,6 +26,7 @@ export interface StaffFormData {
   role: string;
   jobCategories: string[];
   contactNumber: string;
+  email: string;
   address: string;
   photo: string | null;
   photoUri: string | null;
@@ -145,11 +147,14 @@ export default function AddStaffOverlay({
   const [role, setRole] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [contactNumber, setContactNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showPermissions, setShowPermissions] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [permissions, setPermissions] = useState<StaffPermissions>({
     vehicleApprovals: false,
     inquiryApprovals: false,
@@ -170,11 +175,14 @@ export default function AddStaffOverlay({
       setRole('');
       setSelectedCategories([]);
       setContactNumber('');
+      setEmail('');
       setAddress('');
       setPhoto(null);
       setPhotoUri(null);
       setShowCategoryDropdown(false);
       setShowPermissions(false);
+      setLoading(false);
+      setError('');
       setPermissions({
         vehicleApprovals: false,
         inquiryApprovals: false,
@@ -236,19 +244,25 @@ export default function AddStaffOverlay({
     setSelectedCategories(prev => prev.filter(c => c !== categoryId));
   };
 
-  const handleSubmit = () => {
-    if (!isFormValid) return;
-    onSubmit?.({
+  const handleSubmit = async () => {
+    if (!isFormValid || loading) return;
+    setError('');
+    setLoading(true);
+    const result = await onSubmit?.({
       name,
       role,
       jobCategories: selectedCategories,
       contactNumber,
+      email,
       address,
       photo,
       photoUri,
       permissions,
     });
-    onClose();
+    setLoading(false);
+    if (result?.success === false) {
+      setError(result.error || 'Failed to add staff. Please try again.');
+    }
   };
 
   const updatePermission = (key: keyof StaffPermissions, value: boolean) => {
@@ -381,13 +395,26 @@ export default function AddStaffOverlay({
               <TextInput value={contactNumber} onChangeText={setContactNumber} placeholder="Contact Number" placeholderTextColor="#828282" keyboardType="phone-pad" style={[styles.input, contactNumber && styles.inputFilled]} />
             </View>
             <View style={styles.inputWrapper}>
+              {email !== '' && <Text style={styles.floatingLabel}>Email</Text>}
+              <TextInput value={email} onChangeText={setEmail} placeholder="Email" placeholderTextColor="#828282" keyboardType="email-address" autoCapitalize="none" style={[styles.input, email && styles.inputFilled]} />
+            </View>
+            <View style={styles.inputWrapper}>
               {address !== '' && <Text style={styles.floatingLabel}>Address</Text>}
               <TextInput value={address} onChangeText={setAddress} placeholder="Address" placeholderTextColor="#828282" style={[styles.input, address && styles.inputFilled]} />
             </View>
           </View>
+          {!!error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
           <View style={styles.buttons}>
-            <TouchableOpacity onPress={handleSubmit} disabled={!isFormValid} style={[styles.submitBtn, !isFormValid && styles.submitBtnDisabled]} activeOpacity={0.8}>
-              <Text style={styles.submitBtnText}>ADD STAFF</Text>
+            <TouchableOpacity onPress={handleSubmit} disabled={!isFormValid || loading} style={[styles.submitBtn, (!isFormValid || loading) && styles.submitBtnDisabled]} activeOpacity={0.8}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitBtnText}>ADD STAFF</Text>
+              )}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowPermissions(true)} style={styles.permissionsLinkBtn} activeOpacity={0.8}>
               <Text style={styles.permissionsLinkText}>MANAGE PERMISSIONS</Text>
@@ -426,7 +453,9 @@ const styles = StyleSheet.create({
   categoryItem: {width: '31%', padding: 12, borderRadius: 8, backgroundColor: '#f5f5f5', alignItems: 'center'},
   categoryItemSelected: {backgroundColor: '#fff5f5', borderWidth: 2, borderColor: '#e5383b'},
   categoryName: {fontSize: 11, fontWeight: '500', color: '#333', textAlign: 'center'},
-  buttons: {marginTop: 24, gap: 12},
+  errorBox: {marginTop: 16, padding: 12, backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', borderRadius: 8},
+  errorText: {fontSize: 14, color: '#dc2626'},
+  buttons: {marginTop: 12, gap: 12},
   submitBtn: {height: 56, backgroundColor: '#e5383b', borderRadius: 8, alignItems: 'center', justifyContent: 'center'},
   submitBtnDisabled: {backgroundColor: '#d3d3d3'},
   submitBtnText: {fontSize: 15, fontWeight: '500', color: '#fff', letterSpacing: 0.5},

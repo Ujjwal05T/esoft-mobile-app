@@ -14,15 +14,15 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {
-  sendRegistrationOtp,
-  verifyRegistrationOtp,
+  sendRegistrationOtpByEmail,
+  verifyRegistrationOtpByEmail,
   submitWorkshopRegistration,
 } from '../services/api';
 import FloatingInput from '../components/ui/FloatingInput';
 import CheckIcon from '../assets/icons/check.svg';
 
 type RegistrationStep =
-  | 'enter-mobile'
+  | 'enter-email'
   | 'verify-otp'
   | 'workshop-details'
   | 'request-sent';
@@ -34,12 +34,12 @@ interface RegisterScreenProps {
 }
 
 const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
-  const [currentStep, setCurrentStep] = useState<RegistrationStep>('enter-mobile');
+  const [currentStep, setCurrentStep] = useState<RegistrationStep>('enter-email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Step 1
-  const [mobileNumber, setMobileNumber] = useState('');
+  const [email, setEmail] = useState('');
 
   // Step 2
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
@@ -49,7 +49,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const [workshopDetails, setWorkshopDetails] = useState({
     fullName: '',
     contactNumber: '',
-    email: '',
     aadharNumber: '',
     workshopName: '',
     address: '',
@@ -62,12 +61,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const setField = (field: keyof typeof workshopDetails) => (value: string) =>
     setWorkshopDetails(prev => ({...prev, [field]: value}));
 
-  const isMobileValid = mobileNumber.length >= 10;
+  const isEmailValid = email.includes('@') && email.includes('.');
   const isOtpComplete = otp.every(d => d !== '');
   const isWorkshopFormValid =
     workshopDetails.fullName.trim() !== '' &&
     workshopDetails.contactNumber.trim() !== '' &&
-    workshopDetails.email.trim() !== '' &&
     workshopDetails.aadharNumber.trim() !== '' &&
     workshopDetails.workshopName.trim() !== '' &&
     workshopDetails.address.trim() !== '' &&
@@ -77,10 +75,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   // ── Handlers ──
 
   const handleGetOTP = async () => {
-    if (!isMobileValid) return;
+    if (!isEmailValid) return;
     setError('');
     setLoading(true);
-    const result = await sendRegistrationOtp(mobileNumber);
+    const result = await sendRegistrationOtpByEmail(email);
     setLoading(false);
     if (!result.success) {
       setError(result.error || 'Failed to send OTP. Please try again.');
@@ -94,13 +92,12 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     if (!isOtpComplete) return;
     setError('');
     setLoading(true);
-    const result = await verifyRegistrationOtp(mobileNumber, otp.join(''));
+    const result = await verifyRegistrationOtpByEmail(email, otp.join(''));
     setLoading(false);
     if (!result.success) {
       setError(result.error || 'Invalid OTP. Please try again.');
       return;
     }
-    setWorkshopDetails(prev => ({...prev, contactNumber: mobileNumber}));
     setCurrentStep('workshop-details');
   };
 
@@ -111,7 +108,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     const result = await submitWorkshopRegistration({
       ownerName: workshopDetails.fullName,
       phoneNumber: workshopDetails.contactNumber,
-      email: workshopDetails.email || undefined,
+      email: email || undefined,
       aadhaarNumber: workshopDetails.aadharNumber,
       workshopName: workshopDetails.workshopName,
       address: workshopDetails.address,
@@ -131,7 +128,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const handleResend = async () => {
     setOtp(Array(OTP_LENGTH).fill(''));
     setLoading(true);
-    const result = await sendRegistrationOtp(mobileNumber);
+    const result = await sendRegistrationOtpByEmail(email);
     setLoading(false);
     if (result.success) {
       otpRefs.current[0]?.focus();
@@ -144,7 +141,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     if (currentStep === 'request-sent') {
       navigation?.navigate('Login');
     } else if (currentStep === 'verify-otp') {
-      setCurrentStep('enter-mobile');
+      setCurrentStep('enter-email');
       setOtp(Array(OTP_LENGTH).fill(''));
       setError('');
     } else if (currentStep === 'workshop-details') {
@@ -208,16 +205,15 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
             </View>
           )}
 
-          {/* Step 1: Enter Mobile Number */}
-          {currentStep === 'enter-mobile' && (
+          {/* Step 1: Enter Email */}
+          {currentStep === 'enter-email' && (
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Enter Mobile Number</Text>
+              <Text style={styles.stepTitle}>Enter Email</Text>
               <FloatingInput
-                label="Enter Mobile Number"
-                value={mobileNumber}
-                onChange={setMobileNumber}
-                keyboardType="phone-pad"
-                maxLength={10}
+                label="Enter Email Address"
+                value={email}
+                onChange={setEmail}
+                keyboardType="email-address"
                 required
               />
 
@@ -235,7 +231,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
             <View style={styles.stepContent}>
               <Text style={styles.stepTitle}>Verify OTP</Text>
               <Text style={styles.otpSubtitle}>
-                Enter the 6-digit code sent to your WhatsApp ({mobileNumber})
+                Enter the 6-digit code sent to {email}
               </Text>
 
               <View style={styles.otpRow}>
@@ -263,15 +259,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 <Text style={styles.resendLink}>Resend OTP</Text>
               </TouchableOpacity>
 
-              {/* Demo hint for bypass number (Play Store verification) */}
-              {(mobileNumber === '7024316744' || mobileNumber === '7024316755') && (
-                <View style={styles.demoBox}>
-                  <Text style={styles.demoText}>
-                    <Text style={styles.demoBold}>Test Mode:</Text> You can use any 6-digit code (e.g., <Text style={styles.demoBold}>111111</Text>) for verification
-                  </Text>
-                </View>
-              )}
-
               {/* Error message below form */}
               {!!error && (
                 <View style={styles.errorBox}>
@@ -298,13 +285,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 onChange={setField('contactNumber')}
                 keyboardType="phone-pad"
                 maxLength={10}
-                required
-              />
-              <FloatingInput
-                label="Email (Required)"
-                value={workshopDetails.email}
-                onChange={setField('email')}
-                keyboardType="email-address"
                 required
               />
               <FloatingInput
@@ -376,14 +356,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
         {currentStep !== 'request-sent' && (
           <View style={styles.bottomSection}>
 
-            {currentStep === 'enter-mobile' && (
+            {currentStep === 'enter-email' && (
               <TouchableOpacity
                 style={[
                   styles.actionButton,
-                  !(isMobileValid && !loading) && styles.actionButtonDisabled,
+                  !(isEmailValid && !loading) && styles.actionButtonDisabled,
                 ]}
                 onPress={handleGetOTP}
-                disabled={!isMobileValid || loading}>
+                disabled={!isEmailValid || loading}>
                 {loading ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
