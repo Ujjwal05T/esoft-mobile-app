@@ -22,6 +22,7 @@ import {
   type QuoteApiResponse,
 } from '../services/api';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import {formatDeliveryDateIST} from '../utils/dateUtils';
 
 type QuoteDetailRouteProp = RouteProp<RootStackParamList, 'QuoteDetail'>;
 type QuoteDetailNavProp = NativeStackNavigationProp<
@@ -238,15 +239,6 @@ export default function QuoteDetailScreen() {
       })
       .toLowerCase();
 
-  const formatDeliveryDate = (date: string | null) => {
-    if (!date) return '-';
-    const d = new Date(date);
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
-  };
-
   const getBadgeStatus = () => {
     if (isExpired) return 'expired' as const;
     if (quote?.status === 'approved') return 'approved' as const;
@@ -437,7 +429,7 @@ export default function QuoteDetailScreen() {
                   <View style={styles.metaRow}>
                     <Text style={styles.metaText}>
                       Exp. Delivery{' '}
-                      {formatDeliveryDate(item.estimatedDelivery)}
+                      {formatDeliveryDateIST(item.estimatedDelivery)}
                     </Text>
                     <Text style={styles.metaText}>
                       {item.quantity} of {item.quantity} pcs
@@ -468,7 +460,7 @@ export default function QuoteDetailScreen() {
                   <View style={styles.metaRow}>
                     <Text style={styles.metaText}>
                       Exp. Arrival by{' '}
-                      {formatDeliveryDate(item.estimatedDelivery)}
+                      {formatDeliveryDateIST(item.estimatedDelivery)}
                     </Text>
                     <Text style={styles.metaText}>
                       0 of {item.quantity} pcs

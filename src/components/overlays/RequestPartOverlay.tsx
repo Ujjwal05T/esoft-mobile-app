@@ -32,6 +32,7 @@ const generateId = () =>
 interface PartItem {
   id: string;
   partName: string;
+  partNumber: string;
   preferredBrand: string;
   afterMarketBrandName: string;
   quantity: string;
@@ -47,6 +48,7 @@ interface PartItem {
 const createEmptyPart = (): PartItem => ({
   id: generateId(),
   partName: '',
+  partNumber: '',
   preferredBrand: '',
   afterMarketBrandName: '',
   quantity: '',
@@ -410,9 +412,7 @@ export default function RequestPartOverlay({
         const hasErr =
           !p.partName.trim() ||
           !p.preferredBrand ||
-          (p.preferredBrand === 'After Market' && !p.afterMarketBrandName.trim()) ||
-          !p.quantity.trim() ||
-          (!p.remark.trim() && !p.audioPath);
+          !p.quantity.trim();
         if (hasErr) valid = false;
         return {
           ...p,
@@ -422,7 +422,7 @@ export default function RequestPartOverlay({
       }),
     );
     if (valid) {
-      onSubmit?.(parts);
+      onSubmit?.(parts.map(p => ({...p, remark: p.remark.trim() || 'No remark'})));
       setShowSuccess(true);
     }
   };
@@ -493,6 +493,27 @@ export default function RequestPartOverlay({
               )}
             </View>
 
+            {/* Part Number */}
+            <View style={styles.fieldWrap}>
+              <View
+                style={[
+                  styles.inputBorder,
+                  !!part.partNumber && styles.inputFilled,
+                ]}>
+                {!!part.partNumber && (
+                  <Text style={styles.floatLabel}>Part Number</Text>
+                )}
+                <TextInput
+                  value={part.partNumber}
+                  onChangeText={v => updatePart(part.id, {partNumber: v})}
+                  placeholder="Part Number (Optional)"
+                  placeholderTextColor="#828282"
+                  style={styles.inputText}
+                  autoCapitalize="characters"
+                />
+              </View>
+            </View>
+
             {/* Preferred Brand */}
             <View
               style={[
@@ -561,24 +582,18 @@ export default function RequestPartOverlay({
                   style={[
                     styles.inputBorder,
                     !!part.afterMarketBrandName && styles.inputFilled,
-                    part.hasAttemptedSubmit &&
-                      !part.afterMarketBrandName.trim() &&
-                      styles.inputError,
                   ]}>
                   {!!part.afterMarketBrandName && (
-                    <Text style={styles.floatLabel}>Brand Name</Text>
+                    <Text style={styles.floatLabel}>Preferred Brand Name</Text>
                   )}
                   <TextInput
                     value={part.afterMarketBrandName}
                     onChangeText={v => updatePart(part.id, {afterMarketBrandName: v})}
-                    placeholder="Brand Name"
+                    placeholder="Preferred Brand Name (if any)"
                     placeholderTextColor="#828282"
                     style={styles.inputText}
                   />
                 </View>
-                {part.hasAttemptedSubmit && !part.afterMarketBrandName.trim() && (
-                  <Text style={styles.errorMsg}>Please enter the brand name</Text>
-                )}
               </View>
             )}
 
@@ -619,10 +634,6 @@ export default function RequestPartOverlay({
                     styles.row,
                     styles.remarkPad,
                     !!part.remark && styles.inputFilled,
-                    part.hasAttemptedSubmit &&
-                      !part.remark.trim() &&
-                      !part.audioPath &&
-                      styles.inputError,
                   ]}>
                   {!!part.remark && (
                     <Text style={styles.floatLabel}>Remark</Text>
@@ -630,7 +641,7 @@ export default function RequestPartOverlay({
                   <TextInput
                     value={part.remark}
                     onChangeText={v => updatePart(part.id, {remark: v})}
-                    placeholder="Remark"
+                    placeholder="Audio Request or Remark"
                     placeholderTextColor="#828282"
                     style={[styles.inputText, {flex: 1}]}
                   />
@@ -679,11 +690,6 @@ export default function RequestPartOverlay({
                 </View>
               )}
 
-              {part.hasAttemptedSubmit &&
-                !part.remark.trim() &&
-                !part.audioPath && (
-                  <Text style={styles.errorMsg}>Please add remark</Text>
-                )}
             </View>
 
             {/* Media grid */}
@@ -781,12 +787,20 @@ export default function RequestPartOverlay({
                   !!partNumber && {color: '#e5383b'},
                 ]}
                 returnKeyType="done"
-                onSubmitEditing={() =>
-                  partNumber.trim() && setCurrentView('form')
-                }
+                onSubmitEditing={() => {
+                  if (partNumber.trim()) {
+                    setParts(prev => prev.map((p, i) => i === 0 ? {...p, partNumber: partNumber.trim()} : p));
+                    setCurrentView('form');
+                  }
+                }}
               />
               <TouchableOpacity
-                onPress={() => partNumber.trim() && setCurrentView('form')}
+                onPress={() => {
+                if (partNumber.trim()) {
+                  setParts(prev => prev.map((p, i) => i === 0 ? {...p, partNumber: partNumber.trim()} : p));
+                  setCurrentView('form');
+                }
+              }}
                 style={[
                   styles.partNumArrow,
                   !partNumber && {backgroundColor: '#828282'},

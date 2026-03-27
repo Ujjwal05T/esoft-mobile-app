@@ -28,6 +28,7 @@ import type {DisputeFormData} from '../components/overlays/RaiseDisputeOverlay';
 import DisputeCommentsOverlay from '../components/overlays/DisputeCommentsOverlay';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import EditInquiryOverlay from '../components/overlays/EditInquiryOverlay';
+import {formatDateIST} from '../utils/dateUtils';
 import {
   getStoredUser,
   getInquiriesByStaffId,
@@ -59,23 +60,15 @@ type DisputeWithDate = Dispute & {rawDate?: string; numericId?: number; partName
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
 function mapApiInquiry(api: InquiryResponse): InquiryWithDate {
   return {
     id: api.inquiryNumber,
     numericId: api.id,
     vehicleName: api.vehicleName ?? '',
     numberPlate: api.numberPlate ?? '',
-    placedDate: formatDate(api.placedDate),
-    closedDate: api.closedDate ? formatDate(api.closedDate) : undefined,
-    declinedDate: api.declinedDate ? formatDate(api.declinedDate) : undefined,
+    placedDate: formatDateIST(api.placedDate),
+    closedDate: api.closedDate ? formatDateIST(api.closedDate) : undefined,
+    declinedDate: api.declinedDate ? formatDateIST(api.declinedDate) : undefined,
     status: api.status.toLowerCase() as Inquiry['status'],
     inquiryBy: api.requestedByName ?? 'Owner',
     jobCategories: api.jobCategories ?? [],
@@ -106,7 +99,7 @@ function mapApiDispute(api: DisputeListItemResponse): DisputeWithDate {
     numericId: api.id,
     vehicleName: '',
     plateNumber: '',
-    receivedDate: formatDate(api.date),
+    receivedDate: formatDateIST(api.date),
     status: mapStatus(api.status),
     disputeRaised: api.issue,
     resolutionStatus: api.status === 'Resolved' ? 'Resolved' : api.status === 'Investigating' ? 'Under Investigation' : undefined,
@@ -419,7 +412,7 @@ export default function StaffInquiryScreen() {
               return {
                 id: String(o.id),
                 orderId: o.orderNumber,
-                date: formatDate(o.createdAt),
+                date: formatDateIST(o.createdAt),
                 parts: items.map(item => ({
                   id: String(item.id),
                   name: item.partName,

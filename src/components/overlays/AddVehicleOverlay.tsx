@@ -16,7 +16,8 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import {launchImageLibrary} from 'react-native-image-picker';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import RNFS from 'react-native-fs';
@@ -59,7 +60,7 @@ interface AddVehicleOverlayProps {
 
 
 // Simple inline dropdown component
-function DropdownField({
+export function DropdownField({
   label,
   value,
   options,
@@ -190,7 +191,6 @@ export default function AddVehicleOverlay({
   const [gstNumber, setGstNumber] = useState('');
   const [isGstVerified, setIsGstVerified] = useState(false);
   const [insuranceProvider, setInsuranceProvider] = useState('');
-  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   // RC Card Images (collected in manual step)
   const [rcFrontImage, setRcFrontImage] = useState<{uri: string; name: string; type: string} | null>(null);
@@ -213,7 +213,9 @@ export default function AddVehicleOverlay({
   const successFade = useRef(new Animated.Value(0)).current;
   const checkScale = useRef(new Animated.Value(0)).current;
   const textFade = useRef(new Animated.Value(0)).current;
-  const [hasAttemptedGateIn, setHasAttemptedGateIn] = useState(false);
+
+  // RC image source picker
+  const [rcPickerSide, setRcPickerSide] = useState<'front' | 'back' | null>(null);
 
   // AppAlert state
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
@@ -243,7 +245,6 @@ export default function AddVehicleOverlay({
     setGstNumber('');
     setIsGstVerified(false);
     setInsuranceProvider('');
-    setHasAttemptedSubmit(false);
     setDriverName('');
     setDriverContact('');
     setGateInDate(new Date());
@@ -257,7 +258,7 @@ export default function AddVehicleOverlay({
     setIsRecording(false);
     setRecordedAudioPath(null);
     audioRecorderPlayer.current.stopRecorder().catch(() => {});
-    setHasAttemptedGateIn(false);
+
     setIsLoading(false);
     setApiError(null);
     setCreatedVehicleId(null);
@@ -388,7 +389,7 @@ export default function AddVehicleOverlay({
 
   const handleManualNext = async () => {
     setHasAttemptedManual(true);
-    if (!selectedBrand || !selectedModel || !selectedYear || !vehicleNumber.trim()) return;
+    if (!vehicleNumber.trim() || !chassisNumber.trim()) return;
 
     const plate = vehicleNumber.trim();
     setIsLoading(true);
@@ -436,7 +437,6 @@ export default function AddVehicleOverlay({
         setCurrentView('search');
       }
       setVehicleData(null);
-      setHasAttemptedSubmit(false);
     } else if (currentView === 'manual') {
       setCurrentView('search');
       setHasAttemptedManual(false);
@@ -446,9 +446,7 @@ export default function AddVehicleOverlay({
   };
 
   const handleSendRequest = async () => {
-    setHasAttemptedSubmit(true);
     setApiError(null);
-    if (!registrationName.trim() || !ownerName.trim() || !contactNumber.trim()) return;
     if (!vehicleData) return;
 
     setIsLoading(true);
@@ -501,9 +499,7 @@ export default function AddVehicleOverlay({
   };
 
   const handleGateIn = async () => {
-    setHasAttemptedGateIn(true);
     setApiError(null);
-    if (!driverName.trim() || !driverContact.trim()) return;
     if (!createdVehicleId) {
       setApiError('Vehicle not created. Please go back and try again.');
       return;
@@ -581,14 +577,26 @@ export default function AddVehicleOverlay({
   };
 
   const handlePickRcImage = (side: 'front' | 'back') => {
-    launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 1}, response => {
+    setRcPickerSide(side);
+  };
+
+  const handleRcImageSource = (source: 'camera' | 'gallery') => {
+    const side = rcPickerSide;
+    setRcPickerSide(null);
+    if (!side) return;
+    const onResult = (response: any) => {
       if (!response.didCancel && !response.errorCode && response.assets?.[0]?.uri) {
         const a = response.assets[0];
         const file = {uri: a.uri!, name: a.fileName || `rc_${side}_${Date.now()}.jpg`, type: a.type || 'image/jpeg'};
         if (side === 'front') setRcFrontImage(file);
         else setRcBackImage(file);
       }
-    });
+    };
+    if (source === 'camera') {
+      launchCamera({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+    } else {
+      launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 1}, onResult);
+    }
   };
 
   const handleRecord = async () => {
@@ -728,7 +736,7 @@ export default function AddVehicleOverlay({
                   </Svg>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.scanBtn} onPress={() => setScanMode('plate')}>
+              {/* <TouchableOpacity style={styles.scanBtn} onPress={() => setScanMode('plate')}>
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                   <Path
                     d="M3 7V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H7M17 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V7M21 17V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H17M7 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V17"
@@ -742,7 +750,7 @@ export default function AddVehicleOverlay({
                   <Rect x="7" y="13" width="4" height="4" rx="1" fill="white" />
                 </Svg>
                 <Text style={styles.scanBtnText}>Scan Number</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
 
             <TouchableOpacity style={[styles.redCard, {overflow: 'hidden'}]} onPress={() => setScanMode('rc')}>
@@ -811,7 +819,6 @@ export default function AddVehicleOverlay({
                   setSelectedVariant('');
                   setOpenManualDropdown(null);
                 }}
-                error={hasAttemptedManual}
                 isOpen={openManualDropdown === 'brand'}
                 onToggle={() => toggleManualDropdown('brand')}
                 disabled={loadingBrands}
@@ -827,7 +834,6 @@ export default function AddVehicleOverlay({
                   setOpenManualDropdown(null);
                 }}
                 disabled={!selectedBrand || loadingModels}
-                error={hasAttemptedManual}
                 isOpen={openManualDropdown === 'model'}
                 onToggle={() => toggleManualDropdown('model')}
               />
@@ -840,7 +846,6 @@ export default function AddVehicleOverlay({
                   setSelectedVariant('');
                   setOpenManualDropdown(null);
                 }}
-                error={hasAttemptedManual}
                 disabled={!selectedModel || loadingYears}
                 isOpen={openManualDropdown === 'year'}
                 onToggle={() => toggleManualDropdown('year')}
@@ -869,9 +874,13 @@ export default function AddVehicleOverlay({
                 label="Chassis Number"
                 value={chassisNumber}
                 onChange={v => setChassisNumber(v.toUpperCase())}
+                required
                 containerStyle={{borderRadius: 8}}
-                wrapperStyle={{marginBottom: 8}}
+                wrapperStyle={{marginBottom: 0}}
               />
+              {hasAttemptedManual && !chassisNumber.trim() && (
+                <Text style={styles.errorText}>Please enter chassis number</Text>
+              )}
 
               {/* RC Card Images */}
               <Text style={styles.rcSectionLabel}>RC Card Images (Optional)</Text>
@@ -932,8 +941,7 @@ export default function AddVehicleOverlay({
                 style={[
                   styles.primaryBtn,
                   {marginTop: 8},
-                  !(selectedBrand && selectedModel && selectedYear && vehicleNumber.trim()) &&
-                    styles.disabledBtn,
+                  !(vehicleNumber.trim() && chassisNumber.trim()) && styles.disabledBtn,
                 ]}>
                 <Text style={styles.primaryBtnText}>NEXT</Text>
               </TouchableOpacity>
@@ -968,38 +976,26 @@ export default function AddVehicleOverlay({
                 label="Registration Name"
                 value={registrationName}
                 onChange={setRegistrationName}
-                required
                 containerStyle={{borderRadius:8}}
                 wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0,marginTop:0}}
               />
-              {hasAttemptedSubmit && !registrationName.trim() && (
-                <Text style={styles.errorText}>Please enter registration name</Text>
-              )}
 
               <FloatingInput
                 label="Owner Name"
                 value={ownerName}
                 onChange={setOwnerName}
-                required
                 containerStyle={{borderRadius:8}}
-                 wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0,marginTop:0}} 
+                wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0,marginTop:0}}
               />
-              {hasAttemptedSubmit && !ownerName.trim() && (
-                <Text style={styles.errorText}>Please enter owner name</Text>
-              )}
 
               <FloatingInput
                 label="Contact Number"
                 value={contactNumber}
                 onChange={setContactNumber}
                 keyboardType="phone-pad"
-                required
                 containerStyle={{borderRadius:8}}
                 wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0}}
               />
-              {hasAttemptedSubmit && !contactNumber.trim() && (
-                <Text style={styles.errorText}>Please enter contact number</Text>
-              )}
 
               <FloatingInput
                 label="Email Id"
@@ -1047,28 +1043,25 @@ export default function AddVehicleOverlay({
                 onSelect={setInsuranceProvider}
               />
 
-              <TouchableOpacity
-                onPress={handleSendRequest}
-                disabled={
-                  !registrationName.trim() ||
-                  !ownerName.trim() ||
-                  !contactNumber.trim() ||
-                  isLoading
-                }
-                style={[
-                  styles.primaryBtn,
-                  {marginTop: 8},
-                  (!registrationName.trim() ||
-                    !ownerName.trim() ||
-                    !contactNumber.trim()) &&
-                    styles.disabledBtn,
-                ]}>
-                {isLoading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.primaryBtnText}>PROCEED TO GATE IN</Text>
-                )}
-              </TouchableOpacity>
+              {(registrationName || ownerName || contactNumber || email || gstNumber || insuranceProvider) ? (
+                <TouchableOpacity
+                  onPress={handleSendRequest}
+                  disabled={isLoading}
+                  style={[styles.primaryBtn, {marginTop: 8}]}>
+                  {isLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.primaryBtnText}>PROCEED TO GATE IN</Text>
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={handleSendRequest}
+                  disabled={isLoading}
+                  style={[styles.skipBtnOutline, {marginTop: 8}]}>
+                  <Text style={styles.skipBtnOutlineText}>Skip</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </ScrollView>
         )}
@@ -1088,26 +1081,19 @@ export default function AddVehicleOverlay({
                 label="Driver's Name"
                 value={driverName}
                 onChange={setDriverName}
-                required
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 1}}
               />
-              {hasAttemptedGateIn && !driverName.trim() && (
-                <Text style={styles.errorText}>Please enter driver's name</Text>
-              )}
 
               <FloatingInput
                 label="Driver's Contact Number"
                 value={driverContact}
                 onChange={setDriverContact}
+                maxLength={10}
                 keyboardType="phone-pad"
-                required
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 8}}
               />
-              {hasAttemptedGateIn && !driverContact.trim() && (
-                <Text style={styles.errorText}>Please enter driver's contact number</Text>
-              )}
 
               {/* Gate In Date and Time */}
               <TouchableOpacity
@@ -1313,12 +1299,8 @@ export default function AddVehicleOverlay({
 
               <TouchableOpacity
                 onPress={handleGateIn}
-                disabled={!driverName.trim() || !driverContact.trim() || isLoading}
-                style={[
-                  styles.primaryBtn,
-                  {marginTop: 8},
-                  (!driverName.trim() || !driverContact.trim()) && styles.disabledBtn,
-                ]}>
+                disabled={isLoading}
+                style={[styles.primaryBtn, {marginTop: 8}]}>
                 {isLoading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
@@ -1367,6 +1349,51 @@ export default function AddVehicleOverlay({
           isProcessing={isScanProcessing}
         />
       )}
+      {/* RC Image source picker */}
+      <Modal
+        visible={rcPickerSide !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setRcPickerSide(null)}>
+        <TouchableWithoutFeedback onPress={() => setRcPickerSide(null)}>
+          <View style={styles.backdrop} />
+        </TouchableWithoutFeedback>
+        <View style={styles.actionSheet}>
+          <View style={styles.handle} />
+          <Text style={styles.actionSheetTitle}>Add RC Image</Text>
+          <TouchableOpacity
+            style={styles.actionSheetBtn}
+            onPress={() => handleRcImageSource('camera')}
+            activeOpacity={0.7}>
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                stroke="#e5383b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              />
+              <Path d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="#e5383b" strokeWidth="2" />
+            </Svg>
+            <Text style={styles.actionSheetBtnText}>Take Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionSheetBtn}
+            onPress={() => handleRcImageSource('gallery')}
+            activeOpacity={0.7}>
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <Rect x="3" y="3" width="18" height="18" rx="2" stroke="#e5383b" strokeWidth="2" />
+              <Path d="M3 9l4-4 4 4 4-4 4 4" stroke="#e5383b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <Path d="M3 15l5 5 8-8 5 5" stroke="#e5383b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+            <Text style={styles.actionSheetBtnText}>Choose from Gallery</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionSheetBtn, styles.actionSheetCancel]}
+            onPress={() => setRcPickerSide(null)}
+            activeOpacity={0.7}>
+            <Text style={styles.actionSheetCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       <AppAlert
         isOpen={!!appAlert}
         type={appAlert?.type ?? 'info'}
@@ -1760,4 +1787,76 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rcRemoveX: {color: '#fff', fontSize: 10, fontWeight: '700'},
+  skipBtn: {
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  skipBtnText: {
+    fontSize: 14,
+    color: '#828282',
+    fontWeight: '500',
+  },
+  formBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  skipBtnOutline: {
+    height: 52,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#d3d3d3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  skipBtnOutlineText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#828282',
+  },
+  actionSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 18,
+    paddingBottom: 32,
+  },
+  actionSheetTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  actionSheetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  actionSheetBtnText: {
+    fontSize: 15,
+    color: '#000',
+  },
+  actionSheetCancel: {
+    borderBottomWidth: 0,
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  actionSheetCancelText: {
+    fontSize: 15,
+    color: '#828282',
+    fontWeight: '500',
+    textAlign: 'center',
+    flex: 1,
+  },
 });

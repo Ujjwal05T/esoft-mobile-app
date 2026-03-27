@@ -3,8 +3,8 @@ import * as Keychain from 'react-native-keychain';
 // API Base URL
 // const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
 // export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-const API_BASE_URL = 'https://brian-treasurer-oxide-enhancement.trycloudflare.com/api';
-export const SERVER_ORIGIN = 'https://brian-treasurer-oxide-enhancement.trycloudflare.com';
+const API_BASE_URL = 'https://trials-trailer-drives-improving.trycloudflare.com/api';
+export const SERVER_ORIGIN = 'https://keywords-republican-emotions-term.trycloudflare.com';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -240,6 +240,7 @@ export interface WorkshopRegistrationData {
   pinCode: string;
   city: string;
   gstNumber?: string;
+  monthlyWorkshopCapacity?: string;
 }
 
 export async function submitWorkshopRegistration(data: WorkshopRegistrationData) {
@@ -1639,6 +1640,7 @@ export async function updateInquiryItems(inquiryId: number, items: InquiryItemRe
 export interface UpdateInquiryItemWithFilesData {
   id?: number;
   partName: string;
+  partNumber?: string;
   preferredBrand: string;
   afterMarketBrandName?: string;
   quantity: number;

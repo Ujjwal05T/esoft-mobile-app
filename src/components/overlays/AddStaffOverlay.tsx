@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import {launchImageLibrary} from 'react-native-image-picker';
+import AppAlert from './AppAlert';
 
 interface AddStaffOverlayProps {
   isOpen: boolean;
@@ -392,7 +393,7 @@ export default function AddStaffOverlay({
             </View>
             <View style={styles.inputWrapper}>
               {contactNumber !== '' && <Text style={styles.floatingLabel}>Contact Number</Text>}
-              <TextInput value={contactNumber} onChangeText={setContactNumber} placeholder="Contact Number" placeholderTextColor="#828282" keyboardType="phone-pad" style={[styles.input, contactNumber && styles.inputFilled]} />
+              <TextInput value={contactNumber} maxLength={10} onChangeText={setContactNumber} placeholder="Contact Number" placeholderTextColor="#828282" keyboardType="phone-pad" style={[styles.input, contactNumber && styles.inputFilled]} />
             </View>
             <View style={styles.inputWrapper}>
               {email !== '' && <Text style={styles.floatingLabel}>Email</Text>}

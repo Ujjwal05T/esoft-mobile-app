@@ -23,9 +23,15 @@ import {
   createJobCard,
   createJobCardWithMedia,
   getStaff,
+  createStaff,
+  createStaffWithPhoto,
   type CreateJobCardData,
   type WorkshopStaffResponse,
+  type CreateStaffData,
+  type RNFile,
 } from '../../services/api';
+import AddStaffOverlay, {StaffFormData} from './AddStaffOverlay';
+import AppAlert, {AlertState} from './AppAlert';
 
 const SCREEN_H = Dimensions.get('screen').height;
 const MAX_IMAGES = 3;
@@ -47,7 +53,7 @@ const jobCategories = [
   {id: '1', name: 'General Service', icon: '🔧'},
   {id: '2', name: 'Engine', icon: '⚙️'},
   {id: '3', name: 'Brake System', icon: '🛞'},
-  {id: '4', name: 'Denting/Painting', icon: '🎨'},
+  {id: '4', name: 'Body Parts', icon: '🚗'},
   {id: '5', name: 'AC', icon: '❄️'},
   {id: '6', name: 'Battery', icon: '🔋'},
   {id: '7', name: 'Tyre', icon: '⭕'},
@@ -73,6 +79,8 @@ export default function NewJobCardOverlay({
   // Staff state
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
+  const [addStaffOpen, setAddStaffOpen] = useState(false);
+  const [staffAlert, setStaffAlert] = useState<AlertState | null>(null);
 
   // Media state
   const [vehicleImages, setVehicleImages] = useState<{uri: string; name: string; type: string}[]>([]);
@@ -91,11 +99,9 @@ export default function NewJobCardOverlay({
   const [apiError, setApiError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const isValid = selectedCategory !== '' && remark.trim() !== '';
+  const isValid = selectedCategory !== '';
 
-  // Fetch staff on open
-  useEffect(() => {
-    if (!isOpen) return;
+  const fetchStaff = () => {
     setLoadingStaff(true);
     getStaff()
       .then(result => {
@@ -109,6 +115,12 @@ export default function NewJobCardOverlay({
         }
       })
       .finally(() => setLoadingStaff(false));
+  };
+
+  // Fetch staff on open
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchStaff();
   }, [isOpen]);
 
   // Reset on close
@@ -226,7 +238,7 @@ export default function NewJobCardOverlay({
         assignedStaffIds: selectedStaffIds.length > 0
           ? selectedStaffIds.map(id => parseInt(id, 10))
           : undefined,
-        remark,
+        remark: remark.trim() || 'No Remark',
         priority: 'Normal',
       };
 
@@ -372,41 +384,66 @@ export default function NewJobCardOverlay({
 
             {showStaffPicker && (
               <View style={styles.pickerList}>
-                {loadingStaff ? (
-                  <ActivityIndicator color="#e5383b" style={styles.staffLoader} />
-                ) : staffMembers.length === 0 ? (
-                  <Text style={styles.emptyText}>No staff available</Text>
-                ) : (
-                  staffMembers.map(s => {
-                    const isSelected = selectedStaffIds.includes(s.id);
-                    return (
-                      <TouchableOpacity
-                        key={s.id}
-                        style={[styles.staffItem, isSelected && styles.staffItemActive]}
-                        onPress={() => {
-                          setSelectedStaffIds(prev =>
-                            isSelected ? prev.filter(id => id !== s.id) : [...prev, s.id],
-                          );
-                        }}
-                        activeOpacity={0.8}>
-                        <Text style={[styles.staffItemText, isSelected && styles.staffItemTextActive]}>
-                          {s.name}
-                        </Text>
-                        {isSelected && (
-                          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                            <Path
-                              d="M5 13L9 17L19 7"
-                              stroke="#e5383b"
-                              strokeWidth="2.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </Svg>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })
-                )}
+                <ScrollView
+                  style={styles.staffScrollList}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled">
+                  {loadingStaff ? (
+                    <ActivityIndicator color="#e5383b" style={styles.staffLoader} />
+                  ) : staffMembers.length === 0 ? (
+                    <Text style={styles.emptyText}>No staff available</Text>
+                  ) : (
+                    staffMembers.map(s => {
+                      const isSelected = selectedStaffIds.includes(s.id);
+                      return (
+                        <TouchableOpacity
+                          key={s.id}
+                          style={[styles.staffItem, isSelected && styles.staffItemActive]}
+                          onPress={() => {
+                            setSelectedStaffIds(prev =>
+                              isSelected ? prev.filter(id => id !== s.id) : [...prev, s.id],
+                            );
+                          }}
+                          activeOpacity={0.8}>
+                          <Text style={[styles.staffItemText, isSelected && styles.staffItemTextActive]}>
+                            {s.name}
+                          </Text>
+                          {isSelected && (
+                            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                              <Path
+                                d="M5 13L9 17L19 7"
+                                stroke="#e5383b"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </Svg>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })
+                  )}
+                </ScrollView>
+                <View style={styles.addStaffDivider} />
+                <TouchableOpacity
+                  style={styles.addStaffBtn}
+                  onPress={() => {
+                    setShowStaffPicker(false);
+                    setAddStaffOpen(true);
+                  }}
+                  activeOpacity={0.8}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M12 5V19M5 12H19"
+                      stroke="#e5383b"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                  <Text style={styles.addStaffBtnText}>Add New Staff</Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -574,6 +611,54 @@ export default function NewJobCardOverlay({
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      <AddStaffOverlay
+        isOpen={addStaffOpen}
+        onClose={() => {
+          setAddStaffOpen(false);
+          fetchStaff();
+        }}
+        onSubmit={async (staffData: StaffFormData) => {
+          const createData: CreateStaffData = {
+            name: staffData.name,
+            phoneNumber: staffData.contactNumber,
+            email: staffData.email || undefined,
+            role: staffData.role,
+            address: staffData.address,
+            jobCategories: staffData.jobCategories,
+            canApproveVehicles: staffData.permissions.vehicleApprovals,
+            canApproveInquiries: staffData.permissions.inquiryApprovals,
+            canGenerateEstimates: staffData.permissions.generateEstimates,
+            canCreateJobCard: staffData.permissions.createJobCard,
+            canApproveDisputes: staffData.permissions.disputeApprovals,
+            canApproveQuotesPayments: staffData.permissions.quoteApprovalsPayments,
+            canAddVehicle: staffData.permissions.addVehicle,
+            canRaiseDispute: staffData.permissions.raiseDispute,
+            canCreateInquiry: staffData.permissions.createInquiry,
+          };
+          let response;
+          if (staffData.photoUri) {
+            const photo: RNFile = {uri: staffData.photoUri, type: 'image/jpeg', name: 'staff-photo.jpg'};
+            response = await createStaffWithPhoto(createData, photo);
+          } else {
+            response = await createStaff(createData);
+          }
+          if (response.success) {
+            setAddStaffOpen(false);
+            fetchStaff();
+            setStaffAlert({type: 'success', message: 'Staff member added successfully.'});
+            return {success: true};
+          }
+          return {success: false, error: response.error || 'Failed to add staff'};
+        }}
+      />
+
+      <AppAlert
+        isOpen={!!staffAlert}
+        type={staffAlert?.type ?? 'info'}
+        message={staffAlert?.message ?? ''}
+        onClose={() => setStaffAlert(null)}
+      />
 
       {/* Success overlay — sibling of sheet */}
       {showSuccess && (
@@ -748,4 +833,11 @@ const styles = StyleSheet.create({
   successText: {
     color: '#fff', fontSize: 18, fontWeight: '700', letterSpacing: 1,
   },
+  staffScrollList: {maxHeight: 200},
+  addStaffDivider: {height: 1, backgroundColor: '#f0f0f0', marginHorizontal: 16},
+  addStaffBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 16, paddingVertical: 12,
+  },
+  addStaffBtnText: {fontSize: 14, color: '#e5383b', fontWeight: '500'},
 });

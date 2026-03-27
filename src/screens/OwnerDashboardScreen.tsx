@@ -8,7 +8,15 @@ import {
   StatusBar,
 } from 'react-native';
 
-import {getDashboardStats, DashboardStatsResponse} from '../services/api';
+import {
+  getDashboardStats,
+  DashboardStatsResponse,
+  createStaff,
+  createStaffWithPhoto,
+  type CreateStaffData,
+  type RNFile,
+} from '../services/api';
+import {StaffFormData} from '../components/overlays/AddStaffOverlay';
 import Header from '../components/dashboard/Header';
 import StatusCard from '../components/dashboard/StatusCard';
 import VehicleVector from '../assets/vectors/vehicle-vector.svg';
@@ -16,12 +24,15 @@ import InquiryVector from '../assets/vectors/inquiry-vector.svg';
 import ClockVector from '../assets/vectors/clock-vector.svg';
 import QuestionVector from '../assets/vectors/question-vector.svg';
 import AddVehicleCard from '../components/dashboard/AddVehicleCard';
+import AddStaffCard from '../components/dashboard/AddStaffCard';
 import JobsCard from '../components/dashboard/JobsCard';
 import EventCard from '../components/dashboard/EventCard';
 import RunningPartsCard from '../components/dashboard/RunningPartsCard';
 import RaisePartsCard from '../components/dashboard/RaisePartsCard';
 import FloatingActionButton from '../components/dashboard/FloatingActionButton';
 import AddVehicleOverlay from '../components/overlays/AddVehicleOverlay';
+import AddStaffOverlay from '../components/overlays/AddStaffOverlay';
+import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import NewJobCardOverlay from '../components/overlays/NewJobCardOverlay';
 import FiltersOverlay from '../components/overlays/FiltersOverlay';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -33,6 +44,8 @@ interface OwnerDashboardScreenProps {
 
 export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenProps) {
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
+  const [addStaffOpen, setAddStaffOpen] = useState(false);
+  const [alert, setAlert] = useState<AlertState | null>(null);
   const [newJobOpen, setNewJobOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -41,6 +54,41 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  const handleStaffSubmit = async (staffData: StaffFormData): Promise<{success: boolean; error?: string}> => {
+    const createData: CreateStaffData = {
+      name: staffData.name,
+      phoneNumber: staffData.contactNumber,
+      email: staffData.email || undefined,
+      role: staffData.role,
+      address: staffData.address,
+      jobCategories: staffData.jobCategories,
+      canApproveVehicles: staffData.permissions.vehicleApprovals,
+      canApproveInquiries: staffData.permissions.inquiryApprovals,
+      canGenerateEstimates: staffData.permissions.generateEstimates,
+      canCreateJobCard: staffData.permissions.createJobCard,
+      canApproveDisputes: staffData.permissions.disputeApprovals,
+      canApproveQuotesPayments: staffData.permissions.quoteApprovalsPayments,
+      canAddVehicle: staffData.permissions.addVehicle,
+      canRaiseDispute: staffData.permissions.raiseDispute,
+      canCreateInquiry: staffData.permissions.createInquiry,
+    };
+
+    let response;
+    if (staffData.photoUri) {
+      const photo: RNFile = {uri: staffData.photoUri, type: 'image/jpeg', name: 'staff-photo.jpg'};
+      response = await createStaffWithPhoto(createData, photo);
+    } else {
+      response = await createStaff(createData);
+    }
+
+    if (response.success) {
+      setAddStaffOpen(false);
+      setAlert({type: 'success', message: 'Staff member added successfully.'});
+      return {success: true};
+    }
+    return {success: false, error: response.error || 'Failed to add staff'};
+  };
 
   const fetchDashboardStats = useCallback(async () => {
     setLoading(true);
@@ -166,6 +214,12 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
         {/* ── Add New Vehicle Card ── */}
         <AddVehicleCard onPress={() => setAddVehicleOpen(true)} />
 
+        {/* ── Add Staff Card ── */}
+        <AddStaffCard onPress={() => setAddStaffOpen(true)} />
+
+        
+
+
         {/* ── Pending Vehicle Requests / Jobs Card ── */}
         <JobsCard />
 
@@ -202,6 +256,12 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
         onClose={() => setAddVehicleOpen(false)}
       />
 
+      <AddStaffOverlay
+        isOpen={addStaffOpen}
+        onClose={() => setAddStaffOpen(false)}
+        onSubmit={handleStaffSubmit}
+      />
+
       <NewJobCardOverlay
         isOpen={newJobOpen}
         onClose={() => setNewJobOpen(false)}
@@ -219,6 +279,13 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
           setFiltersOpen(false);
           navigation?.navigate('VehicleDetail', {vehicleId});
         }}
+      />
+
+      <AppAlert
+        isOpen={!!alert}
+        type={alert?.type ?? 'info'}
+        message={alert?.message ?? ''}
+        onClose={() => setAlert(null)}
       />
     </SafeAreaView>
   );

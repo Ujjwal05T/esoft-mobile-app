@@ -31,6 +31,7 @@ import BankIcon from '../assets/icons/Bank.svg';
 import RazorpayCheckout, {type RazorpayOptions} from 'react-native-razorpay';
 import creditCardImg from '../assets/icons/Credit-Card.png';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import {formatDateIST} from '../utils/dateUtils';
 
 type PaymentRouteProp = RouteProp<RootStackParamList, 'Payment'>;
 type PaymentNavProp = NativeStackNavigationProp<RootStackParamList, 'Payment'>;
@@ -103,15 +104,6 @@ export default function PaymentScreen() {
     if (diffHours <= 24) return `${diffHours} hours`;
     return `${Math.ceil(diffMs / (1000 * 60 * 60 * 24))} days`;
   };
-
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr)
-      .toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      })
-      .toLowerCase();
 
   const handlePay = useCallback(
     async (method: string) => {
@@ -258,7 +250,7 @@ export default function PaymentScreen() {
               )}
               <Text style={styles.quoteNumber}>{quote.quoteNumber}</Text>
               <Text style={styles.dateText}>
-                Submitted: {formatDate(quote.createdAt)}
+                Submitted: {formatDateIST(quote.createdAt)}
               </Text>
             </View>
             <View style={styles.summaryRight}>
@@ -287,7 +279,7 @@ export default function PaymentScreen() {
             <View>
               <Text style={styles.financialLabel}>Delivery by:</Text>
               <Text style={styles.financialValue}>
-                {quote.expiresAt ? formatDate(quote.expiresAt) : '-'}
+                {quote.expiresAt ? formatDateIST(quote.expiresAt) : '-'}
               </Text>
             </View>
             <View>

@@ -3,6 +3,7 @@ import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import {SERVER_ORIGIN} from '../../services/api';
+import {formatDateIST} from '../../utils/dateUtils';
 
 export interface JobCardProps {
   id: number;
@@ -44,11 +45,7 @@ export default function JobCard({
 }: JobCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const formattedDate = new Date(createdAt).toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  const formattedDate = formatDateIST(createdAt);
 
   const fullAudioUrl = audioUrl
     ? audioUrl.startsWith('http')

@@ -19,6 +19,7 @@ import {
   submitWorkshopRegistration,
 } from '../services/api';
 import FloatingInput from '../components/ui/FloatingInput';
+import {DropdownField} from '../components/overlays/AddVehicleOverlay';
 import CheckIcon from '../assets/icons/check.svg';
 
 type RegistrationStep =
@@ -57,6 +58,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     city: '',
     gstNumber: '',
   });
+  const [monthlyCapacity, setMonthlyCapacity] = useState<string>('');
+
+  const CAPACITY_OPTIONS = ['1-20', '20-50', '50-70', '70+'];
 
   const setField = (field: keyof typeof workshopDetails) => (value: string) =>
     setWorkshopDetails(prev => ({...prev, [field]: value}));
@@ -116,6 +120,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
       pinCode: workshopDetails.pinCode,
       city: workshopDetails.city,
       gstNumber: workshopDetails.gstNumber || undefined,
+      monthlyWorkshopCapacity: monthlyCapacity || undefined,
     });
     setLoading(false);
     if (!result.success) {
@@ -296,7 +301,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 required
               />
               <FloatingInput
-                label="GST Number"
+                label="GST Number (Optional)"
                 value={workshopDetails.gstNumber}
                 onChange={setField('gstNumber')}
                 // autoCapitalize="characters"
@@ -308,11 +313,21 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 onChange={setField('workshopName')}
                 required
               />
+
+              {/* Monthly Workshop Capacity Dropdown */}
+              <DropdownField
+                label="Monthly Workshop Capacity"
+                value={monthlyCapacity}
+                options={CAPACITY_OPTIONS}
+                onSelect={setMonthlyCapacity}
+              />
+
               <FloatingInput
                 label="Address (Required)"
                 value={workshopDetails.address}
                 onChange={setField('address')}
                 required
+                wrapperStyle={{paddingTop:17}}
               />
               <FloatingInput
                 label="Landmark"
@@ -333,6 +348,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 onChange={setField('city')}
                 required
               />
+
             </View>
           )}
 

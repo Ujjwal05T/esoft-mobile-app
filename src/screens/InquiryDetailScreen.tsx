@@ -26,6 +26,7 @@ import Svg, {Path} from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import {useAuth} from '../context/AuthContext';
+import {formatDateIST} from '../utils/dateUtils';
 
 type InquiryDetailRouteProp = RouteProp<RootStackParamList, 'InquiryDetail'>;
 type InquiryDetailNavigationProp = NativeStackNavigationProp<
@@ -109,26 +110,15 @@ export default function InquiryDetailScreen() {
   const isDeclined = status === 'declined';
   const isClosed = status === 'closed';
 
-  // Date formatting
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr)
-      .toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      })
-      .toLowerCase();
-  };
-
   // Get the date label based on status
   const getDateLabel = () => {
     if (isDeclined && inquiry?.declinedDate) {
-      return `Declined: ${formatDate(inquiry.declinedDate)}`;
+      return `Declined: ${formatDateIST(inquiry.declinedDate)}`;
     }
     if (isClosed && inquiry?.closedDate) {
-      return `Closed: ${formatDate(inquiry.closedDate)}`;
+      return `Closed: ${formatDateIST(inquiry.closedDate)}`;
     }
-    return `Placed: ${formatDate(inquiry?.placedDate || '')}`;
+    return `Placed: ${formatDateIST(inquiry?.placedDate || '')}`;
   };
 
   // Handle status updates

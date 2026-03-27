@@ -17,6 +17,7 @@ import {
   type Notification,
 } from '../services/notificationStorage';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {formatDateIST} from '../utils/dateUtils';
 
 export default function NotificationsScreen() {
   const navigation = useNavigation();
@@ -79,8 +80,7 @@ export default function NotificationsScreen() {
     if (hours < 24) return `${hours}h ago`;
     if (days < 7) return `${days}d ago`;
 
-    const date = new Date(timestamp);
-    return date.toLocaleDateString();
+    return formatDateIST(new Date(timestamp).toISOString());
   };
 
   const renderNotification = ({item}: {item: Notification}) => (

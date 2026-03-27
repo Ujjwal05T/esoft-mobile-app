@@ -24,6 +24,7 @@ import {
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import {useAuth} from '../context/AuthContext';
+import {formatDateIST} from '../utils/dateUtils';
 
 type OrderDetailRouteProp = RouteProp<RootStackParamList, 'OrderDetail'>;
 type OrderDetailNavigationProp = NativeStackNavigationProp<
@@ -34,15 +35,6 @@ type OrderDetailNavigationProp = NativeStackNavigationProp<
 type OrderStatus = 'in-process' | 'shipped' | 'delivered';
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
-
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '–';
-  return new Date(iso).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 function mapStatus(s: string): OrderStatus {
   switch (s?.toLowerCase()) {
@@ -157,7 +149,7 @@ const InfoColumn = ({label, value}: {label: string; value: string}) => (
 const OrderSummaryCard = ({order, status}: {order: OrderDetailApiResponse; status: OrderStatus}) => {
   const isDelivered = status === 'delivered';
   const dateLabel = isDelivered ? 'Delivered at:' : 'Delivery by:';
-  const dateValue = formatDate(order.estimatedDeliveryDate);
+  const dateValue = formatDateIST(order.estimatedDeliveryDate);
 
   // Build vehicle name from brand + model if vehicleName is null
   const apiVehicleName =
@@ -170,7 +162,7 @@ const OrderSummaryCard = ({order, status}: {order: OrderDetailApiResponse; statu
   const plateNumber = order.plateNumber || '–';
 
   // 'Placed at' → use createdAt from detail API
-  const placedDateStr = formatDate(order.createdAt);
+  const placedDateStr = formatDateIST(order.createdAt);
 
   // Real additional charges (packing + forwarding + shipping)
   const additionalCharges =
@@ -548,7 +540,7 @@ export default function OrderDetailScreen() {
           }}
           item={selectedItem}
           isDelivered={status === 'delivered'}
-          deliveryDateStr={formatDate(order?.estimatedDeliveryDate)}
+          deliveryDateStr={formatDateIST(order?.estimatedDeliveryDate)}
           onRaiseDispute={handleRaiseDispute}
         />
       )}
@@ -567,7 +559,7 @@ export default function OrderDetailScreen() {
             ? [{
                 id: String(order.id),
                 orderId: order.orderNumber,
-                date: order.createdAt,
+                date: formatDateIST(order.createdAt),
                 parts: order.items.map(i => ({id: String(i.id), name: i.partName})),
               }]
             : []

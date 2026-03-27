@@ -20,16 +20,9 @@ import {
   type WorkshopOrderListItem,
 } from '../services/api';
 import type {RootStackParamList} from '../navigation/RootNavigator';
+import {formatDateIST} from '../utils/dateUtils';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 function mapStatus(backendStatus: string): OrderStatus {
   switch (backendStatus) {
@@ -82,7 +75,7 @@ export default function OrdersScreen() {
           const items = detail.success && detail.data ? detail.data.items : [];
           const estimatedDelivery =
             detail.success && detail.data?.estimatedDeliveryDate
-              ? formatDate(detail.data.estimatedDeliveryDate)
+              ? formatDateIST(detail.data.estimatedDeliveryDate)
               : '–';
 
           return {
@@ -90,7 +83,7 @@ export default function OrdersScreen() {
             vehicleName: o.vehicleName ?? o.orderNumber,
             plateNumber: o.plateNumber ?? '',
             orderId: o.orderNumber,
-            placedDate: formatDate(o.createdAt),
+            placedDate: formatDateIST(o.createdAt),
             deliveryDate: estimatedDelivery,
             totalAmount: o.totalAmount,
             status: mapStatus(o.status),

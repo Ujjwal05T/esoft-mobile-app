@@ -53,6 +53,7 @@ import {
 } from '../services/api';
 import type {DisputeFormData} from '../components/overlays/RaiseDisputeOverlay';
 import {Order} from '../components/dashboard/OrderCard';
+import {formatDateIST} from '../utils/dateUtils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -63,14 +64,6 @@ type ActiveTab = 'jobcard' | 'inquiry' | 'disputes';
 type SectionKey = 'basicInfo' | 'problemsShared' | 'previousServices' | 'jobs';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 function mapOrderStatus(s: string): Order['status'] {
   if (s === 'shipped') return 'shipped';
@@ -86,9 +79,9 @@ function mapApiInquiry(api: InquiryResponse, vehicle: VehicleResponse): InquiryW
     numericId: api.id,
     vehicleName: api.vehicleName ?? `${vehicle.brand ?? ''} ${vehicle.model ?? ''}`.trim(),
     numberPlate: api.numberPlate ?? vehicle.plateNumber,
-    placedDate: formatDate(api.placedDate),
-    closedDate: api.closedDate ? formatDate(api.closedDate) : undefined,
-    declinedDate: api.declinedDate ? formatDate(api.declinedDate) : undefined,
+    placedDate: formatDateIST(api.placedDate),
+    closedDate: api.closedDate ? formatDateIST(api.closedDate) : undefined,
+    declinedDate: api.declinedDate ? formatDateIST(api.declinedDate) : undefined,
     status: api.status.toLowerCase() as Inquiry['status'],
     inquiryBy: api.requestedByName ?? 'Staff',
     jobCategories: api.jobCategories ?? [],
@@ -118,7 +111,7 @@ function mapApiDispute(api: DisputeListItemResponse): DisputeWithNumericId {
     numericId: api.id,
     vehicleName: '',
     plateNumber: '',
-    receivedDate: formatDate(api.date),
+    receivedDate: formatDateIST(api.date),
     status: mapStatus(api.status),
     disputeRaised: api.issue,
     resolutionStatus: api.status === 'Resolved' ? 'Resolved' : api.status === 'Investigating' ? 'Under Investigation' : undefined,
@@ -359,14 +352,14 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
             const items = detail.success && detail.data ? detail.data.items : [];
             const deliveryDate =
               detail.success && detail.data?.estimatedDeliveryDate
-                ? formatDate(detail.data.estimatedDeliveryDate)
+                ? formatDateIST(detail.data.estimatedDeliveryDate)
                 : '–';
             return {
               id: String(o.id),
               vehicleName: o.vehicleName ?? o.orderNumber,
               plateNumber: o.plateNumber ?? '',
               orderId: o.orderNumber,
-              placedDate: formatDate(o.createdAt),
+              placedDate: formatDateIST(o.createdAt),
               deliveryDate,
               totalAmount: o.totalAmount,
               status: mapOrderStatus(o.status),
@@ -739,7 +732,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
                     return (
                       <PreviousServiceCard
                         key={visit.id}
-                        visitDate={formatDate(visit.gateInDateTime)}
+                        visitDate={formatDateIST(visit.gateInDateTime)}
                         jobCategories={visitJobCategories}
                       />
                     );

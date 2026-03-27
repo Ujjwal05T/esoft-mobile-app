@@ -17,6 +17,7 @@ import {
 import Svg, {Path, Rect} from 'react-native-svg';
 import {launchImageLibrary} from 'react-native-image-picker';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+import {formatDateIST} from '../../utils/dateUtils';
 
 const SCREEN_H = Dimensions.get('screen').height;
 
@@ -139,6 +140,7 @@ const PlusIcon = () => (
 const defaultReasons: Reason[] = [
   {id: '1', name: 'Wrong Part Delivered'},
   {id: '2', name: 'Damaged Part'},
+  {id: '3', name: 'Fitting Issues'},
 ];
 
 export default function RaiseDisputeOverlay({
@@ -386,11 +388,8 @@ export default function RaiseDisputeOverlay({
                         style={styles.dropdownItem}>
                         <Text style={styles.dropdownItemText}>
                           {order.orderId} -{' '}
-                          {new Date(order.date).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
+                          {(order.date)}
+                          {/* //order.date is already formated formatIST function gives invalid date issue */}
                         </Text>
                       </TouchableOpacity>
                     ))}

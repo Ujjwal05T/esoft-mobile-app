@@ -27,6 +27,7 @@ import {
   SERVER_ORIGIN,
 } from '../../services/api';
 import {useAuth} from '../../context/AuthContext';
+import {formatTimeIST} from '../../utils/dateUtils';
 
 const SCREEN_H = Dimensions.get('screen').height;
 
@@ -80,15 +81,6 @@ interface DisputeCommentsOverlayProps {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatTime(isoString: string): string {
-  try {
-    const d = new Date(isoString);
-    return d.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'});
-  } catch {
-    return '';
-  }
-}
 
 function isEtnaComment(comment: DisputeCommentResponse): boolean {
   // Comments from ETNA team: role contains "Admin" / "SalesPerson" or isInternal
@@ -403,7 +395,7 @@ export default function DisputeCommentsOverlay({
                                 {etna ? 'By ETNA' : c.senderName}
                               </Text>
                               <Text style={styles.commentTime}>
-                                {formatTime(c.createdAt)}
+                                {formatTimeIST(c.createdAt)}
                               </Text>
                             </View>
                             <Text
