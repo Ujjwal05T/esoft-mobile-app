@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {Camera, useCameraDevice, useCameraPermission} from 'react-native-vision-camera';
+import {launchImageLibrary} from 'react-native-image-picker';
 import Svg, {Path} from 'react-native-svg';
 
 const {width: SCREEN_W, height: SCREEN_H} = Dimensions.get('window');
@@ -116,6 +117,17 @@ export default function CameraScannerOverlay({
     onCapture(`file://${photo.path}`);
   };
 
+  const handleUpload = () => {
+    if (isProcessing) {
+      return;
+    }
+    launchImageLibrary({mediaType: 'photo', quality: 1}, response => {
+      if (response.assets && response.assets[0]?.uri) {
+        onCapture(response.assets[0].uri);
+      }
+    });
+  };
+
   if (!visible) {
     return null;
   }
@@ -215,15 +227,42 @@ export default function CameraScannerOverlay({
           : 'Align the RC card within the frame'}
       </Text>
 
-      {/* Capture button */}
+      {/* Capture + Upload buttons */}
       {!isProcessing && (
         <View style={styles.captureArea}>
+          {/* Upload from gallery */}
+          <TouchableOpacity
+            style={styles.uploadBtn}
+            onPress={handleUpload}
+            activeOpacity={0.8}>
+            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M4 16l4-4 4 4 4-6 4 6"
+                stroke="#ffffff"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <Path
+                d="M4 20h16"
+                stroke="#ffffff"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </Svg>
+            <Text style={styles.uploadBtnText}>Gallery</Text>
+          </TouchableOpacity>
+
+          {/* Shutter */}
           <TouchableOpacity
             style={styles.captureBtn}
             onPress={handleCapture}
             activeOpacity={0.85}>
             <View style={styles.captureInner} />
           </TouchableOpacity>
+
+          {/* Spacer to keep shutter centred */}
+          <View style={styles.uploadBtn} />
         </View>
       )}
 
@@ -320,7 +359,22 @@ const styles = StyleSheet.create({
     bottom: 48,
     left: 0,
     right: 0,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 32,
+  },
+  uploadBtn: {
+    width: 72,
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  uploadBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '500',
   },
   captureBtn: {
     width: 72,

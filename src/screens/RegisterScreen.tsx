@@ -57,6 +57,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     pinCode: '',
     city: '',
     gstNumber: '',
+    tradeLicenseNumber: '',
   });
   const [monthlyCapacity, setMonthlyCapacity] = useState<string>('');
 
@@ -74,7 +75,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     workshopDetails.workshopName.trim() !== '' &&
     workshopDetails.address.trim() !== '' &&
     workshopDetails.pinCode.trim() !== '' &&
-    workshopDetails.city.trim() !== '';
+    workshopDetails.city.trim() !== '' &&
+    (workshopDetails.gstNumber.trim() !== '' || workshopDetails.tradeLicenseNumber.trim() !== '');
 
   // ── Handlers ──
 
@@ -120,6 +122,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
       pinCode: workshopDetails.pinCode,
       city: workshopDetails.city,
       gstNumber: workshopDetails.gstNumber || undefined,
+      tradeLicenseNumber: workshopDetails.tradeLicenseNumber || undefined,
       monthlyWorkshopCapacity: monthlyCapacity || undefined,
     });
     setLoading(false);
@@ -301,12 +304,19 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 required
               />
               <FloatingInput
-                label="GST Number (Optional)"
+                label="GST Number"
                 value={workshopDetails.gstNumber}
                 onChange={setField('gstNumber')}
-                // autoCapitalize="characters"
                 maxLength={15}
               />
+              <FloatingInput
+                label="Trade License Number"
+                value={workshopDetails.tradeLicenseNumber}
+                onChange={setField('tradeLicenseNumber')}
+              />
+              {workshopDetails.gstNumber.trim() === '' && workshopDetails.tradeLicenseNumber.trim() === '' && (
+                <Text style={styles.fieldHint}>Either GST or Trade License Number is required</Text>
+              )}
               <FloatingInput
                 label="Workshop Name (Required)"
                 value={workshopDetails.workshopName}
@@ -330,7 +340,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 wrapperStyle={{paddingTop:17}}
               />
               <FloatingInput
-                label="Landmark"
+                label="Landmark (Optional)"
                 value={workshopDetails.landmark}
                 onChange={setField('landmark')}
               />
@@ -616,6 +626,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#e5383b',
+  },
+  fieldHint: {
+    fontSize: 12,
+    color: '#e5383b',
+    marginTop: -8,
+    marginBottom: 4,
   },
 });
 

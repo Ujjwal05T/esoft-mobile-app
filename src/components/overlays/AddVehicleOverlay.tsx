@@ -389,7 +389,9 @@ export default function AddVehicleOverlay({
 
   const handleManualNext = async () => {
     setHasAttemptedManual(true);
-    if (!vehicleNumber.trim() || !chassisNumber.trim()) return;
+    const hasChassisNumber = chassisNumber.trim().length > 0;
+    const hasModelInfo = !!(selectedBrand && selectedModel && selectedYear && selectedVariant && vehicleNumber.trim() && rcFrontImage);
+    if (!hasChassisNumber && !hasModelInfo) return;
 
     const plate = vehicleNumber.trim();
     setIsLoading(true);
@@ -457,7 +459,7 @@ export default function AddVehicleOverlay({
         model: selectedModel || vehicleData.model || undefined,
         year: selectedYear ? parseInt(selectedYear) : vehicleData.year || undefined,
         variant: selectedVariant || undefined,
-        chassisNumber: chassisNumber || undefined,
+        chassisNumber: chassisNumber.trim() || 'NOTPROVIDED',
         specs: vehicleData.specs || undefined,
         registrationName,
         ownerName,
@@ -487,7 +489,7 @@ export default function AddVehicleOverlay({
         model: selectedModel || undefined,
         year: selectedYear || undefined,
         variant: selectedVariant || undefined,
-        chassisNumber: chassisNumber || undefined,
+        chassisNumber: chassisNumber.trim() || 'NOTPROVIDED',
       });
       setDriverContact(contactNumber);
       setCurrentView('gatein');
@@ -866,7 +868,7 @@ export default function AddVehicleOverlay({
                 label="Vehicle Number"
                 value={vehicleNumber}
                 onChange={v => setVehicleNumber(v.toUpperCase())}
-                required
+                required={!chassisNumber.trim()}
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{marginBottom:0}}
               />
@@ -874,16 +876,17 @@ export default function AddVehicleOverlay({
                 label="Chassis Number"
                 value={chassisNumber}
                 onChange={v => setChassisNumber(v.toUpperCase())}
-                required
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{marginBottom: 0}}
               />
-              {hasAttemptedManual && !chassisNumber.trim() && (
-                <Text style={styles.errorText}>Please enter chassis number</Text>
+              {hasAttemptedManual && !chassisNumber.trim() && !(selectedBrand && selectedModel && selectedYear && selectedVariant && vehicleNumber.trim() && rcFrontImage) && (
+                <Text style={styles.errorText}>Enter chassis number, or fill in vehicle number + brand/model/year/variant + RC front image</Text>
               )}
 
               {/* RC Card Images */}
-              <Text style={styles.rcSectionLabel}>RC Card Images (Optional)</Text>
+              <Text style={styles.rcSectionLabel}>
+                RC Card Images{chassisNumber.trim() ? ' (Optional)' : ' (Front required)'}
+              </Text>
               <View style={styles.rcRow}>
                 <TouchableOpacity
                   onPress={() => handlePickRcImage('front')}
@@ -941,7 +944,7 @@ export default function AddVehicleOverlay({
                 style={[
                   styles.primaryBtn,
                   {marginTop: 8},
-                  !(vehicleNumber.trim() && chassisNumber.trim()) && styles.disabledBtn,
+                  !(chassisNumber.trim() || (vehicleNumber.trim() && selectedBrand && selectedModel && selectedYear && selectedVariant && rcFrontImage)) && styles.disabledBtn,
                 ]}>
                 <Text style={styles.primaryBtnText}>NEXT</Text>
               </TouchableOpacity>
@@ -952,7 +955,7 @@ export default function AddVehicleOverlay({
         {/* FORM VIEW (Owner Details) */}
         {currentView === 'form' && (
           <ScrollView showsVerticalScrollIndicator={false}>
-            {renderHeader('Add New Vehicle')}
+            {renderHeader('Add Owner Info(Optional)')}
             {vehicleData && (
               <View style={styles.vehicleCardWrapper}>
                 <VehicleCard
@@ -992,6 +995,7 @@ export default function AddVehicleOverlay({
                 label="Contact Number"
                 value={contactNumber}
                 onChange={setContactNumber}
+                maxLength={10}
                 keyboardType="phone-pad"
                 containerStyle={{borderRadius:8}}
                 wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0}}
