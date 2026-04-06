@@ -154,7 +154,7 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
       {icon: <StaffIcon />, label: 'My staff', action: () => navigate('Staff')},
       {icon: <ReportIcon />, label: 'Generate reports', action: () => navigate('Reports')},
     ] : []),
-    {icon: <PhoneIcon />, label: 'Contact ETNA', action: handleContactETNA},
+    {icon: <PhoneIcon />, label: 'Contact Parts Now', action: handleContactETNA},
     {icon: <FAQIcon />, label: 'FAQs', action: () => navigate('FAQs')},
     {icon: <DeleteIcon />, label: 'Delete account', action: handleDeleteAccount},
     {icon: <LogoutIcon />, label: 'Logout', action: handleLogout},

@@ -14,8 +14,8 @@ interface ContactETNAOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   whatsappNumber?: string;
-  email?: string;
-  phone?: string;
+  emailGeneral?: string;
+  emailSales?: string;
 }
 
 const WhatsAppIcon = () => (
@@ -31,18 +31,13 @@ const EmailIcon = () => (
   </Svg>
 );
 
-const PhoneIcon = () => (
-  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-    <Path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.52 10.5a19.79 19.79 0 01-3.07-8.62A2 2 0 012.44 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.91 9.4a16 16 0 006.09 6.09l.77-.77a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" stroke="#e5383b" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
 
 export default function ContactETNAOverlay({
   isOpen,
   onClose,
-  whatsappNumber = '+911234567890',
-  email = 'support@etna.com',
-  phone = '+911234567890',
+  whatsappNumber = '+919109109381',
+  emailGeneral = 'info@partsnow.in',
+  emailSales = 'sales@partsnow.in',
 }: ContactETNAOverlayProps) {
   const contactOptions = [
     {
@@ -52,13 +47,13 @@ export default function ContactETNAOverlay({
     },
     {
       icon: <EmailIcon />,
-      label: 'Email',
-      action: () => Linking.openURL(`mailto:${email}`),
+      label: 'General Query & Returns',
+      action: () => Linking.openURL(`mailto:${emailGeneral}`),
     },
     {
-      icon: <PhoneIcon />,
-      label: 'Call',
-      action: () => Linking.openURL(`tel:${phone}`),
+      icon: <EmailIcon />,
+      label: 'Sales Inquiry',
+      action: () => Linking.openURL(`mailto:${emailSales}`),
     },
   ];
 
@@ -70,7 +65,7 @@ export default function ContactETNAOverlay({
 
       <View style={styles.sheet}>
         <View style={styles.handle} />
-        <Text style={styles.title}>Contact ETNA</Text>
+        <Text style={styles.title}>Contact Parts Now</Text>
         <Text style={styles.subtitle}>Choose how you'd like to reach us</Text>
 
         <View style={styles.options}>
