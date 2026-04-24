@@ -6,8 +6,9 @@
  */
 
 import React, {useState, useEffect} from 'react';
-import {StatusBar, useColorScheme, View, StyleSheet, Alert} from 'react-native';
+import {StatusBar, useColorScheme, View, StyleSheet, Alert, Platform} from 'react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
 import {RootNavigator} from './src/navigation';
 import {SplashScreen} from './src/components';
@@ -18,6 +19,14 @@ import {
   getInitialNotification,
   handleNotification,
 } from './src/services/notificationService';
+import DeviceInfo from 'react-native-device-info';
+import AppUpdateModal from './src/components/overlays/AppUpdateModal';
+import {checkAppVersion, VersionCheckResponse} from './src/services/api';
+
+// Reads version from android/build.gradle (versionName) or ios/Info.plist (CFBundleShortVersionString)
+const APP_VERSION = DeviceInfo.getVersion();
+const UPDATE_DISMISSED_KEY = '@update_dismissed_at';
+const REMIND_AGAIN_HOURS = 24;
 
 // Background message handler must be set outside of any component
 messaging().setBackgroundMessageHandler(async remoteMessage => {
@@ -28,6 +37,38 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
   const [showSplash, setShowSplash] = useState(true);
+  const [updateInfo, setUpdateInfo] = useState<VersionCheckResponse | null>(null);
+
+  const handleSplashFinish = async () => {
+    setShowSplash(false);
+    await runVersionCheck();
+  };
+
+  const runVersionCheck = async () => {
+    try {
+      const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+      const result = await checkAppVersion(platform, APP_VERSION);
+      if (!result.success || !result.data || result.data.updateType === 'none') return;
+
+      // For optional updates, respect the "remind later" 24h window
+      if (result.data.updateType === 'optional') {
+        const dismissedAt = await AsyncStorage.getItem(UPDATE_DISMISSED_KEY);
+        if (dismissedAt) {
+          const hoursSince = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60);
+          if (hoursSince < REMIND_AGAIN_HOURS) return;
+        }
+      }
+
+      setUpdateInfo(result.data);
+    } catch {
+      // Fail silently — never block the user due to a check error
+    }
+  };
+
+  const handleDismissUpdate = async () => {
+    await AsyncStorage.setItem(UPDATE_DISMISSED_KEY, Date.now().toString());
+    setUpdateInfo(null);
+  };
 
   useEffect(() => {
     // Handle foreground notifications
@@ -85,8 +126,18 @@ function App(): React.JSX.Element {
           <SplashScreen
             isVisible={showSplash}
             duration={2500}
-            onFinish={() => setShowSplash(false)}
+            onFinish={handleSplashFinish}
           />
+          {updateInfo && updateInfo.updateType !== 'none' && (
+            <AppUpdateModal
+              visible
+              updateType={updateInfo.updateType as 'optional' | 'forced'}
+              latestVersion={updateInfo.latestVersion}
+              storeUrl={updateInfo.storeUrl}
+              releaseNotes={updateInfo.releaseNotes}
+              onDismiss={handleDismissUpdate}
+            />
+          )}
         </View>
       </AuthProvider>
     </SafeAreaProvider>

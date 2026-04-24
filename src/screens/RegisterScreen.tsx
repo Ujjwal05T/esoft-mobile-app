@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {
+  sendRegistrationOtp,
+  verifyRegistrationOtp,
   sendRegistrationOtpByEmail,
   verifyRegistrationOtpByEmail,
   submitWorkshopRegistration,
@@ -23,10 +25,12 @@ import {DropdownField} from '../components/overlays/AddVehicleOverlay';
 import CheckIcon from '../assets/icons/check.svg';
 
 type RegistrationStep =
-  | 'enter-email'
+  | 'enter-credentials'
   | 'verify-otp'
   | 'workshop-details'
   | 'request-sent';
+
+type RegisterMode = 'email' | 'phone';
 
 const OTP_LENGTH = 6;
 
@@ -35,12 +39,14 @@ interface RegisterScreenProps {
 }
 
 const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
-  const [currentStep, setCurrentStep] = useState<RegistrationStep>('enter-email');
+  const [registerMode, setRegisterMode] = useState<RegisterMode>('email');
+  const [currentStep, setCurrentStep] = useState<RegistrationStep>('enter-credentials');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Step 1
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
   // Step 2
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
@@ -67,6 +73,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     setWorkshopDetails(prev => ({...prev, [field]: value}));
 
   const isEmailValid = email.includes('@') && email.includes('.');
+  const isPhoneValid = /^[6-9]\d{9}$/.test(phone);
+  const isInputValid = registerMode === 'email' ? isEmailValid : isPhoneValid;
   const isOtpComplete = otp.every(d => d !== '');
   const isWorkshopFormValid =
     workshopDetails.fullName.trim() !== '' &&
@@ -80,11 +88,20 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
 
   // ── Handlers ──
 
+  const handleModeSwitch = (mode: RegisterMode) => {
+    setRegisterMode(mode);
+    setEmail('');
+    setPhone('');
+    setError('');
+  };
+
   const handleGetOTP = async () => {
-    if (!isEmailValid) return;
+    if (!isInputValid) return;
     setError('');
     setLoading(true);
-    const result = await sendRegistrationOtpByEmail(email);
+    const result = registerMode === 'email'
+      ? await sendRegistrationOtpByEmail(email)
+      : await sendRegistrationOtp(phone);
     setLoading(false);
     if (!result.success) {
       setError(result.error || 'Failed to send OTP. Please try again.');
@@ -98,11 +115,17 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     if (!isOtpComplete) return;
     setError('');
     setLoading(true);
-    const result = await verifyRegistrationOtpByEmail(email, otp.join(''));
+    const result = registerMode === 'email'
+      ? await verifyRegistrationOtpByEmail(email, otp.join(''))
+      : await verifyRegistrationOtp(phone, otp.join(''));
     setLoading(false);
     if (!result.success) {
       setError(result.error || 'Invalid OTP. Please try again.');
       return;
+    }
+    // Pre-fill contact number from phone if phone mode
+    if (registerMode === 'phone' && phone) {
+      setWorkshopDetails(prev => ({...prev, contactNumber: phone}));
     }
     setCurrentStep('workshop-details');
   };
@@ -113,8 +136,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     setLoading(true);
     const result = await submitWorkshopRegistration({
       ownerName: workshopDetails.fullName,
-      phoneNumber: workshopDetails.contactNumber,
-      email: email || undefined,
+      phoneNumber: registerMode === 'phone' ? phone : workshopDetails.contactNumber,
+      email: registerMode === 'email' ? email : (workshopDetails.contactNumber || undefined),
       aadhaarNumber: workshopDetails.aadharNumber,
       workshopName: workshopDetails.workshopName,
       address: workshopDetails.address,
@@ -136,7 +159,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const handleResend = async () => {
     setOtp(Array(OTP_LENGTH).fill(''));
     setLoading(true);
-    const result = await sendRegistrationOtpByEmail(email);
+    const result = registerMode === 'email'
+      ? await sendRegistrationOtpByEmail(email)
+      : await sendRegistrationOtp(phone);
     setLoading(false);
     if (result.success) {
       otpRefs.current[0]?.focus();
@@ -149,7 +174,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     if (currentStep === 'request-sent') {
       navigation?.navigate('Login');
     } else if (currentStep === 'verify-otp') {
-      setCurrentStep('enter-email');
+      setCurrentStep('enter-credentials');
       setOtp(Array(OTP_LENGTH).fill(''));
       setError('');
     } else if (currentStep === 'workshop-details') {
@@ -213,19 +238,46 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
             </View>
           )}
 
-          {/* Step 1: Enter Email */}
-          {currentStep === 'enter-email' && (
+          {/* Step 1: Enter Credentials */}
+          {currentStep === 'enter-credentials' && (
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Enter Email</Text>
-              <FloatingInput
-                label="Enter Email Address"
-                value={email}
-                onChange={setEmail}
-                keyboardType="email-address"
-                required
-              />
+              {/* Mode Toggle */}
+              <View style={styles.modeToggle}>
+                <TouchableOpacity
+                  style={[styles.modeTab, registerMode === 'email' && styles.modeTabActive]}
+                  onPress={() => handleModeSwitch('email')}>
+                  <Text style={[styles.modeTabText, registerMode === 'email' && styles.modeTabTextActive]}>
+                    Email
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeTab, registerMode === 'phone' && styles.modeTabActive]}
+                  onPress={() => handleModeSwitch('phone')}>
+                  <Text style={[styles.modeTabText, registerMode === 'phone' && styles.modeTabTextActive]}>
+                    Phone
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-              {/* Error message below form */}
+              {registerMode === 'email' ? (
+                <FloatingInput
+                  label="Enter Email Address"
+                  value={email}
+                  onChange={setEmail}
+                  keyboardType="email-address"
+                  required
+                />
+              ) : (
+                <FloatingInput
+                  label="Enter Mobile Number"
+                  value={phone}
+                  onChange={setPhone}
+                  keyboardType="number-pad"
+                  maxLength={10}
+                  required
+                />
+              )}
+
               {!!error && (
                 <View style={styles.errorBox}>
                   <Text style={styles.errorText}>{error}</Text>
@@ -239,7 +291,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
             <View style={styles.stepContent}>
               <Text style={styles.stepTitle}>Verify OTP</Text>
               <Text style={styles.otpSubtitle}>
-                Enter the 6-digit code sent to {email}
+                {registerMode === 'email'
+                  ? `Enter the 6-digit code sent to ${email}`
+                  : `Enter the 6-digit code sent to your WhatsApp (+91 ${phone})`}
               </Text>
 
               <View style={styles.otpRow}>
@@ -382,18 +436,20 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
         {currentStep !== 'request-sent' && (
           <View style={styles.bottomSection}>
 
-            {currentStep === 'enter-email' && (
+            {currentStep === 'enter-credentials' && (
               <TouchableOpacity
                 style={[
                   styles.actionButton,
-                  !(isEmailValid && !loading) && styles.actionButtonDisabled,
+                  !(isInputValid && !loading) && styles.actionButtonDisabled,
                 ]}
                 onPress={handleGetOTP}
-                disabled={!isEmailValid || loading}>
+                disabled={!isInputValid || loading}>
                 {loading ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
-                  <Text style={styles.actionButtonText}>GET OTP</Text>
+                  <Text style={styles.actionButtonText}>
+                    {'GET OTP'}
+                  </Text>
                 )}
               </TouchableOpacity>
             )}
@@ -632,6 +688,37 @@ const styles = StyleSheet.create({
     color: '#e5383b',
     marginTop: -8,
     marginBottom: 4,
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 3,
+    marginBottom: 20,
+  },
+  modeTab: {
+    flex: 1,
+    height: 36,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeTabActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  modeTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#9ca3af',
+  },
+  modeTabTextActive: {
+    color: '#e5383b',
+    fontWeight: '600',
   },
 });
 

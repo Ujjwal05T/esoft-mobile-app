@@ -13,11 +13,12 @@ import {
   Image,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {sendOtpByEmail, verifyOtpByEmail} from '../services/otpAuth';
+import {sendOtpByEmail, verifyOtpByEmail, sendOtpByWhatsApp, verifyOtpByPhone} from '../services/otpAuth';
 import FloatingInput from '../components/ui/FloatingInput';
 import {useAuth} from '../context/AuthContext';
 
-type LoginStep = 'enter-email' | 'verify-otp';
+type LoginStep = 'enter-credentials' | 'verify-otp';
+type LoginMode = 'email' | 'phone';
 
 const OTP_LENGTH = 6;
 
@@ -27,8 +28,10 @@ interface LoginScreenProps {
 
 const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
   const {signIn} = useAuth();
-  const [currentStep, setCurrentStep] = useState<LoginStep>('enter-email');
+  const [loginMode, setLoginMode] = useState<LoginMode>('email');
+  const [currentStep, setCurrentStep] = useState<LoginStep>('enter-credentials');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,6 +41,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
   const [resendTimer, setResendTimer] = useState(0);
 
   const isEmailValid = email.includes('@') && email.includes('.');
+  const isPhoneValid = /^[6-9]\d{9}$/.test(phone);
+  const isInputValid = loginMode === 'email' ? isEmailValid : isPhoneValid;
   const isOtpComplete = otp.every(d => d !== '');
 
   useEffect(() => {
@@ -45,6 +50,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  const handleModeSwitch = (mode: LoginMode) => {
+    setLoginMode(mode);
+    setError('');
+    setEmail('');
+    setPhone('');
+    setOtp(Array(OTP_LENGTH).fill(''));
+    setCurrentStep('enter-credentials');
+  };
 
   const startResendTimer = () => {
     setResendTimer(30);
@@ -60,10 +74,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
   };
 
   const handleGetOTP = async () => {
-    if (!isEmailValid) return;
+    if (!isInputValid) return;
     setError('');
     setLoading(true);
-    const result = await sendOtpByEmail(email);
+    const result = loginMode === 'email'
+      ? await sendOtpByEmail(email)
+      : await sendOtpByWhatsApp(phone);
     setLoading(false);
     if (!result.success) {
       setError(result.error || 'Failed to send OTP. Please try again.');
@@ -78,7 +94,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     if (!isOtpComplete) return;
     setError('');
     setLoading(true);
-    const result = await verifyOtpByEmail(email, otp.join(''));
+    const result = loginMode === 'email'
+      ? await verifyOtpByEmail(email, otp.join(''))
+      : await verifyOtpByPhone(phone, otp.join(''));
     setLoading(false);
     if (!result.success) {
       setError(result.error || 'Invalid OTP. Please try again.');
@@ -90,22 +108,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     navigation?.reset({index: 0, routes: [{name: 'MainTabs'}]});
   };
 
-  const handleBack = () => {
-    if (currentStep === 'verify-otp') {
-      setCurrentStep('enter-email');
-      setOtp(Array(OTP_LENGTH).fill(''));
-      setError('');
-    } else {
-      navigation?.goBack();
-    }
-  };
-
   const handleResend = async () => {
     if (resendTimer > 0) return;
     setOtp(Array(OTP_LENGTH).fill(''));
     setError('');
     setLoading(true);
-    const result = await sendOtpByEmail(email);
+    const result = loginMode === 'email'
+      ? await sendOtpByEmail(email)
+      : await sendOtpByWhatsApp(phone);
     setLoading(false);
     if (result.success) {
       startResendTimer();
@@ -160,22 +170,55 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled">
 
-          {/* Step 1: Enter Email */}
-          {currentStep === 'enter-email' && (
+          {/* Step 1: Enter Credentials */}
+          {currentStep === 'enter-credentials' && (
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Enter Email</Text>
-              <FloatingInput
-                label="Enter Email Address"
-                value={email}
-                onChange={setEmail}
-                keyboardType="email-address"
-                required
-              />
-              <Text style={styles.helperText}>
-                We'll send you a 6-digit OTP to verify your email
-              </Text>
+              {/* Mode Toggle */}
+              <View style={styles.modeToggle}>
+                <TouchableOpacity
+                  style={[styles.modeTab, loginMode === 'email' && styles.modeTabActive]}
+                  onPress={() => handleModeSwitch('email')}>
+                  <Text style={[styles.modeTabText, loginMode === 'email' && styles.modeTabTextActive]}>
+                    Email
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeTab, loginMode === 'phone' && styles.modeTabActive]}
+                  onPress={() => handleModeSwitch('phone')}>
+                  <Text style={[styles.modeTabText, loginMode === 'phone' && styles.modeTabTextActive]}>
+                    Phone
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-              {/* Error message below form */}
+              {loginMode === 'email' ? (
+                <>
+                  <FloatingInput
+                    label="Enter Email Address"
+                    value={email}
+                    onChange={setEmail}
+                    keyboardType="email-address"
+                    required
+                  />
+                  <Text style={styles.helperText}>
+                    We'll send you a 6-digit OTP to verify your email
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <FloatingInput
+                    label="Enter Mobile Number"
+                    value={phone}
+                    onChange={setPhone}
+                    keyboardType="number-pad"
+                    required
+                  />
+                  <Text style={styles.helperText}>
+                    We'll send you a 6-digit OTP on WhatsApp
+                  </Text>
+                </>
+              )}
+
               {!!error && (
                 <View style={styles.errorBox}>
                   <Text style={styles.errorText}>{error}</Text>
@@ -189,7 +232,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             <View style={styles.stepContent}>
               <Text style={styles.stepTitle}>Verify OTP</Text>
               <Text style={styles.otpSubtitle}>
-                Enter the 6-digit code sent to {email}
+                {loginMode === 'email'
+                  ? `Enter the 6-digit code sent to ${email}`
+                  : `Enter the 6-digit code sent to your WhatsApp (+91 ${phone})`}
               </Text>
 
               {/* OTP Boxes */}
@@ -239,18 +284,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
         {/* ── Fixed Bottom Section ── */}
         <View style={styles.bottomSection}>
           {/* Action Button */}
-          {currentStep === 'enter-email' && (
+          {currentStep === 'enter-credentials' && (
             <TouchableOpacity
               style={[
                 styles.actionButton,
-                !(isEmailValid && !loading) && styles.actionButtonDisabled,
+                !(isInputValid && !loading) && styles.actionButtonDisabled,
               ]}
               onPress={handleGetOTP}
-              disabled={!isEmailValid || loading}>
+              disabled={!isInputValid || loading}>
               {loading ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
-                <Text style={styles.actionButtonText}>GET OTP</Text>
+                <Text style={styles.actionButtonText}>
+                  {'GET OTP'}
+                </Text>
               )}
             </TouchableOpacity>
           )}
@@ -427,6 +474,37 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
     letterSpacing: 1,
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 3,
+    marginBottom: 20,
+  },
+  modeTab: {
+    flex: 1,
+    height: 36,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeTabActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  modeTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#9ca3af',
+  },
+  modeTabTextActive: {
+    color: '#e5383b',
+    fontWeight: '600',
   },
   registerRow: {
     flexDirection: 'row',

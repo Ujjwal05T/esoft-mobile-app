@@ -3,8 +3,8 @@ import * as Keychain from 'react-native-keychain';
 // API Base URL
 const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
 export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-// const API_BASE_URL = 'https://commerce-administrator-half-recommendations.trycloudflare.com/api';
-// export const SERVER_ORIGIN = 'https://commerce-administrator-half-recommendations.trycloudflare.com';
+// const API_BASE_URL = 'https://stats-ion-acquisitions-display.trycloudflare.com/api';
+// export const SERVER_ORIGIN = 'https://stats-ion-acquisitions-display.trycloudflare.com';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -2085,6 +2085,24 @@ export async function createDisputeWithFiles(
     console.error('API Error (createDisputeWithFiles):', error);
     return {success: false, error: 'Network error. Please try again.'};
   }
+}
+
+// ==========================================
+// APP VERSION CHECK
+// ==========================================
+
+export interface VersionCheckResponse {
+  updateType: 'none' | 'optional' | 'forced';
+  latestVersion: string;
+  storeUrl: string;
+  releaseNotes: string | null;
+}
+
+export async function checkAppVersion(platform: 'android' | 'ios', version: string) {
+  return apiRequest<VersionCheckResponse>(
+    `/app/version-check?platform=${platform}&version=${encodeURIComponent(version)}`,
+    {method: 'GET'},
+  );
 }
 
 // ==========================================
