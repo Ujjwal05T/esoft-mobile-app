@@ -12,7 +12,8 @@ import {
   Platform,
   PermissionsAndroid,
 } from 'react-native';
-import {launchImageLibrary} from 'react-native-image-picker';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import Svg, {Path, Rect} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
@@ -118,6 +119,7 @@ export default function EditInquiryItemOverlay({
 
   // Images: track isServer so we resolve URLs for display
   const [images, setImages] = useState<{uri: string; isServer: boolean}[]>([]);
+  const [showImagePicker, setShowImagePicker] = useState(false);
 
   // Reset state when item/isOpen changes
   useEffect(() => {
@@ -225,11 +227,21 @@ export default function EditInquiryItemOverlay({
 
   const pickImage = () => {
     if (images.length >= 3) return;
-    launchImageLibrary({mediaType: 'photo', selectionLimit: 3 - images.length, quality: 0.8}, res => {
+    setShowImagePicker(true);
+  };
+
+  const handleImageSource = (source: 'camera' | 'gallery') => {
+    setShowImagePicker(false);
+    const onResult = (res: any) => {
       if (res.didCancel || res.errorCode) return;
-      const picked = (res.assets || []).map(a => ({uri: a.uri || '', isServer: false})).filter(a => a.uri);
+      const picked = (res.assets || []).map((a: any) => ({uri: a.uri || '', isServer: false})).filter((a: any) => a.uri);
       setImages(prev => [...prev, ...picked].slice(0, 3));
-    });
+    };
+    if (source === 'camera') {
+      launchCamera({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+    } else {
+      launchImageLibrary({mediaType: 'photo', selectionLimit: 3 - images.length, quality: 0.8}, onResult);
+    }
   };
 
   const deleteImage = (idx: number) => setImages(prev => prev.filter((_, i) => i !== idx));
@@ -363,6 +375,13 @@ export default function EditInquiryItemOverlay({
         message={appAlert?.message ?? ''}
         onClose={() => { const d = appAlert?.onDone; setAppAlert(null); d?.(); }}
         onConfirm={appAlert?.onConfirm ? () => { const c = appAlert.onConfirm!; setAppAlert(null); c(); } : undefined}
+      />
+      <ImagePickerActionSheet
+        visible={showImagePicker}
+        title="Add Photo"
+        onCamera={() => handleImageSource('camera')}
+        onGallery={() => handleImageSource('gallery')}
+        onClose={() => setShowImagePicker(false)}
       />
     </Modal>
   );

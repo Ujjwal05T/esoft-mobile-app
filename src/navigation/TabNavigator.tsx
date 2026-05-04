@@ -23,7 +23,7 @@ export type MainTabParamList = {
   Home: undefined;
   Vehicle: undefined;
   Orders: undefined;
-  Inquiry: undefined;
+  Inquiry: {initialTab?: 'inquiries' | 'quotes' | 'disputes'} | undefined;
 };
 
 type SvgIcon = React.FC<{width?: number; height?: number; color?: string}>;

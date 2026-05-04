@@ -3,7 +3,7 @@
 import { getAuthToken, setAuthToken, setStoredUser, removeAuthToken } from './api';
 
 const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
-// const API_BASE_URL = 'https://stats-ion-acquisitions-display.trycloudflare.com/api';
+// const API_BASE_URL = 'https://outside-maybe-inspection-continuous.trycloudflare.com/api';
 
 export interface LoginResponse {
   success: boolean;

@@ -9,9 +9,10 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/RootNavigator';
+import {MainTabParamList} from '../navigation/TabNavigator';
 import Svg, {Path} from 'react-native-svg';
 import Header from '../components/dashboard/Header';
 import InquiryCard, {
@@ -227,7 +228,14 @@ export default function InquiryScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {user} = useAuth();
 
+  const route = useRoute<RouteProp<MainTabParamList, 'Inquiry'>>();
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('inquiries');
+
+  useEffect(() => {
+    const tab = route.params?.initialTab;
+    if (tab) setActiveTab(tab);
+  }, [route.params?.initialTab]);
   const [inquiries, setInquiries] = useState<InquiryWithDate[]>([]);
   const [quotes, setQuotes] = useState<QuoteWithDate[]>([]);
   const [disputes, setDisputes] = useState<DisputeWithDate[]>([]);

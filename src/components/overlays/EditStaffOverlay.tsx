@@ -12,7 +12,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
-import {launchImageLibrary} from 'react-native-image-picker';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 
 interface EditStaffOverlayProps {
   isOpen: boolean;
@@ -97,6 +98,7 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
 
   const [showPermissions, setShowPermissions] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showPhotoPicker, setShowPhotoPicker] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'inactive' | 'active' | 'delete'>('inactive');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -124,32 +126,23 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
     }
   }, [isOpen]);
 
-  const handlePhotoUpload = () => {
-    launchImageLibrary(
-      {
-        mediaType: 'photo',
-        quality: 0.8,
-        maxWidth: 1000,
-        maxHeight: 1000,
-        selectionLimit: 1,
-      },
-      response => {
-        if (response.didCancel) {
-          console.log('User cancelled image picker');
-          return;
-        }
-        if (response.errorCode) {
-          console.log('ImagePicker Error: ', response.errorMessage);
-          return;
-        }
-        if (response.assets && response.assets[0]) {
-          const asset = response.assets[0];
-          console.log('Image selected:', asset.uri);
-          setPhotoUri(asset.uri || null);
-          setPhoto(asset.uri || null);
-        }
-      },
-    );
+  const handlePhotoUpload = () => setShowPhotoPicker(true);
+
+  const handlePhotoSource = (source: 'camera' | 'gallery') => {
+    setShowPhotoPicker(false);
+    const onResult = (response: any) => {
+      if (response.didCancel || response.errorCode) return;
+      if (response.assets && response.assets[0]) {
+        const asset = response.assets[0];
+        setPhotoUri(asset.uri || null);
+        setPhoto(asset.uri || null);
+      }
+    };
+    if (source === 'camera') {
+      launchCamera({mediaType: 'photo', quality: 0.8, maxWidth: 1000, maxHeight: 1000, saveToPhotos: false}, onResult);
+    } else {
+      launchImageLibrary({mediaType: 'photo', quality: 0.8, maxWidth: 1000, maxHeight: 1000, selectionLimit: 1}, onResult);
+    }
   };
 
   const hasPermissionsChanged = staffData && (
@@ -370,6 +363,13 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
           </View>
         </ScrollView>
       </View>
+      <ImagePickerActionSheet
+        visible={showPhotoPicker}
+        title="Update Staff Photo"
+        onCamera={() => handlePhotoSource('camera')}
+        onGallery={() => handlePhotoSource('gallery')}
+        onClose={() => setShowPhotoPicker(false)}
+      />
     </Modal>
   );
 }

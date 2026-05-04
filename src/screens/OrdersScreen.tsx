@@ -13,11 +13,21 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import Header from '../components/dashboard/Header';
 import OrderCard, {Order, OrderStatus} from '../components/dashboard/OrderCard';
+import FloatingActionButton from '../components/dashboard/FloatingActionButton';
+import VehicleSelectionOverlay, {
+  type VehicleInfo,
+} from '../components/overlays/VehicleSelectionOverlay';
+import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
+import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import {
   getStoredUser,
   getOrdersByWorkshopId,
   getOrderById,
+  getActiveVehicleVisit,
+  createInquiryWithMedia,
   type WorkshopOrderListItem,
+  type VehicleResponse,
+  type InquiryItemRequest,
 } from '../services/api';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 import {formatDateIST} from '../utils/dateUtils';
@@ -47,6 +57,13 @@ export default function OrdersScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Overlay states
+  const [showVehicleSelection, setShowVehicleSelection] = useState(false);
+  const [showRequestPart, setShowRequestPart] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleResponse | null>(null);
+  const [activeVisitCategories, setActiveVisitCategories] = useState<string[]>([]);
+  const [appAlert, setAppAlert] = useState<AlertState | null>(null);
+
   const fetchOrders = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setIsLoading(true);
     setError(null);
@@ -64,7 +81,6 @@ export default function OrdersScreen() {
         return;
       }
 
-      // Fetch full details for all orders in parallel to get items
       const detailResults = await Promise.all(
         res.data.orders.map((o: WorkshopOrderListItem) => getOrderById(o.id)),
       );
@@ -115,6 +131,81 @@ export default function OrdersScreen() {
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  // ── FAB Handlers ─────────────────────────────────────────────────────────────
+
+  const handleRequestPart = () => setShowVehicleSelection(true);
+
+  const handleVehicleSelected = async (vehicle: VehicleResponse, _info: VehicleInfo) => {
+    setSelectedVehicle(vehicle);
+    const visitRes = await getActiveVehicleVisit(vehicle.id);
+    setActiveVisitCategories(visitRes.data?.activeJobCategories ?? []);
+    setShowVehicleSelection(false);
+    setShowRequestPart(true);
+  };
+
+  const handleRequestPartSubmit = async (parts: any[]) => {
+    try {
+      const user = await getStoredUser();
+      if (!user || !selectedVehicle) {
+        setAppAlert({type: 'error', message: 'User or vehicle not found. Please try again.'});
+        return;
+      }
+
+      const audioFiles: any[] = [];
+      const imageFiles: any[] = [];
+
+      const items: InquiryItemRequest[] = parts.map(part => {
+        if (part.audioPath) {
+          audioFiles.push({
+            uri: part.audioPath,
+            name: `audio_${Date.now()}_${audioFiles.length}.mp4`,
+            type: 'audio/mp4',
+          });
+        }
+        part.images.forEach((img: any) => {
+          if (img?.uri) {
+            imageFiles.push({
+              uri: img.uri,
+              name: img.name || `image_${Date.now()}_${imageFiles.length}.jpg`,
+              type: 'image/jpeg',
+            });
+          }
+        });
+
+        return {
+          partName: part.partName,
+          preferredBrand: part.preferredBrand,
+          quantity: parseInt(part.quantity, 10) || 1,
+          remark: part.remark,
+          audioDuration: part.audioDuration || undefined,
+        };
+      });
+
+      const result = await createInquiryWithMedia(
+        selectedVehicle.id,
+        user.id,
+        activeVisitCategories,
+        items,
+        audioFiles,
+        imageFiles,
+        undefined,
+        null,
+      );
+
+      if (result.success) {
+        setAppAlert({
+          type: 'success',
+          message: `Inquiry created successfully!\n\nInquiry Number: ${result.data?.inquiryNumber || 'N/A'}`,
+          onDone: () => setShowRequestPart(false),
+        });
+      } else {
+        setAppAlert({type: 'error', message: result.error || 'Failed to create inquiry'});
+      }
+    } catch {
+      setAppAlert({type: 'error', message: 'An error occurred while creating the inquiry'});
+    }
+  };
 
   return (
     <View style={[styles.container, {paddingTop: insets.top}]}>
@@ -180,6 +271,47 @@ export default function OrdersScreen() {
           />
         ))}
       </ScrollView>
+
+      {/* ── Floating Action Button ───────────────────────────────────── */}
+      <FloatingActionButton
+        navigationOptions={[
+          {label: 'Request Part', onPress: handleRequestPart},
+        ]}
+      />
+
+      {/* ── Vehicle Selection Overlay ────────────────────────────────── */}
+      <VehicleSelectionOverlay
+        isOpen={showVehicleSelection}
+        onClose={() => setShowVehicleSelection(false)}
+        onVehicleSelected={handleVehicleSelected}
+        title="Select Vehicle for Request Part"
+      />
+
+      {/* ── Request Part Overlay ─────────────────────────────────────── */}
+      {selectedVehicle && (
+        <RequestPartOverlay
+          isOpen={showRequestPart}
+          onClose={() => setShowRequestPart(false)}
+          onSubmit={handleRequestPartSubmit}
+        />
+      )}
+
+      <AppAlert
+        isOpen={!!appAlert}
+        type={appAlert?.type ?? 'info'}
+        title={appAlert?.title}
+        message={appAlert?.message ?? ''}
+        onClose={() => {
+          const done = appAlert?.onDone;
+          setAppAlert(null);
+          done?.();
+        }}
+        onConfirm={appAlert?.onConfirm ? () => {
+          const confirm = appAlert.onConfirm!;
+          setAppAlert(null);
+          confirm();
+        } : undefined}
+      />
     </View>
   );
 }

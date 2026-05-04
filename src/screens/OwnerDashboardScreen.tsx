@@ -169,7 +169,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
               title="Pending Quotes"
               value={loading ? '...' : String(stats?.pendingQuotes ?? 0)}
               bgColor="#2294f2"
-              onPress={() => navigation?.navigate('Inquiry')}
+              onPress={() => navigation?.navigate('Inquiry', {initialTab: 'quotes'})}
               VectorIcon={InquiryVector}
               vectorWidth={110}
               vectorHeight={110}
@@ -183,7 +183,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
               title="Pending Part Requests"
               value={loading ? '...' : String(stats?.pendingPartRequests ?? 0)}
               bgColor="#ffad2a"
-              onPress={() => navigation?.navigate('Inquiry')}
+              onPress={() => navigation?.navigate('Inquiry', {initialTab: 'inquiries'})}
               VectorIcon={ClockVector}
               vectorWidth={100}
               vectorHeight={100}
@@ -194,7 +194,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
               title="Raised Disputes"
               value={loading ? '...' : String(stats?.raisedDisputes ?? 0)}
               bgColor="#e43cd3"
-              onPress={() => navigation?.navigate('Inquiry')}
+              onPress={() => navigation?.navigate('Inquiry', {initialTab: 'disputes'})}
               VectorIcon={QuestionVector}
               vectorWidth={100}
               vectorHeight={100}

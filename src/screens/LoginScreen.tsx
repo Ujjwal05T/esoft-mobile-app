@@ -199,6 +199,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                     onChange={setEmail}
                     keyboardType="email-address"
                     required
+                    error={email.length > 0 && !isEmailValid ? 'Enter a valid email address' : undefined}
                   />
                   <Text style={styles.helperText}>
                     We'll send you a 6-digit OTP to verify your email
@@ -209,9 +210,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                   <FloatingInput
                     label="Enter Mobile Number"
                     value={phone}
-                    onChange={setPhone}
+                    onChange={v => setPhone(v.replace(/[^0-9]/g, ''))}
                     keyboardType="number-pad"
+                    maxLength={10}
                     required
+                    error={phone.length > 0 && !isPhoneValid ? 'Enter a valid 10-digit mobile number starting with 6-9' : undefined}
                   />
                   <Text style={styles.helperText}>
                     We'll send you a 6-digit OTP on WhatsApp

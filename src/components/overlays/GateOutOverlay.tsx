@@ -345,6 +345,7 @@ export default function GateOutOverlay({
                 value={odometerReading}
                 onChange={setOdometerReading}
                 keyboardType="numeric"
+                optional
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 0}}
               />

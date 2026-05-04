@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
-import {launchImageLibrary} from 'react-native-image-picker';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 import AppAlert, {AlertState} from './AppAlert';
 import {
   updateInquiryItemsWithFiles,
@@ -60,14 +61,14 @@ interface EditInquiryOverlayProps {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const BRAND_OPTIONS = ['OEM - Original Brands', 'After Market'];
+const BRAND_OPTIONS = ['OEM - Original Brands'];
 
 const generateId = () => `part-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 const createEmptyPart = (): PartItem => ({
   id: generateId(),
   partName: '',
-  preferredBrand: '',
+  preferredBrand: 'OEM - Original Brands',
   afterMarketBrandName: '',
   quantity: '',
   remark: '',
@@ -190,6 +191,7 @@ export default function EditInquiryOverlay({
   const [parts, setParts] = useState<PartItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
+  const [pendingPickPartId, setPendingPickPartId] = useState<string | null>(null);
 
   // Shared recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -311,8 +313,13 @@ export default function EditInquiryOverlay({
 
   // ── Images ───────────────────────────────────────────────────────────────────
 
-  const pickImage = (partId: string) => {
-    launchImageLibrary({mediaType: 'photo', quality: 0.8}, res => {
+  const pickImage = (partId: string) => setPendingPickPartId(partId);
+
+  const handleImageSource = (source: 'camera' | 'gallery') => {
+    const partId = pendingPickPartId;
+    setPendingPickPartId(null);
+    if (!partId) return;
+    const onResult = (res: any) => {
       if (!res.didCancel && !res.errorCode && res.assets?.[0]) {
         const a = res.assets[0];
         setParts(prev => {
@@ -325,7 +332,12 @@ export default function EditInquiryOverlay({
           return prev.map(p => (p.id === partId ? {...p, images: imgs} : p));
         });
       }
-    });
+    };
+    if (source === 'camera') {
+      launchCamera({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+    } else {
+      launchImageLibrary({mediaType: 'photo', quality: 0.8}, onResult);
+    }
   };
 
   const deleteImage = (partId: string, idx: number) =>
@@ -341,7 +353,7 @@ export default function EditInquiryOverlay({
   const handleSave = async () => {
     let valid = true;
     setParts(prev => prev.map(p => {
-      const hasErr = !p.partName.trim() || !p.preferredBrand || (p.preferredBrand === 'After Market' && !p.afterMarketBrandName.trim()) || !p.quantity.trim();
+      const hasErr = !p.partName.trim() || !p.preferredBrand || !p.quantity.trim();
       if (hasErr) valid = false;
       return {...p, hasAttemptedSubmit: true, isExpanded: hasErr ? true : p.isExpanded};
     }));
@@ -395,6 +407,8 @@ export default function EditInquiryOverlay({
       setSubmitting(false);
     }
   };
+
+  const isFormValid = parts.every(p => p.partName.trim() && p.preferredBrand && p.quantity.trim());
 
   // ── Render part ──────────────────────────────────────────────────────────────
 
@@ -496,7 +510,7 @@ export default function EditInquiryOverlay({
                   <TextInput
                     value={part.remark}
                     onChangeText={v => updatePart(part.id, {remark: v})}
-                    placeholder="Remark (optional)"
+                    placeholder="Remark (Optional)"
                     placeholderTextColor="#828282"
                     style={[styles.inputText, {flex: 1}]}
                   />
@@ -526,7 +540,7 @@ export default function EditInquiryOverlay({
                   <TextInput
                     value={part.remark}
                     onChangeText={v => updatePart(part.id, {remark: v})}
-                    placeholder="Remark (optional)"
+                    placeholder="Remark (Optional)"
                     placeholderTextColor="#828282"
                     style={styles.inputText}
                   />
@@ -612,8 +626,8 @@ export default function EditInquiryOverlay({
 
             <TouchableOpacity
               onPress={handleSave}
-              disabled={submitting}
-              style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
+              disabled={submitting || !isFormValid}
+              style={[styles.saveBtn, (!isFormValid || submitting) && styles.saveBtnDisabled]}
               activeOpacity={0.85}>
               <Text style={styles.saveBtnText}>
                 {submitting ? 'Saving...' : `SAVE CHANGES (${parts.length} ${parts.length === 1 ? 'PART' : 'PARTS'})`}
@@ -630,6 +644,13 @@ export default function EditInquiryOverlay({
         message={appAlert?.message ?? ''}
         onClose={() => { const d = appAlert?.onDone; setAppAlert(null); d?.(); }}
         onConfirm={appAlert?.onConfirm ? () => { const c = appAlert.onConfirm!; setAppAlert(null); c(); } : undefined}
+      />
+      <ImagePickerActionSheet
+        visible={pendingPickPartId !== null}
+        title="Add Photo"
+        onCamera={() => handleImageSource('camera')}
+        onGallery={() => handleImageSource('gallery')}
+        onClose={() => setPendingPickPartId(null)}
       />
     </Modal>
   );

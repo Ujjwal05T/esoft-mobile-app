@@ -16,14 +16,14 @@ import {
 } from 'react-native';
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
-import {launchImageLibrary} from 'react-native-image-picker';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 import AppAlert, {AlertState} from './AppAlert';
 
 const SCREEN_H = Dimensions.get('window').height;
 
 const brandOptions = [
   {id: '1', name: 'OEM - Original Brands'},
-  {id: '2', name: 'After Market'},
 ];
 
 const generateId = () =>
@@ -49,7 +49,7 @@ const createEmptyPart = (): PartItem => ({
   id: generateId(),
   partName: '',
   partNumber: '',
-  preferredBrand: '',
+  preferredBrand: 'OEM - Original Brands',
   afterMarketBrandName: '',
   quantity: '',
   remark: '',
@@ -222,6 +222,7 @@ export default function RequestPartOverlay({
 
   /* Success */
   const [showSuccess, setShowSuccess] = useState(false);
+  const [pendingPickPartId, setPendingPickPartId] = useState<string | null>(null);
   const successFade = useRef(new Animated.Value(0)).current;
   const checkScale = useRef(new Animated.Value(0)).current;
   const textFade = useRef(new Animated.Value(0)).current;
@@ -370,8 +371,13 @@ export default function RequestPartOverlay({
   };
 
   /* Images */
-  const pickImage = (partId: string) => {
-    launchImageLibrary({mediaType: 'photo', quality: 0.8}, res => {
+  const pickImage = (partId: string) => setPendingPickPartId(partId);
+
+  const handleImageSource = (source: 'camera' | 'gallery') => {
+    const partId = pendingPickPartId;
+    setPendingPickPartId(null);
+    if (!partId) return;
+    const onResult = (res: any) => {
       if (!res.didCancel && !res.errorCode && res.assets?.[0]) {
         const a = res.assets[0];
         setParts(prev => {
@@ -384,12 +390,15 @@ export default function RequestPartOverlay({
             uri: a.uri!,
             name: a.fileName || `photo_${Date.now()}.jpg`,
           };
-          return prev.map(p =>
-            p.id === partId ? {...p, images: newImages} : p,
-          );
+          return prev.map(p => (p.id === partId ? {...p, images: newImages} : p));
         });
       }
-    });
+    };
+    if (source === 'camera') {
+      launchCamera({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+    } else {
+      launchImageLibrary({mediaType: 'photo', quality: 0.8}, onResult);
+    }
   };
 
   const deleteImage = (partId: string, idx: number) => {
@@ -426,6 +435,10 @@ export default function RequestPartOverlay({
       setShowSuccess(true);
     }
   };
+
+  const isFormValid = parts.every(
+    p => p.partName.trim() && p.quantity.trim() && p.preferredBrand,
+  );
 
   /* Render one accordion part */
   const renderPart = (part: PartItem, index: number) => {
@@ -641,7 +654,7 @@ export default function RequestPartOverlay({
                   <TextInput
                     value={part.remark}
                     onChangeText={v => updatePart(part.id, {remark: v})}
-                    placeholder="Audio Request or Remark"
+                    placeholder="Audio or Remark (Optional)"
                     placeholderTextColor="#828282"
                     style={[styles.inputText, {flex: 1}]}
                   />
@@ -683,7 +696,7 @@ export default function RequestPartOverlay({
                   <TextInput
                     value={part.remark}
                     onChangeText={v => updatePart(part.id, {remark: v})}
-                    placeholder="Remark"
+                    placeholder="Remark (Optional)"
                     placeholderTextColor="#828282"
                     style={styles.inputText}
                   />
@@ -870,7 +883,8 @@ export default function RequestPartOverlay({
                 {/* Send Request */}
                 <TouchableOpacity
                   onPress={handleSendRequest}
-                  style={styles.sendBtn}>
+                  disabled={!isFormValid}
+                  style={[styles.sendBtn, !isFormValid && {backgroundColor: '#d3d3d3'}]}>
                   <Text style={styles.sendBtnText}>
                     SEND REQUEST ({parts.length}{' '}
                     {parts.length === 1 ? 'PART' : 'PARTS'})
@@ -921,6 +935,13 @@ export default function RequestPartOverlay({
           setAppAlert(null);
           confirm();
         } : undefined}
+      />
+      <ImagePickerActionSheet
+        visible={pendingPickPartId !== null}
+        title="Add Part Photo"
+        onCamera={() => handleImageSource('camera')}
+        onGallery={() => handleImageSource('gallery')}
+        onClose={() => setPendingPickPartId(null)}
       />
     </Modal>
   );

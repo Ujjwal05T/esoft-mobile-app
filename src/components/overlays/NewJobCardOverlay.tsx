@@ -16,7 +16,8 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import {launchImageLibrary} from 'react-native-image-picker';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import Svg, {Path, Rect} from 'react-native-svg';
 import {
@@ -60,6 +61,7 @@ const jobCategories = [
   {id: '8', name: 'Clutch System', icon: '⚡'},
   {id: '9', name: 'Electrical', icon: '💡'},
   {id: '10', name: 'Suspension', icon: '🔩'},
+  {id: '11', name: 'Engine Oil', icon: '🛢️'},
 ];
 
 export default function NewJobCardOverlay({
@@ -98,8 +100,9 @@ export default function NewJobCardOverlay({
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showImagePicker, setShowImagePicker] = useState(false);
 
-  const isValid = selectedCategory !== '';
+  const isValid = selectedCategory !== '' && selectedStaffIds.length > 0;
 
   const fetchStaff = () => {
     setLoadingStaff(true);
@@ -188,22 +191,27 @@ export default function NewJobCardOverlay({
     }
   }, [showSuccess, onClose]);
 
-  const handlePickImage = () => {
-    launchImageLibrary(
-      {mediaType: 'photo', quality: 0.8, selectionLimit: MAX_IMAGES - vehicleImages.length},
-      response => {
-        if (!response.didCancel && !response.errorCode && response.assets?.length) {
-          const newImages = response.assets
-            .filter(a => a.uri)
-            .map(a => ({
-              uri: a.uri!,
-              name: a.fileName || `photo_${Date.now()}.jpg`,
-              type: a.type || 'image/jpeg',
-            }));
-          setVehicleImages(prev => [...prev, ...newImages].slice(0, MAX_IMAGES));
-        }
-      },
-    );
+  const handlePickImage = () => setShowImagePicker(true);
+
+  const handleImageSource = (source: 'camera' | 'gallery') => {
+    setShowImagePicker(false);
+    const onResult = (response: any) => {
+      if (!response.didCancel && !response.errorCode && response.assets?.length) {
+        const newImages = response.assets
+          .filter((a: any) => a.uri)
+          .map((a: any) => ({
+            uri: a.uri!,
+            name: a.fileName || `photo_${Date.now()}.jpg`,
+            type: a.type || 'image/jpeg',
+          }));
+        setVehicleImages(prev => [...prev, ...newImages].slice(0, MAX_IMAGES));
+      }
+    };
+    if (source === 'camera') {
+      launchCamera({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+    } else {
+      launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: MAX_IMAGES - vehicleImages.length}, onResult);
+    }
   };
 
   const handleRecord = async () => {
@@ -458,7 +466,7 @@ export default function NewJobCardOverlay({
                 <TextInput
                   value={remark}
                   onChangeText={setRemark}
-                  placeholder="Remark"
+                  placeholder="Remark (Optional)"
                   placeholderTextColor="#828282"
                   style={[
                     styles.dropdown,
@@ -658,6 +666,14 @@ export default function NewJobCardOverlay({
         type={staffAlert?.type ?? 'info'}
         message={staffAlert?.message ?? ''}
         onClose={() => setStaffAlert(null)}
+      />
+
+      <ImagePickerActionSheet
+        visible={showImagePicker}
+        title="Add Photo"
+        onCamera={() => handleImageSource('camera')}
+        onGallery={() => handleImageSource('gallery')}
+        onClose={() => setShowImagePicker(false)}
       />
 
       {/* Success overlay — sibling of sheet */}

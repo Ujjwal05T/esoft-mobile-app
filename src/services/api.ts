@@ -3,7 +3,7 @@ import * as Keychain from 'react-native-keychain';
 // API Base URL
 const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
 export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-// const API_BASE_URL = 'https://stats-ion-acquisitions-display.trycloudflare.com/api';
+// const API_BASE_URL = 'https://outside-maybe-inspection-continuous.trycloudflare.com/api';
 // export const SERVER_ORIGIN = 'https://stats-ion-acquisitions-display.trycloudflare.com';
 
 // ==========================================

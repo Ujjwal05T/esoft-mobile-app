@@ -6,7 +6,8 @@
  */
 
 import React, {useState, useEffect} from 'react';
-import {StatusBar, useColorScheme, View, StyleSheet, Alert, Platform} from 'react-native';
+import {StatusBar, useColorScheme, View, StyleSheet, Platform} from 'react-native';
+import notifee, {AndroidImportance} from '@notifee/react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
@@ -71,19 +72,32 @@ function App(): React.JSX.Element {
   };
 
   useEffect(() => {
+    // Create Android notification channel once
+    notifee.createChannel({
+      id: 'etna_default_channel',
+      name: 'ETNA Notifications',
+      importance: AndroidImportance.HIGH,
+      sound: 'default',
+    });
+
     // Handle foreground notifications
     const unsubscribeForeground = onMessageReceived(async remoteMessage => {
       console.log('Foreground notification received:', remoteMessage);
 
-      // Save notification
       await handleNotification(remoteMessage);
 
-      // Show alert for foreground notifications
       if (remoteMessage.notification) {
-        Alert.alert(
-          remoteMessage.notification.title || 'Notification',
-          remoteMessage.notification.body || '',
-        );
+        await notifee.displayNotification({
+          title: remoteMessage.notification.title || 'Notification',
+          body: remoteMessage.notification.body || '',
+          data: remoteMessage.data,
+          android: {
+            channelId: 'etna_default_channel',
+            smallIcon: 'ic_notification',
+            importance: AndroidImportance.HIGH,
+            pressAction: {id: 'default'},
+          },
+        });
       }
     });
 

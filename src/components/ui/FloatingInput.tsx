@@ -3,6 +3,7 @@ import {
   Animated,
   TextInput,
   View,
+  Text,
   StyleSheet,
   KeyboardTypeOptions,
   ViewStyle,
@@ -22,6 +23,8 @@ interface FloatingInputProps {
   containerStyle?: ViewStyle;
   wrapperStyle?: ViewStyle;
   rightElement?: React.ReactNode;
+  error?: string;
+  optional?: boolean;
 }
 
 const FloatingInput: React.FC<FloatingInputProps> = ({
@@ -38,6 +41,8 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
   containerStyle,
   wrapperStyle,
   rightElement,
+  error,
+  optional,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const labelAnim = useRef(new Animated.Value(value.length > 0 ? 1 : 0)).current;
@@ -62,14 +67,14 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
     outputRange: [16, 12],
   });
 
-  const borderColor = isActive ? '#e5383b' : '#9ca3af';
+  const borderColor = error ? '#dc2626' : isActive ? '#e5383b' : '#9ca3af';
 
   return (
     <View style={[styles.wrapper, wrapperStyle]}>
       <View style={[styles.container, {borderColor}, multiline && styles.containerMultiline, containerStyle]}>
         <Animated.Text
           style={[styles.label, {top: labelTop, fontSize: labelFontSize}]}>
-          {label}
+          {label}{optional && !isActive ? ' (Optional)' : ''}
           {required && value.length > 0 ? '*' : ''}
         </Animated.Text>
         <TextInput
@@ -92,6 +97,7 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
           <View style={styles.rightElement}>{rightElement}</View>
         )}
       </View>
+      {!!error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 };
@@ -141,6 +147,12 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     justifyContent: 'center',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#dc2626',
+    marginTop: 4,
+    marginLeft: 4,
   },
 });
 

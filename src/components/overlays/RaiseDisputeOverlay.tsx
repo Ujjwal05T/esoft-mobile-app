@@ -15,7 +15,8 @@ import {
   Dimensions,
 } from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
-import {launchImageLibrary} from 'react-native-image-picker';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import {formatDateIST} from '../../utils/dateUtils';
 
@@ -197,6 +198,7 @@ export default function RaiseDisputeOverlay({
 
   // Success animation
   const [showSuccess, setShowSuccess] = useState(false);
+  const [pendingPickIndex, setPendingPickIndex] = useState<number | null>(null);
   const successFade = useRef(new Animated.Value(0)).current;
   const checkScale = useRef(new Animated.Value(0)).current;
   const textFade = useRef(new Animated.Value(0)).current;
@@ -267,8 +269,13 @@ export default function RaiseDisputeOverlay({
     }
   };
 
-  const handlePickImage = (index: number) => {
-    launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 1}, response => {
+  const handlePickImage = (index: number) => setPendingPickIndex(index);
+
+  const handleImageSource = (source: 'camera' | 'gallery') => {
+    const index = pendingPickIndex;
+    setPendingPickIndex(null);
+    if (index === null) return;
+    const onResult = (response: any) => {
       if (!response.didCancel && !response.errorCode && response.assets?.length) {
         const asset = response.assets[0];
         if (asset.uri) {
@@ -282,7 +289,12 @@ export default function RaiseDisputeOverlay({
           });
         }
       }
-    });
+    };
+    if (source === 'camera') {
+      launchCamera({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+    } else {
+      launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 1}, onResult);
+    }
   };
 
   const handleDeleteImage = (index: number) => {
@@ -293,9 +305,11 @@ export default function RaiseDisputeOverlay({
     });
   };
 
+  const isFormValid = !!orderId.trim() && !!selectedPart && !!selectedReason;
+
   const handleConfirm = () => {
     setHasAttemptedSubmit(true);
-    if (!orderId.trim() || !selectedPart || !selectedReason || !remark.trim()) return;
+    if (!orderId.trim() || !selectedPart || !selectedReason) return;
 
     // Call parent callback with form data
     onConfirm({
@@ -510,13 +524,12 @@ export default function RaiseDisputeOverlay({
                 style={[
                   styles.remarkField,
                   !!remark && {borderColor: '#e5383b'},
-                  hasAttemptedSubmit && !remark.trim() && styles.inputError,
                 ]}>
                 {!!remark && <Text style={styles.floatLabel}>Remark</Text>}
                 <TextInput
                   value={remark}
                   onChangeText={setRemark}
-                  placeholder="Remark"
+                  placeholder="Remark (Optional)"
                   placeholderTextColor="#828282"
                   multiline
                   numberOfLines={3}
@@ -524,9 +537,6 @@ export default function RaiseDisputeOverlay({
                   style={styles.inputText}
                 />
               </View>
-              {hasAttemptedSubmit && !remark.trim() && (
-                <Text style={styles.errorMsg}>Please add a remark</Text>
-              )}
             </View>
 
             {/* Audio Recording */}
@@ -593,7 +603,10 @@ export default function RaiseDisputeOverlay({
             </View>
 
             {/* Confirm Button */}
-            <TouchableOpacity onPress={handleConfirm} style={styles.confirmBtn}>
+            <TouchableOpacity
+              onPress={handleConfirm}
+              disabled={!isFormValid}
+              style={[styles.confirmBtn, !isFormValid && {backgroundColor: '#d3d3d3'}]}>
               <Text style={styles.confirmBtnText}>{buttonText}</Text>
             </TouchableOpacity>
 
@@ -624,6 +637,13 @@ export default function RaiseDisputeOverlay({
           </Animated.View>
         )}
       </View>
+      <ImagePickerActionSheet
+        visible={pendingPickIndex !== null}
+        title="Add Dispute Photo"
+        onCamera={() => handleImageSource('camera')}
+        onGallery={() => handleImageSource('gallery')}
+        onClose={() => setPendingPickIndex(null)}
+      />
     </Modal>
   );
 }

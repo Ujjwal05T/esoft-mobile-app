@@ -76,15 +76,21 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const isPhoneValid = /^[6-9]\d{9}$/.test(phone);
   const isInputValid = registerMode === 'email' ? isEmailValid : isPhoneValid;
   const isOtpComplete = otp.every(d => d !== '');
+  const isContactNumberValid = /^[6-9]\d{9}$/.test(workshopDetails.contactNumber);
+  const isAadharValid = /^\d{12}$/.test(workshopDetails.aadharNumber);
+  const isPinCodeValid = /^\d{6}$/.test(workshopDetails.pinCode);
+  const isGstValid = workshopDetails.gstNumber.trim() === '' || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/i.test(workshopDetails.gstNumber.trim());
+
   const isWorkshopFormValid =
     workshopDetails.fullName.trim() !== '' &&
-    workshopDetails.contactNumber.trim() !== '' &&
-    workshopDetails.aadharNumber.trim() !== '' &&
+    isContactNumberValid &&
+    isAadharValid &&
     workshopDetails.workshopName.trim() !== '' &&
     workshopDetails.address.trim() !== '' &&
-    workshopDetails.pinCode.trim() !== '' &&
+    isPinCodeValid &&
     workshopDetails.city.trim() !== '' &&
-    (workshopDetails.gstNumber.trim() !== '' || workshopDetails.tradeLicenseNumber.trim() !== '');
+    (workshopDetails.gstNumber.trim() !== '' || workshopDetails.tradeLicenseNumber.trim() !== '') &&
+    isGstValid;
 
   // ── Handlers ──
 
@@ -266,15 +272,17 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                   onChange={setEmail}
                   keyboardType="email-address"
                   required
+                  error={email.length > 0 && !isEmailValid ? 'Enter a valid email address' : undefined}
                 />
               ) : (
                 <FloatingInput
                   label="Enter Mobile Number"
                   value={phone}
-                  onChange={setPhone}
+                  onChange={v => setPhone(v.replace(/[^0-9]/g, ''))}
                   keyboardType="number-pad"
                   maxLength={10}
                   required
+                  error={phone.length > 0 && !isPhoneValid ? 'Enter a valid 10-digit mobile number starting with 6-9' : undefined}
                 />
               )}
 
@@ -344,24 +352,27 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
               <FloatingInput
                 label="Contact Number (Required)"
                 value={workshopDetails.contactNumber}
-                onChange={setField('contactNumber')}
+                onChange={v => setField('contactNumber')(v.replace(/[^0-9]/g, ''))}
                 keyboardType="phone-pad"
                 maxLength={10}
                 required
+                error={workshopDetails.contactNumber.length > 0 && !isContactNumberValid ? 'Enter a valid 10-digit mobile number starting with 6-9' : undefined}
               />
               <FloatingInput
                 label="Aadhar Number (Required)"
                 value={workshopDetails.aadharNumber}
-                onChange={setField('aadharNumber')}
+                onChange={v => setField('aadharNumber')(v.replace(/[^0-9]/g, ''))}
                 keyboardType="numeric"
                 maxLength={12}
                 required
+                error={workshopDetails.aadharNumber.length > 0 && !isAadharValid ? 'Aadhaar number must be exactly 12 digits' : undefined}
               />
               <FloatingInput
                 label="GST Number"
                 value={workshopDetails.gstNumber}
                 onChange={setField('gstNumber')}
                 maxLength={15}
+                error={workshopDetails.gstNumber.length > 0 && !isGstValid ? 'Enter a valid 15-character GST number' : undefined}
               />
               <FloatingInput
                 label="Trade License Number"
@@ -401,10 +412,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
               <FloatingInput
                 label="PIN Code (Required)"
                 value={workshopDetails.pinCode}
-                onChange={setField('pinCode')}
+                onChange={v => setField('pinCode')(v.replace(/[^0-9]/g, ''))}
                 keyboardType="numeric"
                 maxLength={6}
                 required
+                error={workshopDetails.pinCode.length > 0 && !isPinCodeValid ? 'PIN code must be exactly 6 digits' : undefined}
               />
               <FloatingInput
                 label="City (Required)"

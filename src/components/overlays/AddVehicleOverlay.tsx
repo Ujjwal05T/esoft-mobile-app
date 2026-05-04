@@ -17,6 +17,7 @@ import {
   Easing,
 } from 'react-native';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
@@ -69,6 +70,7 @@ export function DropdownField({
   error,
   isOpen: externalOpen,
   onToggle,
+  optional,
 }: {
   label: string;
   value: string;
@@ -78,6 +80,7 @@ export function DropdownField({
   error?: boolean;
   isOpen?: boolean;
   onToggle?: () => void;
+  optional?: boolean;
 }) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
@@ -111,7 +114,7 @@ export function DropdownField({
         ]}
         activeOpacity={0.8}>
         <Text style={[styles.dropdownText, !value && styles.dropdownPlaceholder]}>
-          {value || label}
+          {value || (optional && !value ? `${label} (Optional)` : label)}
         </Text>
         <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
           <Path
@@ -216,6 +219,8 @@ export default function AddVehicleOverlay({
 
   // RC image source picker
   const [rcPickerSide, setRcPickerSide] = useState<'front' | 'back' | null>(null);
+  // Vehicle images picker
+  const [showVehicleImagePicker, setShowVehicleImagePicker] = useState(false);
 
   // AppAlert state
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
@@ -563,19 +568,27 @@ export default function AddVehicleOverlay({
     setFuelLevel(Math.round((x / fuelTrackWidth) * 100 / 5) * 5);
   };
 
-  const handlePickImage = () => {
-    launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 10}, response => {
+  const handlePickImage = () => setShowVehicleImagePicker(true);
+
+  const handleVehicleImageSource = (source: 'camera' | 'gallery') => {
+    setShowVehicleImagePicker(false);
+    const onResult = (response: any) => {
       if (!response.didCancel && !response.errorCode && response.assets?.length) {
         const newImages = response.assets
-          .filter(a => a.uri)
-          .map(a => ({
+          .filter((a: any) => a.uri)
+          .map((a: any) => ({
             uri: a.uri!,
             name: a.fileName || `photo_${Date.now()}.jpg`,
             type: a.type || 'image/jpeg',
           }));
         setVehicleImages(prev => [...prev, ...newImages]);
       }
-    });
+    };
+    if (source === 'camera') {
+      launchCamera({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+    } else {
+      launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 10}, onResult);
+    }
   };
 
   const handlePickRcImage = (side: 'front' | 'back') => {
@@ -699,6 +712,8 @@ export default function AddVehicleOverlay({
       });
     }
   };
+
+  const isFallbackStarted = !!(selectedBrand || selectedModel || selectedYear || selectedVariant || vehicleNumber.trim());
 
   return (
     <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
@@ -824,6 +839,7 @@ export default function AddVehicleOverlay({
                 isOpen={openManualDropdown === 'brand'}
                 onToggle={() => toggleManualDropdown('brand')}
                 disabled={loadingBrands}
+                optional={!isFallbackStarted && !loadingBrands}
               />
               <DropdownField
                 label={loadingModels ? 'Loading models...' : 'Model'}
@@ -838,6 +854,7 @@ export default function AddVehicleOverlay({
                 disabled={!selectedBrand || loadingModels}
                 isOpen={openManualDropdown === 'model'}
                 onToggle={() => toggleManualDropdown('model')}
+                optional={!isFallbackStarted && !loadingModels}
               />
               <DropdownField
                 label={loadingYears ? 'Loading years...' : 'Year'}
@@ -851,6 +868,7 @@ export default function AddVehicleOverlay({
                 disabled={!selectedModel || loadingYears}
                 isOpen={openManualDropdown === 'year'}
                 onToggle={() => toggleManualDropdown('year')}
+                optional={!isFallbackStarted && !loadingYears}
               />
               <DropdownField
                 label={loadingVariants ? 'Loading variants...' : 'Select Variant'}
@@ -863,12 +881,15 @@ export default function AddVehicleOverlay({
                 disabled={!selectedYear || loadingVariants}
                 isOpen={openManualDropdown === 'variant'}
                 onToggle={() => toggleManualDropdown('variant')}
+                optional={!isFallbackStarted && !loadingVariants}
               />
               <FloatingInput
                 label="Vehicle Number"
                 value={vehicleNumber}
-                onChange={v => setVehicleNumber(v.toUpperCase())}
-                required={!chassisNumber.trim()}
+                onChange={v => setVehicleNumber(v.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                maxLength={11}
+                optional={!isFallbackStarted}
+                error={vehicleNumber.trim().length > 0 && !/^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}$/.test(vehicleNumber.trim()) ? 'Enter a valid vehicle number (e.g. MH12AB1234)' : undefined}
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{marginBottom:0}}
               />
@@ -876,6 +897,7 @@ export default function AddVehicleOverlay({
                 label="Chassis Number"
                 value={chassisNumber}
                 onChange={v => setChassisNumber(v.toUpperCase())}
+                optional={isFallbackStarted}
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{marginBottom: 0}}
               />
@@ -933,7 +955,7 @@ export default function AddVehicleOverlay({
                         <Rect x={3} y={3} width={18} height={18} rx={2} stroke="#d3d3d3" strokeWidth={2} />
                         <Path d="M12 8v8M8 12h8" stroke="#e5383b" strokeWidth={2} strokeLinecap="round" />
                       </Svg>
-                      <Text style={styles.rcImageLabel}>RC Back</Text>
+                      <Text style={styles.rcImageLabel}>RC Back (Optional)</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -979,6 +1001,7 @@ export default function AddVehicleOverlay({
                 label="Registration Name"
                 value={registrationName}
                 onChange={setRegistrationName}
+                optional
                 containerStyle={{borderRadius:8}}
                 wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0,marginTop:0}}
               />
@@ -987,6 +1010,7 @@ export default function AddVehicleOverlay({
                 label="Owner Name"
                 value={ownerName}
                 onChange={setOwnerName}
+                optional
                 containerStyle={{borderRadius:8}}
                 wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0,marginTop:0}}
               />
@@ -997,6 +1021,7 @@ export default function AddVehicleOverlay({
                 onChange={setContactNumber}
                 maxLength={10}
                 keyboardType="phone-pad"
+                optional
                 containerStyle={{borderRadius:8}}
                 wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0}}
               />
@@ -1006,6 +1031,7 @@ export default function AddVehicleOverlay({
                 value={email}
                 onChange={setEmail}
                 keyboardType="email-address"
+                optional
                   containerStyle={{borderRadius:8}}
                   wrapperStyle={{margin:0,paddingBottom:0,marginBottom:0}}
               />
@@ -1018,6 +1044,7 @@ export default function AddVehicleOverlay({
                   setGstNumber(v.toUpperCase());
                   setIsGstVerified(false);
                 }}
+                optional
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 8}}
                 rightElement={
@@ -1036,6 +1063,7 @@ export default function AddVehicleOverlay({
               <DropdownField
                 label="Insurance Provider"
                 value={insuranceProvider}
+                optional
                 options={[
                   'ICICI Lombard',
                   'HDFC ERGO',
@@ -1085,6 +1113,7 @@ export default function AddVehicleOverlay({
                 label="Driver's Name"
                 value={driverName}
                 onChange={setDriverName}
+                optional
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 1}}
               />
@@ -1095,6 +1124,7 @@ export default function AddVehicleOverlay({
                 onChange={setDriverContact}
                 maxLength={10}
                 keyboardType="phone-pad"
+                optional
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 8}}
               />
@@ -1150,12 +1180,13 @@ export default function AddVehicleOverlay({
                 value={odometerReading}
                 onChange={setOdometerReading}
                 keyboardType="numeric"
+                optional
                 containerStyle={{borderRadius: 8}}
               />
 
               {/* Fuel Level */}
               <View style={styles.fuelContainer}>
-                <Text style={styles.fuelFloatLabel}>Fuel Reading</Text>
+                <Text style={styles.fuelFloatLabel}>Fuel Reading{fuelLevel === 0 ? ' (Optional)' : ''}</Text>
                 <View
                   style={styles.fuelTrack}
                   onLayout={e => setFuelTrackWidth(e.nativeEvent.layout.width)}
@@ -1190,7 +1221,7 @@ export default function AddVehicleOverlay({
                 <TextInput
                   value={problemShared}
                   onChangeText={setProblemShared}
-                  placeholder="Problem Shared"
+                  placeholder={problemShared ? 'Problem Shared' : 'Problem Shared (Optional)'}
                   placeholderTextColor="#828282"
                   style={styles.problemInput}
                 />
@@ -1353,6 +1384,14 @@ export default function AddVehicleOverlay({
           isProcessing={isScanProcessing}
         />
       )}
+      <ImagePickerActionSheet
+        visible={showVehicleImagePicker}
+        title="Add Vehicle Photo"
+        onCamera={() => handleVehicleImageSource('camera')}
+        onGallery={() => handleVehicleImageSource('gallery')}
+        onClose={() => setShowVehicleImagePicker(false)}
+      />
+
       {/* RC Image source picker */}
       <Modal
         visible={rcPickerSide !== null}
