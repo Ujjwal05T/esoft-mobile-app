@@ -316,6 +316,12 @@ const PartRow = ({
             ₹{item.unitPrice.toLocaleString('en-IN')}
           </Text>
         </View>
+        {/* Dispute affordance */}
+        <View style={styles.disputeBadgeRow}>
+          <View style={styles.disputeBadge}>
+            <Text style={styles.disputeBadgeText}>Raise Dispute</Text>
+          </View>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -872,6 +878,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#828282',
+  },
+  disputeBadgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 2,
+  },
+  disputeBadge: {
+    borderWidth: 1,
+    borderColor: '#e5383b',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  disputeBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#e5383b',
   },
 
   // Action buttons

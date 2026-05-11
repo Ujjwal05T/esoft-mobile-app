@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
+import {useNavigation, useRoute, RouteProp, useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/RootNavigator';
 import {MainTabParamList} from '../navigation/TabNavigator';
@@ -98,7 +98,7 @@ function mapApiQuote(api: QuoteApiResponse): QuoteWithDate {
     plateNumber: api.plateNumber ?? '',
     quoteId: api.quoteNumber,
     submittedDate: formatDateIST(api.createdAt),
-    status: api.status === 'approved' ? 'accepted' : 'pending_review',
+    status: (api.expiresAt && new Date(api.expiresAt) < new Date()) ? 'expired' : api.status === 'approved' ? 'accepted' : 'pending_review',
     estimatedTotal: api.totalAmount,
     items: api.items.map(item => ({
       id: item.id.toString(),
@@ -461,11 +461,11 @@ export default function InquiryScreen() {
     setRefreshing(false);
   }, [fetchInquiries, fetchQuotes, fetchDisputes]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     fetchInquiries();
     fetchQuotes();
     fetchDisputes();
-  }, [fetchInquiries, fetchQuotes, fetchDisputes]);
+  }, [fetchInquiries, fetchQuotes, fetchDisputes]));
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -883,7 +883,6 @@ export default function InquiryScreen() {
                     )
                   }
                   showNumberPlate={true}
-                  onAccept={id => console.log('Accept quote:', id)}
                   onView={id =>
                     navigation.navigate('QuoteDetail', {quoteId: parseInt(id)})
                   }

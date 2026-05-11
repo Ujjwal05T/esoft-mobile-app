@@ -30,14 +30,18 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
 
   useEffect(() => {
     (async () => {
+      console.log('[NOTIF] AuthContext — checking stored auth');
       const auth = await checkIsAuth();
+      console.log('[NOTIF] AuthContext — isAuthenticated:', auth);
       if (auth) {
         const storedUser = await getStoredUser();
         if (storedUser) {
+          console.log(`[NOTIF] AuthContext — restoring session for userId:${storedUser.id} role:${storedUser.role}`);
           setUser(storedUser);
           setUserRole(storedUser.role);
-          // Register FCM token for authenticated user
-          await registerFCMToken();
+          console.log('[NOTIF] AuthContext — calling registerFCMToken on session restore');
+          const ok = await registerFCMToken();
+          console.log(`[NOTIF] AuthContext — registerFCMToken result: ${ok}`);
         }
       }
       setIsAuth(auth);
@@ -48,34 +52,39 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   // Listen for FCM token refresh
   useEffect(() => {
     if (isAuth) {
+      console.log('[NOTIF] AuthContext — registering onTokenRefresh listener');
       const unsubscribe = onTokenRefresh(async (newToken) => {
-        console.log('FCM Token refreshed:', newToken);
-        // Re-register the new token with backend
-        await registerFCMToken();
+        console.log(`[NOTIF] AuthContext — token refreshed, re-registering: ${newToken?.slice(0, 20)}...`);
+        const ok = await registerFCMToken();
+        console.log(`[NOTIF] AuthContext — re-register result: ${ok}`);
       });
 
       return () => {
+        console.log('[NOTIF] AuthContext — removing onTokenRefresh listener');
         unsubscribe();
       };
     }
   }, [isAuth]);
 
   const signIn = async (loggedInUser: UserInfo) => {
+    console.log(`[NOTIF] AuthContext — signIn for userId:${loggedInUser.id} role:${loggedInUser.role}`);
     setIsAuth(true);
     setUser(loggedInUser);
     setUserRole(loggedInUser.role);
-    // Register FCM token after successful login
-    await registerFCMToken();
+    console.log('[NOTIF] AuthContext — calling registerFCMToken after login');
+    const ok = await registerFCMToken();
+    console.log(`[NOTIF] AuthContext — registerFCMToken result: ${ok}`);
   };
 
   const signOut = async () => {
-    // Unregister FCM token before logging out
+    console.log('[NOTIF] AuthContext — signOut, unregistering FCM token');
     await unregisterFCMToken();
     await removeFcmToken();
     await removeAuthToken();
     setIsAuth(false);
     setUser(null);
     setUserRole('staff');
+    console.log('[NOTIF] AuthContext — signOut complete');
   };
 
   return (

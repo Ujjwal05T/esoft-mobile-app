@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import Header from '../components/dashboard/Header';
 import OrderCard, {Order, OrderStatus} from '../components/dashboard/OrderCard';
@@ -128,9 +128,9 @@ export default function OrdersScreen() {
     setRefreshing(false);
   }, [fetchOrders]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     fetchOrders();
-  }, [fetchOrders]);
+  }, [fetchOrders]));
 
   // ── FAB Handlers ─────────────────────────────────────────────────────────────
 

@@ -3,28 +3,29 @@ import { Platform, PermissionsAndroid } from 'react-native';
 import { setFcmToken } from './api';
 import { saveNotification } from './notificationStorage';
 
+const TAG = '[NOTIF]';
+
 // Request notification permissions (iOS)
 export async function requestNotificationPermission(): Promise<boolean> {
+  console.log(`${TAG} requestNotificationPermission — platform: ${Platform.OS}, version: ${Platform.Version}`);
   if (Platform.OS === 'ios') {
     const authStatus = await messaging().requestPermission();
     const enabled =
       authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-    if (enabled) {
-      console.log('Authorization status:', authStatus);
-    }
-
+    console.log(`${TAG} iOS permission result: ${authStatus} (enabled: ${enabled})`);
     return enabled;
   } else {
-    // Android 13+ requires POST_NOTIFICATIONS permission
     if (typeof Platform.Version === 'number' && Platform.Version >= 33) {
+      console.log(`${TAG} Android 13+ — requesting POST_NOTIFICATIONS runtime permission`);
       const granted = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
       );
+      console.log(`${TAG} POST_NOTIFICATIONS result: ${granted}`);
       return granted === PermissionsAndroid.RESULTS.GRANTED;
     }
-    return true; // Android < 13 doesn't need runtime permission
+    console.log(`${TAG} Android < 13 — no runtime permission needed`);
+    return true;
   }
 }
 
@@ -32,34 +33,36 @@ export async function requestNotificationPermission(): Promise<boolean> {
 export async function getFCMToken(): Promise<string | null> {
   try {
     const token = await messaging().getToken();
-    console.log('FCM Token:', token);
+    console.log(`${TAG} FCM token obtained: ${token?.slice(0, 20)}...`);
     return token;
   } catch (error) {
-    console.error('Error getting FCM token:', error);
+    console.error(`${TAG} getFCMToken ERROR:`, error);
     return null;
   }
 }
 
 // Register FCM token with backend
 export async function registerFCMToken(): Promise<boolean> {
+  console.log(`${TAG} registerFCMToken — start`);
   try {
     const hasPermission = await requestNotificationPermission();
     if (!hasPermission) {
-      console.log('Notification permission denied');
+      console.warn(`${TAG} registerFCMToken — permission denied, aborting`);
       return false;
     }
 
     const token = await getFCMToken();
     if (!token) {
-      console.log('No FCM token available');
+      console.warn(`${TAG} registerFCMToken — no token returned from Firebase`);
       return false;
     }
 
-    // Send token to backend
+    console.log(`${TAG} registerFCMToken — sending token to backend`);
     const result = await setFcmToken(token, Platform.OS);
+    console.log(`${TAG} registerFCMToken — backend response success: ${result.success}`);
     return result.success;
   } catch (error) {
-    console.error('Error registering FCM token:', error);
+    console.error(`${TAG} registerFCMToken ERROR:`, error);
     return false;
   }
 }
@@ -92,7 +95,11 @@ export function onNotificationOpenedApp(
 
 // Listen for token refresh
 export function onTokenRefresh(callback: (token: string) => void) {
-  return messaging().onTokenRefresh(callback);
+  console.log(`${TAG} onTokenRefresh — listener registered`);
+  return messaging().onTokenRefresh(token => {
+    console.log(`${TAG} onTokenRefresh — new token received: ${token?.slice(0, 20)}...`);
+    callback(token);
+  });
 }
 
 // Unregister FCM token (on logout)
@@ -146,19 +153,26 @@ export async function setBadgeCount(count: number): Promise<void> {
 
 // Handle and save notification
 export async function handleNotification(remoteMessage: FirebaseMessagingTypes.RemoteMessage): Promise<void> {
+  console.log(`${TAG} handleNotification — messageId: ${remoteMessage.messageId}`);
+  console.log(`${TAG} handleNotification — notification payload:`, JSON.stringify(remoteMessage.notification));
+  console.log(`${TAG} handleNotification — data payload:`, JSON.stringify(remoteMessage.data));
   try {
     const notification = remoteMessage.notification;
     const data = remoteMessage.data;
 
-    if (notification) {
-      await saveNotification({
-        title: notification.title || 'New Notification',
-        body: notification.body || '',
-        imageUrl: notification.android?.imageUrl || data?.imageUrl as string | undefined,
-        data: data as any,
-      });
+    if (!notification) {
+      console.warn(`${TAG} handleNotification — no notification object in message, skipping save`);
+      return;
     }
+
+    await saveNotification({
+      title: notification.title || 'New Notification',
+      body: notification.body || '',
+      imageUrl: notification.android?.imageUrl || data?.imageUrl as string | undefined,
+      data: data as any,
+    });
+    console.log(`${TAG} handleNotification — saved to storage OK`);
   } catch (error) {
-    console.error('Error handling notification:', error);
+    console.error(`${TAG} handleNotification ERROR:`, error);
   }
 }

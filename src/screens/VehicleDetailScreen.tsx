@@ -108,7 +108,7 @@ function mapApiQuote(api: QuoteApiResponse): Quote {
     plateNumber: api.plateNumber ?? '',
     quoteId: api.quoteNumber,
     submittedDate: formatDateIST(api.createdAt),
-    status: api.status === 'approved' ? 'accepted' : 'pending_review',
+    status: (api.expiresAt && new Date(api.expiresAt) < new Date()) ? 'expired' : api.status === 'approved' ? 'accepted' : 'pending_review',
     estimatedTotal: api.totalAmount,
     items: api.items.map(item => ({
       id: item.id.toString(),
@@ -632,7 +632,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
       const result = await createInquiryWithMedia(
         vehicleId,
         user.id,
-        activeVisit?.activeJobCategories ?? [],
+        activeVisit?.activeJobCategories?.length ? activeVisit.activeJobCategories : ['Default'],
         items,
         audioFiles,
         imageFiles,
@@ -891,7 +891,6 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
                       )
                     }
                     showNumberPlate={false}
-                    onAccept={id => console.log('Accept quote:', id)}
                     onView={id =>
                       navigation.navigate('QuoteDetail', {quoteId: parseInt(id)})
                     }
@@ -1038,7 +1037,6 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
           {
             label: 'Request Part',
             onPress: () => setShowRequestPart(true),
-            disabled: jobCards.length === 0,
           },
         ]}
       />

@@ -31,8 +31,11 @@ const REMIND_AGAIN_HOURS = 24;
 
 // Background message handler must be set outside of any component
 messaging().setBackgroundMessageHandler(async remoteMessage => {
-  console.log('Message handled in the background!', remoteMessage);
+  console.log('[NOTIF] setBackgroundMessageHandler — received', remoteMessage.messageId);
+  console.log('[NOTIF] setBackgroundMessageHandler — notification:', JSON.stringify(remoteMessage.notification));
+  console.log('[NOTIF] setBackgroundMessageHandler — data:', JSON.stringify(remoteMessage.data));
   await handleNotification(remoteMessage);
+  console.log('[NOTIF] setBackgroundMessageHandler — handleNotification done');
 });
 
 function App(): React.JSX.Element {
@@ -78,51 +81,65 @@ function App(): React.JSX.Element {
       name: 'ETNA Notifications',
       importance: AndroidImportance.HIGH,
       sound: 'default',
+    }).then(() => {
+      console.log('[NOTIF] createChannel — etna_default_channel created/verified');
+    }).catch((err: any) => {
+      console.error('[NOTIF] createChannel ERROR:', err);
     });
 
     // Handle foreground notifications
+    console.log('[NOTIF] Registering onMessage (foreground) listener');
     const unsubscribeForeground = onMessageReceived(async remoteMessage => {
-      console.log('Foreground notification received:', remoteMessage);
+      console.log('[NOTIF] onMessage (foreground) — received', remoteMessage.messageId);
+      console.log('[NOTIF] onMessage — notification:', JSON.stringify(remoteMessage.notification));
+      console.log('[NOTIF] onMessage — data:', JSON.stringify(remoteMessage.data));
 
       await handleNotification(remoteMessage);
 
       if (remoteMessage.notification) {
-        await notifee.displayNotification({
-          title: remoteMessage.notification.title || 'Notification',
-          body: remoteMessage.notification.body || '',
-          data: remoteMessage.data,
-          android: {
-            channelId: 'etna_default_channel',
-            smallIcon: 'ic_notification',
-            importance: AndroidImportance.HIGH,
-            pressAction: {id: 'default'},
-          },
-        });
+        console.log('[NOTIF] onMessage — calling notifee.displayNotification');
+        try {
+          await notifee.displayNotification({
+            title: remoteMessage.notification.title || 'Notification',
+            body: remoteMessage.notification.body || '',
+            data: remoteMessage.data,
+            android: {
+              channelId: 'etna_default_channel',
+              smallIcon: 'ic_notification',
+              importance: AndroidImportance.HIGH,
+              pressAction: {id: 'default'},
+            },
+          });
+          console.log('[NOTIF] onMessage — notifee.displayNotification OK');
+        } catch (err) {
+          console.error('[NOTIF] onMessage — notifee.displayNotification ERROR:', err);
+        }
+      } else {
+        console.warn('[NOTIF] onMessage — no notification payload, skipping display');
       }
     });
 
     // Handle notification opened when app was in background
+    console.log('[NOTIF] Registering onNotificationOpenedApp listener');
     const unsubscribeOpened = onNotificationOpenedApp(remoteMessage => {
-      console.log('Notification caused app to open from background:', remoteMessage);
-      // Handle navigation based on notification data
-      if (remoteMessage.data) {
-        // Navigate to specific screen based on data
-        // Example: navigation.navigate(remoteMessage.data.screen);
-      }
+      console.log('[NOTIF] onNotificationOpenedApp — tapped from background');
+      console.log('[NOTIF] onNotificationOpenedApp — data:', JSON.stringify(remoteMessage.data));
     });
 
     // Check if app was opened from a quit state by notification
     getInitialNotification().then(remoteMessage => {
       if (remoteMessage) {
-        console.log('Notification caused app to open from quit state:', remoteMessage);
-        // Handle navigation based on notification data
-        if (remoteMessage.data) {
-          // Navigate to specific screen based on data
-        }
+        console.log('[NOTIF] getInitialNotification — app opened from quit state');
+        console.log('[NOTIF] getInitialNotification — data:', JSON.stringify(remoteMessage.data));
+      } else {
+        console.log('[NOTIF] getInitialNotification — app was not opened from a notification');
       }
+    }).catch((err: any) => {
+      console.error('[NOTIF] getInitialNotification ERROR:', err);
     });
 
     return () => {
+      console.log('[NOTIF] Cleaning up foreground + openedApp listeners');
       unsubscribeForeground();
       unsubscribeOpened();
     };

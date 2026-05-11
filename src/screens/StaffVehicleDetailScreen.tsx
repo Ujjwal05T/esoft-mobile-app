@@ -559,7 +559,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
       const result = await createInquiryWithMedia(
         vehicleId,
         workshopOwnerId,
-        staffCategories,
+        staffCategories.length ? staffCategories : ['Default'],
         items,
         audioFiles,
         imageFiles,
@@ -882,9 +882,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
           {
             label: 'Request Part',
             onPress: () => setShowRequestPart(true),
-            disabled:
-              jobCards.length === 0 ||
-              (permissions !== null && !permissions.createInquiry),
+            disabled: permissions !== null && !permissions.createInquiry,
           },
         ]}
       />

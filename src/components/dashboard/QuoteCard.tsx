@@ -3,7 +3,7 @@ import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
 import StatusBadge, {StatusType} from '../ui/StatusBadge';
 
-export type QuoteStatus = Extract<StatusType, 'pending_review' | 'accepted'>;
+export type QuoteStatus = Extract<StatusType, 'pending_review' | 'accepted' | 'expired'>;
 
 export interface QuoteItem {
   id: string;
@@ -32,7 +32,6 @@ interface QuoteCardProps {
   isExpanded: boolean;
   onToggle: () => void;
   showNumberPlate?: boolean;
-  onAccept?: (id: string) => void;
   onView?: (id: string) => void;
   maxVisibleAvailable?: number;
   maxVisibleUnavailable?: number;
@@ -62,12 +61,10 @@ export default function QuoteCard({
   isExpanded,
   onToggle,
   showNumberPlate = true,
-  onAccept,
   onView,
   maxVisibleAvailable = 2,
   maxVisibleUnavailable = 2,
 }: QuoteCardProps) {
-  const isAccepted = quote.status === 'accepted';
   const availableItems = quote.items.filter(i => i.isAvailable);
   const unavailableItems = quote.items.filter(i => !i.isAvailable);
   const visibleAvailable = availableItems.slice(0, maxVisibleAvailable);
@@ -188,23 +185,11 @@ export default function QuoteCard({
             <Text style={styles.totalValue}>{formatPrice(quote.estimatedTotal)}</Text>
           </View>
 
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              onPress={() => onAccept?.(quote.id)}
-              disabled={isAccepted}
-              style={[styles.acceptBtn, isAccepted && styles.acceptBtnDisabled]}>
-              <Text style={styles.acceptBtnText}>
-                {isAccepted ? 'Order Placed' : 'Accept Quote'}
-              </Text>
-            </TouchableOpacity>
-            {onView && (
-              <TouchableOpacity
-                onPress={() => onView(quote.id)}
-                style={styles.viewBtn}>
-                <ViewIcon />
-              </TouchableOpacity>
-            )}
-          </View>
+          <TouchableOpacity
+            onPress={() => onView?.(quote.id)}
+            style={styles.viewBtn}>
+            <ViewIcon />
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -272,9 +257,5 @@ const styles = StyleSheet.create({
   itemPrice: {fontSize: 14, fontWeight: '700', color: '#000000'},
   itemQty: {fontSize: 12, fontWeight: '500', color: '#828282'},
   moreText: {fontSize: 14, fontWeight: '600', color: '#e5383b', textAlign: 'center', marginTop: 12},
-  actionRow: {flexDirection: 'row', gap: 8, marginTop: 16},
-  acceptBtn: {flex: 1, backgroundColor: '#e5383b', height: 48, borderRadius: 8, alignItems: 'center', justifyContent: 'center'},
-  acceptBtnDisabled: {backgroundColor: '#828282'},
-  acceptBtnText: {fontSize: 14, fontWeight: '600', color: '#ffffff'},
-  viewBtn: {width: 100, borderWidth: 1, borderColor: '#e5383b', height: 48, borderRadius: 8, alignItems: 'center', justifyContent: 'center'},
+  viewBtn: {marginTop: 16, borderWidth: 1, borderColor: '#e5383b', height: 44, borderRadius: 8, alignItems: 'center', justifyContent: 'center'},
 });
