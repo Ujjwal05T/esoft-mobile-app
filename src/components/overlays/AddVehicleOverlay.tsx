@@ -27,6 +27,11 @@ const SCREEN_H = Dimensions.get('screen').height;
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
 import VehicleCard from '../dashboard/VehicleCard';
+import TataMotors from '../../assets/logos/tata-motors.svg';
+import Toyota from '../../assets/logos/toyota.svg';
+import Mahindra from '../../assets/logos/mahindra.svg';
+import Suzuki from '../../assets/logos/suzuki.svg';
+import Hyundai from '../../assets/logos/hyundai.svg';
 import {createVehicle, createVehicleWithMedia, gateInVehicle, gateInVehicleWithMedia, scanRcCard, scanVehiclePlate, getCarBrands, getCarModels, getCarYears, getCarVariants, getVehicleByPlate} from '../../services/api';
 import CameraScannerOverlay, {ScanMode} from './CameraScannerOverlay';
 import AppAlert, {AlertState} from './AppAlert';
@@ -59,6 +64,161 @@ interface AddVehicleOverlayProps {
 }
 
 
+// Map API brand names → logo SVG components (all-caps as returned by Car_Master_Data)
+const BRAND_LOGOS: Record<string, React.ComponentType<any>> = {
+  'TATA': TataMotors,
+  'TOYOTA': Toyota,
+  'MAHINDRA': Mahindra,
+  'MARUTI SUZUKI': Suzuki,
+  'HYUNDAI': Hyundai,
+};
+
+function BrandPicker({
+  brands,
+  selected,
+  onSelect,
+  loading,
+}: {
+  brands: string[];
+  selected: string;
+  onSelect: (v: string) => void;
+  loading: boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+
+  const handleSelect = (brand: string) => {
+    onSelect(brand);
+    setOpen(false);
+  };
+
+  const sorted = brands.filter(b => !!BRAND_LOGOS[b]);
+
+  return (
+    <View style={bpStyles.wrap}>
+      {/* Floating label */}
+      {selected ? <Text style={bpStyles.floatLabel}>Brand</Text> : null}
+
+      {/* Toggle header */}
+      <TouchableOpacity
+        onPress={() => !loading && setOpen(o => !o)}
+        activeOpacity={0.8}
+        style={[bpStyles.header, (open || selected) && bpStyles.headerActive]}>
+        {loading ? (
+          <ActivityIndicator size="small" color="#e5383b" style={{marginRight: 4}} />
+        ) : null}
+        <Text style={[bpStyles.headerText, !selected && bpStyles.headerPlaceholder]}>
+          {loading ? 'Loading brands...' : selected || 'Brand'}
+        </Text>
+        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+          <Path
+            d={open ? 'M17 14L12 9L7 14' : 'M7 10L12 15L17 10'}
+            stroke="#828282"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      </TouchableOpacity>
+
+      {/* Logo grid */}
+      {open && (
+        <View style={bpStyles.gridWrap}>
+          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} style={{maxHeight: 220}}>
+            <View style={bpStyles.grid}>
+              {sorted.map(brand => {
+                const Logo = BRAND_LOGOS[brand];
+                const isSelected = selected === brand;
+                return (
+                  <View key={brand} style={bpStyles.tileWrapper}>
+                    <TouchableOpacity
+                      onPress={() => handleSelect(brand)}
+                      activeOpacity={0.75}
+                      style={[bpStyles.tile, isSelected && bpStyles.tileSelected]}>
+                      {Logo ? (
+                        <Logo width={56} height={44} />
+                      ) : (
+                        <Text
+                          style={[bpStyles.tileText, isSelected && bpStyles.tileTextSelected]}
+                          numberOfLines={2}>
+                          {brand}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const bpStyles = StyleSheet.create({
+  wrap: {position: 'relative', marginTop: 2},
+  floatLabel: {
+    position: 'absolute',
+    top: -8,
+    left: 12,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 4,
+    fontSize: 10,
+    color: '#828282',
+    zIndex: 2,
+  },
+  header: {
+    borderWidth: 1,
+    borderColor: '#d3d3d3',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+  },
+  headerActive: {borderColor: '#e5383b'},
+  headerText: {fontSize: 15, color: '#000', flex: 1},
+  headerPlaceholder: {color: '#828282'},
+  gridWrap: {
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderColor: '#e5383b',
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    padding: 10,
+    backgroundColor: '#fff',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  tileWrapper: {
+    width: '33.33%',
+    padding: 4,
+  },
+  tile: {
+    flex: 1,
+    height: 72,
+    borderRadius: 10,
+    backgroundColor: '#fafafa',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+  },
+  tileSelected: {
+    backgroundColor: '#fff0f0',
+  },
+  tileText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#4c4c4c',
+    textAlign: 'center',
+    lineHeight: 13,
+  },
+  tileTextSelected: {color: '#e5383b'},
+});
 
 // Simple inline dropdown component
 export function DropdownField({
@@ -825,10 +985,10 @@ export default function AddVehicleOverlay({
           <ScrollView showsVerticalScrollIndicator={false}>
             {renderHeader('Add Vehicle Details')}
             <View style={styles.formGap}>
-              <DropdownField
-                label={loadingBrands ? 'Loading brands...' : 'Brand'}
-                value={selectedBrand}
-                options={brandOptions}
+              <BrandPicker
+                brands={brandOptions}
+                selected={selectedBrand}
+                loading={loadingBrands}
                 onSelect={v => {
                   setSelectedBrand(v);
                   setSelectedModel('');
@@ -836,10 +996,6 @@ export default function AddVehicleOverlay({
                   setSelectedVariant('');
                   setOpenManualDropdown(null);
                 }}
-                isOpen={openManualDropdown === 'brand'}
-                onToggle={() => toggleManualDropdown('brand')}
-                disabled={loadingBrands}
-                optional={!isFallbackStarted && !loadingBrands}
               />
               <DropdownField
                 label={loadingModels ? 'Loading models...' : 'Model'}

@@ -13,8 +13,13 @@ import {
   DashboardStatsResponse,
   createStaff,
   createStaffWithPhoto,
+  getStoredUser,
+  getActiveVehicleVisit,
+  createInquiryWithMedia,
   type CreateStaffData,
   type RNFile,
+  type VehicleResponse,
+  type InquiryItemRequest,
 } from '../services/api';
 import {StaffFormData} from '../components/overlays/AddStaffOverlay';
 import Header from '../components/dashboard/Header';
@@ -29,12 +34,13 @@ import JobsCard from '../components/dashboard/JobsCard';
 import EventCard from '../components/dashboard/EventCard';
 import RunningPartsCard from '../components/dashboard/RunningPartsCard';
 import RaisePartsCard from '../components/dashboard/RaisePartsCard';
-import FloatingActionButton from '../components/dashboard/FloatingActionButton';
 import AddVehicleOverlay from '../components/overlays/AddVehicleOverlay';
 import AddStaffOverlay from '../components/overlays/AddStaffOverlay';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import NewJobCardOverlay from '../components/overlays/NewJobCardOverlay';
 import FiltersOverlay from '../components/overlays/FiltersOverlay';
+import VehicleSelectionOverlay, {type VehicleInfo} from '../components/overlays/VehicleSelectionOverlay';
+import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 interface OwnerDashboardScreenProps {
@@ -48,6 +54,10 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
   const [alert, setAlert] = useState<AlertState | null>(null);
   const [newJobOpen, setNewJobOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [showVehicleSelection, setShowVehicleSelection] = useState(false);
+  const [showRequestPart, setShowRequestPart] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleResponse | null>(null);
+  const [activeVisitCategories, setActiveVisitCategories] = useState<string[]>([]);
 
   // Dashboard statistics state
   const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
@@ -88,6 +98,60 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
       return {success: true};
     }
     return {success: false, error: response.error || 'Failed to add staff'};
+  };
+
+  const handleVehicleSelected = async (vehicle: VehicleResponse, _info: VehicleInfo) => {
+    setSelectedVehicle(vehicle);
+    const visitRes = await getActiveVehicleVisit(vehicle.id);
+    setActiveVisitCategories(visitRes.data?.activeJobCategories?.length ? visitRes.data.activeJobCategories : ['Default']);
+    setShowVehicleSelection(false);
+    setShowRequestPart(true);
+  };
+
+  const handleRequestPartSubmit = async (parts: any[]) => {
+    try {
+      const user = await getStoredUser();
+      if (!user || !selectedVehicle) {
+        setAlert({type: 'error', message: 'User or vehicle not found. Please try again.'});
+        return;
+      }
+      const audioFiles: any[] = [];
+      const imageFiles: any[] = [];
+      const items: InquiryItemRequest[] = parts.map(part => {
+        if (part.audioPath) {
+          audioFiles.push({uri: part.audioPath, name: `audio_${Date.now()}_${audioFiles.length}.mp4`, type: 'audio/mp4'});
+        }
+        part.images.forEach((img: any) => {
+          if (img?.uri) {
+            imageFiles.push({uri: img.uri, name: img.name || `image_${Date.now()}_${imageFiles.length}.jpg`, type: 'image/jpeg'});
+          }
+        });
+        return {
+          partName: part.partName,
+          preferredBrand: part.preferredBrand,
+          quantity: parseInt(part.quantity, 10) || 1,
+          remark: part.remark,
+          audioDuration: part.audioDuration || undefined,
+        };
+      });
+      const result = await createInquiryWithMedia(
+        selectedVehicle.id,
+        user.id,
+        activeVisitCategories,
+        items,
+        audioFiles,
+        imageFiles,
+        undefined,
+        null,
+      );
+      if (result.success) {
+        setAlert({type: 'success', message: `Inquiry created successfully!\n\nInquiry Number: ${result.data?.inquiryNumber || 'N/A'}`, onDone: () => setShowRequestPart(false)});
+      } else {
+        setAlert({type: 'error', message: result.error || 'Failed to create inquiry'});
+      }
+    } catch {
+      setAlert({type: 'error', message: 'An error occurred while creating the inquiry'});
+    }
   };
 
   const fetchDashboardStats = useCallback(async () => {
@@ -150,6 +214,9 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
             tintColor="#e5383b"
           />
         }>
+
+          {/* ── Get Instant Quotes Card ── Update: Used as Order Now as label but working is same */}
+        <RaisePartsCard text1="Order parts," text2="Get Instant Quotes" onPress={() => setShowVehicleSelection(true)} />
 
         {/* ── Status Cards – 2-column grid ── */}
         <View style={styles.statusGrid}>
@@ -234,8 +301,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
         {/* ── Running Parts ── */}
         <RunningPartsCard />
 
-        {/* ── Get Instant Quotes Card ── */}
-        <RaisePartsCard text1="Get Instant Quotes" text2="For OEM Spareparts" />
+        
 
         {/* ── #1 Tagline Block ── */}
         <View style={styles.taglineBlock}>
@@ -281,11 +347,30 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
         }}
       />
 
+      <VehicleSelectionOverlay
+        isOpen={showVehicleSelection}
+        onClose={() => setShowVehicleSelection(false)}
+        onVehicleSelected={handleVehicleSelected}
+        title="Select Vehicle for Order Part"
+      />
+
+      {selectedVehicle && (
+        <RequestPartOverlay
+          isOpen={showRequestPart}
+          onClose={() => setShowRequestPart(false)}
+          onSubmit={handleRequestPartSubmit}
+        />
+      )}
+
       <AppAlert
         isOpen={!!alert}
         type={alert?.type ?? 'info'}
         message={alert?.message ?? ''}
-        onClose={() => setAlert(null)}
+        onClose={() => {
+          const done = alert?.onDone;
+          setAlert(null);
+          done?.();
+        }}
       />
     </SafeAreaView>
   );
@@ -303,11 +388,12 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   statusGrid: {
-    gap: 6,
+    gap: 16,
+    marginTop: 0,
   },
   statusRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 16,
   },
   taglineBlock: {
     flexDirection: 'row',
