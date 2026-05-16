@@ -9,10 +9,15 @@ import VehicleDetailScreen from '../screens/VehicleDetailScreen';
 import StaffVehicleDetailScreen from '../screens/StaffVehicleDetailScreen';
 import QuoteDetailScreen from '../screens/QuoteDetailScreen';
 import PaymentScreen from '../screens/PaymentScreen';
+import PaymentCallbackScreen from '../screens/PaymentCallbackScreen';
 import StaffScreen from '../screens/StaffScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ReportsScreen from '../screens/ReportsScreen';
 import FAQsScreen from '../screens/FAQsScreen';
+import PoliciesScreen from '../screens/PoliciesScreen';
+import TermsAndConditionsScreen from '../screens/TermsAndConditionsScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
+import RefundPolicyScreen from '../screens/RefundPolicyScreen';
 import StaffProfileScreen from '../screens/StaffProfileScreen';
 import InquiryDetailScreen from '../screens/InquiryDetailScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
@@ -28,14 +33,35 @@ export type RootStackParamList = {
   QuoteDetail: {quoteId: number};
   OrderDetail: {orderId: number};
   Payment: {quoteId: number; selectedItemIds: number[]};
+  PaymentCallback: {
+    status?: string;
+    order_id?: string;
+    payment_id?: string;
+    reason?: string;
+  };
   Staff: undefined;
   Profile: undefined;
   StaffProfile: undefined;
   Reports: undefined;
   FAQs: undefined;
+  Policies: undefined;
+  TermsAndConditions: undefined;
+  PrivacyPolicy: undefined;
+  RefundPolicy: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Deep link scheme: partsnow://
+// Payment callback URL to give your PG: partsnow://payment/callback
+const linking = {
+  prefixes: ['partsnow://'],
+  config: {
+    screens: {
+      PaymentCallback: 'payment/callback',
+    },
+  },
+};
 
 const RootNavigator: React.FC = () => {
   const {isAuth, authChecked} = useAuth();
@@ -47,7 +73,7 @@ const RootNavigator: React.FC = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
@@ -104,6 +130,11 @@ const RootNavigator: React.FC = () => {
               options={{animation: 'slide_from_right', headerShown: false}}
             />
             <Stack.Screen
+              name="PaymentCallback"
+              component={PaymentCallbackScreen}
+              options={{animation: 'fade', headerShown: false}}
+            />
+            <Stack.Screen
               name="Staff"
               component={StaffScreen}
               options={{animation: 'slide_from_right', headerShown: false}}
@@ -121,6 +152,26 @@ const RootNavigator: React.FC = () => {
             <Stack.Screen
               name="FAQs"
               component={FAQsScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="Policies"
+              component={PoliciesScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="TermsAndConditions"
+              component={TermsAndConditionsScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="PrivacyPolicy"
+              component={PrivacyPolicyScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="RefundPolicy"
+              component={RefundPolicyScreen}
               options={{animation: 'slide_from_right', headerShown: false}}
             />
             <Stack.Screen
