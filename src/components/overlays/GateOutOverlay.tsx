@@ -80,6 +80,7 @@ export default function GateOutOverlay({
     make: 'Toyota',
     model: 'Crysta',
     specs: '2.4L ZX MT/Diesel',
+    imageUrl: undefined as string | undefined,
   };
   const vehicle = vehicleData || defaultVehicle;
 
@@ -248,6 +249,7 @@ export default function GateOutOverlay({
                 model={vehicle.model}
                 specs={vehicle.specs}
                 variant="default"
+                imageUrl={vehicle.imageUrl}
               />
             </View>
 

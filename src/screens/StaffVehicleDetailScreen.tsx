@@ -670,6 +670,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
           specs={vehicle.specs ?? vehicle.variant ?? ''}
           services={activeVisit?.activeJobCategories?.slice(0, 2) ?? []}
           additionalServices={Math.max(0, (activeVisit?.activeJobCategories?.length ?? 0) - 2)}
+          imageUrl={vehicle.imageUrl}
         />
 
         {/* ── Tab Bar ──────────────────────────────────────────────────── */}
@@ -908,6 +909,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
           make: vehicle.brand ?? '',
           model: vehicle.model ?? '',
           specs: vehicle.specs ?? vehicle.variant ?? '',
+          imageUrl: vehicle.imageUrl ?? undefined,
         }}
       />
 

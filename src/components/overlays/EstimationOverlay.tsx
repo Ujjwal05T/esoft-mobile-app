@@ -8,9 +8,16 @@ import {
   ScrollView,
   TextInput,
   TouchableWithoutFeedback,
+  Platform,
+  ToastAndroid,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import VehicleCard from '../dashboard/VehicleCard';
+import {generatePDF} from 'react-native-html-to-pdf';
+import RNFS from 'react-native-fs';
+import RNShare from 'react-native-share';
 
 interface VehicleInfo {
   plateNumber: string;
@@ -18,6 +25,7 @@ interface VehicleInfo {
   make: string;
   model: string;
   specs: string;
+  chassisNumber?: string;
 }
 
 interface Part {
@@ -57,6 +65,8 @@ interface EstimationOverlayProps {
   onReviewEstimate?: (data: EstimationData) => void;
   onGeneratePDF?: (data: EstimationData & {customerName: string; gstNumber: string}) => void;
   vehicleInfo?: VehicleInfo;
+  workshopName?: string;
+  workshopAddress?: string;
 }
 
 const defaultVehicle: VehicleInfo = {
@@ -177,11 +187,18 @@ export default function EstimationOverlay({
   onReviewEstimate,
   onGeneratePDF,
   vehicleInfo,
+  workshopName,
+  workshopAddress,
 }: EstimationOverlayProps) {
   const vehicle = vehicleInfo || defaultVehicle;
+  const shopName = workshopName || 'Your Workshop';
 
   type ViewType = 'estimate' | 'review' | 'pdf';
   const [currentView, setCurrentView] = useState<ViewType>('estimate');
+  const [pdfPath, setPdfPath] = useState<string | null>(null);
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [pdfMeta, setPdfMeta] = useState<{estNumber: string; invoiceDate: string; dueDate: string} | null>(null);
 
   const [isPartsOpen, setIsPartsOpen] = useState(false);
   const [isLabourOpen, setIsLabourOpen] = useState(false);
@@ -235,6 +252,9 @@ export default function EstimationOverlay({
       setCustomerName('');
       setGstNumber('');
       setIsGstVerified(false);
+      setPdfPath(null);
+      setPdfBase64(null);
+      setPdfMeta(null);
     }
   }, [isOpen]);
 
@@ -247,13 +267,225 @@ export default function EstimationOverlay({
     setCurrentView('review');
   };
 
-  const handleGeneratePDF = () => {
+  const fmtDate = (d: Date) =>
+    d.toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'});
+
+  const buildPdfHtml = (meta: {estNumber: string; invoiceDate: string; dueDate: string}) => {
+    const vehicleName = [vehicle.make, vehicle.model].filter(Boolean).join(' ') || '—';
+    const rows = [
+      ...parts.map((p, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><b>${p.name}</b><br/><span class="sub">Part</span></td>
+          <td class="ar">${p.quantity}</td>
+          <td class="ar">&#8377;${p.rate.toLocaleString('en-IN')}</td>
+          <td class="ar">&#8377;${(p.rate * p.quantity).toLocaleString('en-IN')}</td>
+        </tr>`),
+      ...labour.map((l, i) => `
+        <tr>
+          <td>${parts.length + i + 1}</td>
+          <td><b>${l.name}</b><br/><span class="sub">Labour</span></td>
+          <td class="ar">1</td>
+          <td class="ar">&#8377;${l.rate.toLocaleString('en-IN')}</td>
+          <td class="ar">&#8377;${l.rate.toLocaleString('en-IN')}</td>
+        </tr>`),
+      ...extras.map((e, i) => `
+        <tr>
+          <td>${parts.length + labour.length + i + 1}</td>
+          <td><b>${e.description}</b><br/><span class="sub">Extra</span></td>
+          <td class="ar">1</td>
+          <td class="ar">&#8377;${e.rate.toLocaleString('en-IN')}</td>
+          <td class="ar">&#8377;${e.rate.toLocaleString('en-IN')}</td>
+        </tr>`),
+    ].join('');
+
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; padding: 36px; color: #1a1a1a; font-size: 12px; }
+
+  .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 2px solid #1a1a1a; }
+  .shop-name { font-size: 15px; font-weight: bold; margin-bottom: 6px; }
+  .shop-addr { font-size: 11px; color: #444; line-height: 1.75; white-space: pre-line; }
+  .doc-title { font-size: 34px; font-weight: bold; color: #1a237e; letter-spacing: 0.5px; }
+
+  .info-table { width: 100%; border-collapse: collapse; border: 1px solid #bbb; }
+  .info-table td { padding: 7px 12px; font-size: 11px; border-bottom: 1px solid #ddd; }
+  .info-table tr:last-child td { border-bottom: none; }
+  .lbl { color: #555; width: 90px; }
+  .val { font-weight: bold; }
+  .mid { border-left: 1px solid #bbb; color: #555; width: 80px; }
+
+  .bill-table { width: 100%; border-collapse: collapse; border: 1px solid #bbb; border-top: none; }
+  .bill-table td { padding: 0; vertical-align: top; width: 50%; }
+  .bill-right { border-left: 1px solid #bbb; }
+  .bill-head { font-size: 10px; color: #555; padding: 5px 12px 4px; border-bottom: 1px solid #ddd; background: #f9f9f9; }
+  .bill-body { padding: 7px 12px 12px; }
+  .bill-name { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+  .bill-sub { font-size: 11px; color: #444; }
+
+  .items { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .items thead tr { background: #1a237e; }
+  .items th { padding: 8px 10px; color: #fff; text-align: left; font-size: 11px; border: 1px solid #1a237e; }
+  .items th.ar { text-align: right; }
+  .items td { padding: 7px 10px; font-size: 11px; border: 1px solid #ddd; vertical-align: top; }
+  .sub { font-size: 9px; color: #888; }
+  .ar { text-align: right; }
+
+  .totals-wrap { display: flex; justify-content: flex-end; margin-top: 12px; }
+  .totals { width: 260px; border-collapse: collapse; border: 1px solid #bbb; }
+  .totals td { padding: 6px 12px; font-size: 11px; border-bottom: 1px solid #ddd; }
+  .totals tr:last-child td { border-bottom: none; font-weight: bold; font-size: 12px; background: #e8eaf6; color: #1a237e; }
+  .totals .ar { text-align: right; }
+
+  .footer { margin-top: 20px; font-size: 10px; color: #666; border-top: 1px solid #ddd; padding-top: 10px; }
+</style>
+</head><body>
+
+<div class="header">
+  <div>
+    <div class="shop-name">${shopName}</div>
+    <div class="shop-addr">${(workshopAddress || '').replace(/,\s*/g, '\n')}</div>
+  </div>
+  <div class="doc-title">JOB ESTIMATE</div>
+</div>
+
+<table class="info-table">
+  <tr>
+    <td class="lbl">Invoice#</td><td class="val">${meta.estNumber}</td>
+    <td class="mid">Vehicle</td><td>: <b>${vehicleName}</b></td>
+  </tr>
+  <tr>
+    <td class="lbl">Invoice Date</td><td class="val">${meta.invoiceDate}</td>
+    <td class="mid">Year</td><td>: <b>${vehicle.year || '—'}</b></td>
+  </tr>
+  <tr>
+    <td class="lbl">Terms</td><td class="val">Estimate valid for 15 days</td>
+    <td class="mid">Variant</td><td>: <b>${vehicle.specs || '—'}</b></td>
+  </tr>
+  <tr>
+    <td class="lbl">Due Date</td><td class="val">${meta.dueDate}</td>
+    <td class="mid">Chassis No</td><td>: <b>${vehicle.chassisNumber || 'Not Provided'}</b></td>
+  </tr>
+</table>
+
+<table class="bill-table">
+  <tr>
+    <td>
+      <div class="bill-head">Bill To</div>
+      <div class="bill-body">
+        <div class="bill-name">${customerName || '—'}</div>
+        ${gstNumber ? `<div class="bill-sub">Gst No. : ${gstNumber}</div>` : ''}
+      </div>
+    </td>
+    <td class="bill-right">
+      <div class="bill-head">Ship To</div>
+      <div class="bill-body"><div class="bill-sub">Same as Bill To</div></div>
+    </td>
+  </tr>
+</table>
+
+<table class="items">
+  <thead>
+    <tr>
+      <th style="width:28px">#</th>
+      <th>Item &amp; Description</th>
+      <th class="ar" style="width:40px">Qty</th>
+      <th class="ar" style="width:80px">Rate</th>
+      <th class="ar" style="width:90px">Amount</th>
+    </tr>
+  </thead>
+  <tbody>${rows}</tbody>
+</table>
+
+<div class="totals-wrap">
+  <table class="totals">
+    <tr><td>Sub Total</td><td class="ar">&#8377;${subTotal.toLocaleString('en-IN')}</td></tr>
+    ${discountValue > 0 ? `<tr><td>Discount</td><td class="ar">&#8377;${discountValue.toLocaleString('en-IN')}</td></tr>` : ''}
+    <tr><td>Total Payable</td><td class="ar">&#8377;${totalPayable.toLocaleString('en-IN')}</td></tr>
+    <tr><td>Balance Due</td><td class="ar">&#8377;${totalPayable.toLocaleString('en-IN')}</td></tr>
+  </table>
+</div>
+
+<p class="footer">This is an estimate, not an invoice. Prices are subject to change upon final inspection. Approval required before work begins.</p>
+
+</body></html>`;
+  };
+
+  const handleGeneratePDF = async () => {
     onGeneratePDF?.({
       parts, labour, extras, partsTotal, labourTotal, extrasTotal,
       subTotal, discount: discountValue, totalPayable,
       customerName, gstNumber,
     });
+    const now = new Date();
+    const due = new Date(now);
+    due.setDate(due.getDate() + 15);
+    const meta = {
+      estNumber: `EST-${String(now.getTime()).slice(-6).padStart(6, '0')}`,
+      invoiceDate: fmtDate(now),
+      dueDate: fmtDate(due),
+    };
+    setPdfMeta(meta);
+    setGeneratingPDF(true);
+    try {
+      const result = await generatePDF({
+        html: buildPdfHtml(meta),
+        fileName: `estimate_${vehicle.plateNumber.replace(/\s+/g, '_')}_${Date.now()}`,
+        directory: 'Documents',
+        width: 595,
+        height: 842,
+        padding: 0,
+        base64: true,
+      });
+      setPdfPath(result.filePath);
+      setPdfBase64(result.base64 ?? null);
+    } catch (e) {
+      Alert.alert('Error', 'Could not generate PDF. Please try again.');
+    } finally {
+      setGeneratingPDF(false);
+    }
     setCurrentView('pdf');
+  };
+
+  const handleDownload = async () => {
+    if (!pdfPath) {
+      Alert.alert('Not ready', 'PDF is still generating.');
+      return;
+    }
+    if (Platform.OS === 'android') {
+      try {
+        const dest = `${RNFS.DownloadDirectoryPath}/estimate_${vehicle.plateNumber.replace(/\s+/g, '_')}.pdf`;
+        await RNFS.copyFile(pdfPath, dest);
+        ToastAndroid.show('PDF saved to Downloads', ToastAndroid.SHORT);
+      } catch {
+        Alert.alert('Error', 'Could not save to Downloads.');
+      }
+    } else {
+      await RNShare.open({url: pdfPath, type: 'application/pdf', failOnCancel: false});
+    }
+  };
+
+  const handleShare = async () => {
+    if (!pdfBase64) {
+      Alert.alert('Not ready', 'PDF is still generating.');
+      return;
+    }
+    const sharePath = `${RNFS.CachesDirectoryPath}/estimate_${vehicle.plateNumber.replace(/\s+/g, '_')}.pdf`;
+    try {
+      await RNFS.writeFile(sharePath, pdfBase64, 'base64');
+      await RNShare.open({
+        url: `file://${sharePath}`,
+        type: 'application/pdf',
+        title: 'Job Estimate',
+        failOnCancel: false,
+      });
+    } catch {
+      // user cancelled or error
+    } finally {
+      RNFS.unlink(sharePath).catch(() => {});
+    }
   };
 
   const handleBack = () => {
@@ -665,8 +897,15 @@ export default function EstimationOverlay({
                 </View>
               </View>
 
-              <TouchableOpacity onPress={handleGeneratePDF} style={styles.primaryBtn}>
-                <Text style={styles.primaryBtnText}>GENERATE PDF</Text>
+              <TouchableOpacity
+                onPress={handleGeneratePDF}
+                style={styles.primaryBtn}
+                disabled={generatingPDF}>
+                {generatingPDF ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.primaryBtnText}>GENERATE PDF</Text>
+                )}
               </TouchableOpacity>
             </View>
           )}
@@ -674,64 +913,103 @@ export default function EstimationOverlay({
           {/* ========== PDF VIEW ========== */}
           {currentView === 'pdf' && (
             <View style={styles.sectionGap}>
-              {/* PDF Preview Card */}
               <View style={styles.pdfPreviewOuter}>
                 <View style={styles.pdfDoc}>
-                  <View style={styles.pdfHeader}>
-                    <View>
-                      <Text style={styles.pdfShopName}>National Car Service</Text>
-                      <Text style={styles.pdfShopAddr}>Chopda Bazar, Dewas</Text>
+
+                  {/* Header */}
+                  <View style={styles.pdfTopRow}>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.pdfShopName}>{shopName}</Text>
+                      {!!workshopAddress && (
+                        <Text style={styles.pdfShopAddr}>{workshopAddress}</Text>
+                      )}
                     </View>
-                    <View style={styles.pdfLogo} />
-                  </View>
-                  <Text style={styles.pdfTitle}>JOB ESTIMATE</Text>
-
-                  <View style={styles.pdfCustomer}>
-                    <Text style={styles.pdfSmall}>Bill To:</Text>
-                    <Text style={styles.pdfCustomerName}>{customerName || 'Customer Name'}</Text>
-                    <Text style={styles.pdfSmall}>GST: {gstNumber || 'N/A'}</Text>
+                    <Text style={styles.pdfDocTitle}>JOB{'\n'}ESTIMATE</Text>
                   </View>
 
-                  <View style={styles.pdfTableHeader}>
-                    <Text style={[styles.pdfTableText, {width: 20}]}>#</Text>
-                    <Text style={[styles.pdfTableText, {flex: 1}]}>Description</Text>
-                    <Text style={[styles.pdfTableText, {width: 60, textAlign: 'right'}]}>Rate</Text>
+                  {/* Info grid */}
+                  <View style={styles.pdfInfoGrid}>
+                    {([
+                      ['Invoice#', pdfMeta?.estNumber ?? '', 'Vehicle', [vehicle.make, vehicle.model].filter(Boolean).join(' ') || '—'],
+                      ['Inv. Date', pdfMeta?.invoiceDate ?? '', 'Year', String(vehicle.year || '—')],
+                      ['Terms', 'Valid 15 days', 'Variant', vehicle.specs || '—'],
+                      ['Due Date', pdfMeta?.dueDate ?? '', 'Chassis', vehicle.chassisNumber || 'Not Provided'],
+                    ] as [string, string, string, string][]).map(([l1, v1, l2, v2], i) => (
+                      <View key={i} style={styles.pdfInfoRow}>
+                        <Text style={styles.pdfInfoLbl}>{l1}</Text>
+                        <Text style={styles.pdfInfoVal} numberOfLines={1}>{v1}</Text>
+                        <View style={styles.pdfInfoMid} />
+                        <Text style={styles.pdfInfoLbl}>{l2}</Text>
+                        <Text style={[styles.pdfInfoVal, {flex: 1}]} numberOfLines={1}>: {v2}</Text>
+                      </View>
+                    ))}
                   </View>
-                  {parts.slice(0, 4).map((part, idx) => (
-                    <View key={part.id} style={styles.pdfTableRow}>
-                      <Text style={[styles.pdfTableText, {width: 20}]}>{idx + 1}</Text>
-                      <Text style={[styles.pdfTableText, {flex: 1}]} numberOfLines={1}>{part.name}</Text>
-                      <Text style={[styles.pdfTableText, {width: 60, textAlign: 'right'}]}>
-                        ₹{(part.rate * part.quantity).toLocaleString('en-IN')}
-                      </Text>
+
+                  {/* Bill To / Ship To */}
+                  <View style={styles.pdfBillRow}>
+                    <View style={styles.pdfBillCell}>
+                      <Text style={styles.pdfBillHead}>Bill To</Text>
+                      <Text style={styles.pdfBillName} numberOfLines={1}>{customerName || '—'}</Text>
+                      {!!gstNumber && <Text style={styles.pdfBillSub}>Gst No. : {gstNumber}</Text>}
+                    </View>
+                    <View style={[styles.pdfBillCell, styles.pdfBillRight]}>
+                      <Text style={styles.pdfBillHead}>Ship To</Text>
+                      <Text style={styles.pdfBillSub}>Same as Bill To</Text>
+                    </View>
+                  </View>
+
+                  {/* Items header */}
+                  <View style={styles.pdfItemsHdr}>
+                    <Text style={[styles.pdfItemsHdrTxt, {width: 14}]}>#</Text>
+                    <Text style={[styles.pdfItemsHdrTxt, {flex: 1}]}>Item &amp; Description</Text>
+                    <Text style={[styles.pdfItemsHdrTxt, {width: 22, textAlign: 'right'}]}>Qty</Text>
+                    <Text style={[styles.pdfItemsHdrTxt, {width: 38, textAlign: 'right'}]}>Rate</Text>
+                    <Text style={[styles.pdfItemsHdrTxt, {width: 44, textAlign: 'right'}]}>Amount</Text>
+                  </View>
+
+                  {/* Items rows */}
+                  {[
+                    ...parts.map((p, i) => ({idx: i + 1, name: p.name, tag: 'Part', qty: p.quantity, rate: p.rate, amount: p.rate * p.quantity})),
+                    ...labour.map((l, i) => ({idx: parts.length + i + 1, name: l.name, tag: 'Labour', qty: 1, rate: l.rate, amount: l.rate})),
+                    ...extras.map((e, i) => ({idx: parts.length + labour.length + i + 1, name: e.description, tag: 'Extra', qty: 1, rate: e.rate, amount: e.rate})),
+                  ].map(item => (
+                    <View key={item.idx} style={styles.pdfItemRow}>
+                      <Text style={[styles.pdfItemTxt, {width: 14}]}>{item.idx}</Text>
+                      <View style={{flex: 1}}>
+                        <Text style={[styles.pdfItemTxt, {fontWeight: '600'}]} numberOfLines={1}>{item.name}</Text>
+                        <Text style={styles.pdfItemTag}>{item.tag}</Text>
+                      </View>
+                      <Text style={[styles.pdfItemTxt, {width: 22, textAlign: 'right'}]}>{item.qty}</Text>
+                      <Text style={[styles.pdfItemTxt, {width: 38, textAlign: 'right'}]}>₹{item.rate.toLocaleString('en-IN')}</Text>
+                      <Text style={[styles.pdfItemTxt, {width: 44, textAlign: 'right'}]}>₹{item.amount.toLocaleString('en-IN')}</Text>
                     </View>
                   ))}
 
-                  <View style={styles.pdfTotals}>
-                    <View style={styles.pdfTotalRow}>
-                      <Text style={styles.pdfSmall}>Sub Total</Text>
-                      <Text style={styles.pdfSmall}>₹{subTotal.toLocaleString('en-IN')}</Text>
-                    </View>
-                    <View style={styles.pdfTotalRow}>
-                      <Text style={styles.pdfSmall}>Discount</Text>
-                      <Text style={styles.pdfSmall}>₹{discountValue.toLocaleString('en-IN')}</Text>
-                    </View>
-                    <View style={styles.pdfTotalRow}>
-                      <Text style={[styles.pdfSmall, {fontWeight: '700', color: '#e5383b'}]}>Total</Text>
-                      <Text style={[styles.pdfSmall, {fontWeight: '700', color: '#e5383b'}]}>
-                        ₹{totalPayable.toLocaleString('en-IN')}
-                      </Text>
+                  {/* Totals */}
+                  <View style={styles.pdfTotalsWrap}>
+                    <View style={styles.pdfTotalsBox}>
+                      <View style={styles.pdfTotalRow}><Text style={styles.pdfTotalLbl}>Sub Total</Text><Text style={styles.pdfTotalVal}>₹{subTotal.toLocaleString('en-IN')}</Text></View>
+                      {discountValue > 0 && (
+                        <View style={styles.pdfTotalRow}><Text style={styles.pdfTotalLbl}>Discount</Text><Text style={styles.pdfTotalVal}>₹{discountValue.toLocaleString('en-IN')}</Text></View>
+                      )}
+                      <View style={styles.pdfTotalRow}><Text style={styles.pdfTotalLbl}>Total Payable</Text><Text style={styles.pdfTotalVal}>₹{totalPayable.toLocaleString('en-IN')}</Text></View>
+                      <View style={styles.pdfBalanceRow}><Text style={styles.pdfBalanceTxt}>Balance Due</Text><Text style={styles.pdfBalanceTxt}>₹{totalPayable.toLocaleString('en-IN')}</Text></View>
                     </View>
                   </View>
+
+                  {/* Footer */}
+                  <Text style={styles.pdfFooter}>
+                    This is an estimate, not an invoice. Prices are subject to change upon final inspection.
+                  </Text>
                 </View>
               </View>
 
               <View style={styles.pdfActions}>
-                <TouchableOpacity style={styles.pdfBtn}>
+                <TouchableOpacity style={styles.pdfBtn} onPress={handleDownload}>
                   <DownloadIcon />
                   <Text style={styles.pdfBtnText}>Download</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.pdfBtn}>
+                <TouchableOpacity style={styles.pdfBtn} onPress={handleShare}>
                   <ShareIcon />
                   <Text style={styles.pdfBtnText}>Share</Text>
                 </TouchableOpacity>
@@ -945,12 +1223,7 @@ const styles = StyleSheet.create({
   breakdownRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
   breakdownLabel: {fontSize: 14, color: '#757575'},
   breakdownValue: {fontSize: 14, color: '#000'},
-  pdfPreviewOuter: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
+  pdfPreviewOuter: {backgroundColor: '#f0f0f0', borderRadius: 8, padding: 12},
   pdfDoc: {
     backgroundColor: '#fff',
     borderRadius: 4,
@@ -960,41 +1233,54 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    padding: 12,
+    padding: 10,
+    overflow: 'hidden',
   },
-  pdfHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8},
-  pdfShopName: {fontSize: 10, fontWeight: '600', color: '#e5383b'},
-  pdfShopAddr: {fontSize: 8, color: '#757575'},
-  pdfLogo: {width: 30, height: 20, backgroundColor: '#0077b6', borderRadius: 2},
-  pdfTitle: {fontSize: 12, fontWeight: '700', color: '#0077b6', textAlign: 'center', marginBottom: 8},
-  pdfCustomer: {borderTopWidth: 1, borderTopColor: '#e0e0e0', paddingTop: 8, marginBottom: 8},
-  pdfSmall: {fontSize: 9, color: '#757575'},
-  pdfCustomerName: {fontSize: 10, fontWeight: '500', color: '#000'},
-  pdfTableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
-    padding: 4,
-    marginBottom: 4,
-  },
-  pdfTableRow: {
-    flexDirection: 'row',
-    paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  pdfTableText: {fontSize: 9, color: '#000'},
-  pdfTotals: {marginTop: 8, borderTopWidth: 1, borderTopColor: '#e0e0e0', paddingTop: 8, gap: 4},
-  pdfTotalRow: {flexDirection: 'row', justifyContent: 'space-between'},
+
+  // Header
+  pdfTopRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 2, borderBottomColor: '#1a1a1a', paddingBottom: 8, marginBottom: 0},
+  pdfShopName: {fontSize: 9, fontWeight: '700', color: '#1a1a1a', marginBottom: 2},
+  pdfShopAddr: {fontSize: 7, color: '#555', lineHeight: 11},
+  pdfDocTitle: {fontSize: 14, fontWeight: '700', color: '#1a237e', textAlign: 'right', lineHeight: 17},
+
+  // Info grid
+  pdfInfoGrid: {borderWidth: 1, borderColor: '#bbb', borderTopWidth: 0},
+  pdfInfoRow: {flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#ddd'},
+  pdfInfoLbl: {fontSize: 7, color: '#666', width: 52, paddingVertical: 4, paddingLeft: 5},
+  pdfInfoVal: {fontSize: 7, fontWeight: '700', color: '#111', width: 70, paddingVertical: 4},
+  pdfInfoMid: {width: 1, alignSelf: 'stretch', backgroundColor: '#bbb'},
+
+  // Bill To / Ship To
+  pdfBillRow: {flexDirection: 'row', borderWidth: 1, borderTopWidth: 0, borderColor: '#bbb'},
+  pdfBillCell: {flex: 1, paddingBottom: 6},
+  pdfBillRight: {borderLeftWidth: 1, borderLeftColor: '#bbb'},
+  pdfBillHead: {fontSize: 7, color: '#666', padding: 4, paddingBottom: 3, borderBottomWidth: 1, borderBottomColor: '#ddd', backgroundColor: '#f9f9f9'},
+  pdfBillName: {fontSize: 8, fontWeight: '700', color: '#111', paddingHorizontal: 5, paddingTop: 4},
+  pdfBillSub: {fontSize: 7, color: '#555', paddingHorizontal: 5, paddingTop: 2},
+
+  // Items table
+  pdfItemsHdr: {flexDirection: 'row', backgroundColor: '#1a237e', paddingVertical: 5, paddingHorizontal: 4, marginTop: 8},
+  pdfItemsHdrTxt: {fontSize: 7, color: '#fff', fontWeight: '600'},
+  pdfItemRow: {flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 4, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#eee'},
+  pdfItemTxt: {fontSize: 7, color: '#111'},
+  pdfItemTag: {fontSize: 6, color: '#888', marginTop: 1},
+
+  // Totals
+  pdfTotalsWrap: {alignItems: 'flex-end', marginTop: 8},
+  pdfTotalsBox: {width: 160, borderWidth: 1, borderColor: '#bbb'},
+  pdfTotalRow: {flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: '#eee'},
+  pdfTotalLbl: {fontSize: 7, color: '#444'},
+  pdfTotalVal: {fontSize: 7, color: '#111'},
+  pdfBalanceRow: {flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, paddingHorizontal: 6, backgroundColor: '#e8eaf6'},
+  pdfBalanceTxt: {fontSize: 8, fontWeight: '700', color: '#1a237e'},
+
+  // Footer
+  pdfFooter: {fontSize: 6.5, color: '#888', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#ddd'},
+
   pdfActions: {flexDirection: 'row', gap: 16},
   pdfBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#e5383b',
-    paddingVertical: 16,
-    borderRadius: 8,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: '#e5383b', paddingVertical: 16, borderRadius: 8,
   },
   pdfBtnText: {color: '#fff', fontSize: 15, fontWeight: '500'},
 });

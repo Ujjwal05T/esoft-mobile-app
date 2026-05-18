@@ -42,6 +42,7 @@ import {
   acceptDispute,
   getDisputesByVehicleVisitId,
   getStoredUser,
+  getProfile,
   createInquiryWithMedia,
   getInquiryById,
   SERVER_ORIGIN,
@@ -291,6 +292,8 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   const [showGateOut, setShowGateOut] = useState(false);
   const gateOutCompleted = useRef(false);
   const [showEstimation, setShowEstimation] = useState(false);
+  const [workshopName, setWorkshopName] = useState<string | undefined>();
+  const [workshopAddress, setWorkshopAddress] = useState<string | undefined>();
   const [showNewJob, setShowNewJob] = useState(false);
   const [showRaiseDispute, setShowRaiseDispute] = useState(false);
   const [showRequestPart, setShowRequestPart] = useState(false);
@@ -470,6 +473,8 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
 
   useEffect(() => {
     fetchVehicle();
+    getStoredUser().then(u => setWorkshopName(u?.workshopName));
+    getProfile().then(r => setWorkshopAddress(r.data?.data?.workshopDetails?.address)).catch(() => {});
   }, [fetchVehicle]);
 
   useEffect(() => {
@@ -744,6 +749,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
           specs={vehicle.specs ?? vehicle.variant ?? ''}
           services={activeVisit?.activeJobCategories?.slice(0, 2) ?? []}
           additionalServices={Math.max(0, (activeVisit?.activeJobCategories?.length ?? 0) - 2)}
+          imageUrl={vehicle.imageUrl}
         />
 
         {/* ── Tab Bar ──────────────────────────────────────────────────── */}
@@ -1062,18 +1068,22 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
           make: vehicle.brand ?? '',
           model: vehicle.model ?? '',
           specs: vehicle.specs ?? vehicle.variant ?? '',
+          imageUrl: vehicle.imageUrl ?? undefined,
         }}
       />
 
       <EstimationOverlay
         isOpen={showEstimation}
         onClose={() => setShowEstimation(false)}
+        workshopName={workshopName}
+        workshopAddress={workshopAddress}
         vehicleInfo={{
           plateNumber: vehicle?.plateNumber ?? '',
           year: vehicle?.year ?? 0,
           make: vehicle?.brand ?? '',
           model: vehicle?.model ?? '',
           specs: vehicle?.specs ?? vehicle?.variant ?? '',
+          chassisNumber: vehicle?.chassisNumber ?? undefined,
         }}
       />
 

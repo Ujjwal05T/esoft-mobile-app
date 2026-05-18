@@ -26,6 +26,7 @@ interface FiltersOverlayProps {
   onClose: () => void;
   onApply?: (filters: FilterData) => void;
   onVehicleSelected?: (vehicleId: number) => void;
+  initialFilters?: FilterData;
 }
 
 export interface FilterData {
@@ -190,6 +191,7 @@ export default function FiltersOverlay({
   onClose,
   onApply,
   onVehicleSelected,
+  initialFilters,
 }: FiltersOverlayProps) {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<ActiveTab>('date');
@@ -210,7 +212,6 @@ export default function FiltersOverlay({
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
-  const [vehicleNumber, setVehicleNumber] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [addedBy, setAddedBy] = useState('');
 
@@ -224,14 +225,26 @@ export default function FiltersOverlay({
   const [searchError, setSearchError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      if (initialFilters) {
+        setStartDate(initialFilters.startDate);
+        setEndDate(initialFilters.endDate);
+        setBrand(initialFilters.brand);
+        setModel(initialFilters.model);
+        setYear(initialFilters.year);
+        setPlateNumber(initialFilters.vehicleNumber);
+        setAssignedTo(initialFilters.assignedTo);
+        setAddedBy(initialFilters.addedBy);
+        setSortBy(initialFilters.sortBy);
+      }
+      setSelectedDates([]);
+      setFoundVehicle(null);
+      setSearchError(null);
+    } else {
       setShowBrand(false);
       setShowModel(false);
       setShowAssignedTo(false);
       setShowAddedBy(false);
-      setPlateNumber('');
-      setFoundVehicle(null);
-      setSearchError(null);
     }
   }, [isOpen]);
 
@@ -248,7 +261,7 @@ export default function FiltersOverlay({
       if (result.success && result.data) {
         const foundVisit = result.data.visits.find(
           (v: VehicleVisitResponse) =>
-            v.vehicle?.plateNumber.toLowerCase().trim() === plateNumber.toLowerCase().trim(),
+            v.vehicle?.plateNumber.replace(/\s+/g, '').toLowerCase() === plateNumber.replace(/\s+/g, '').toLowerCase(),
         );
         if (foundVisit && foundVisit.vehicle) {
           const vehicleData: VehicleResponse = {
@@ -266,6 +279,9 @@ export default function FiltersOverlay({
             email: null,
             gstNumber: null,
             insuranceProvider: null,
+            rcCardFrontUrl: null,
+            rcCardBackUrl: null,
+            imageUrl: foundVisit.vehicle.imageUrl,
             odometerReading: null,
             observations: null,
             observationsAudioUrl: null,
@@ -295,7 +311,7 @@ export default function FiltersOverlay({
     setBrand('');
     setModel('');
     setYear('');
-    setVehicleNumber('');
+    setPlateNumber('');
     setAssignedTo('');
     setAddedBy('');
     setSortBy(null);
@@ -308,7 +324,7 @@ export default function FiltersOverlay({
       brand,
       model,
       year,
-      vehicleNumber,
+      vehicleNumber: plateNumber.replace(/\s+/g, ''),
       assignedTo,
       addedBy,
       sortBy,
@@ -576,6 +592,7 @@ export default function FiltersOverlay({
                     specs={foundVehicle.specs ?? foundVehicle.variant ?? ''}
                     services={[]}
                     additionalServices={0}
+                    imageUrl={foundVehicle.imageUrl}
                   />
                   <View style={s.tapHint}>
                     <Text style={s.tapHintText}>Tap to view details</Text>

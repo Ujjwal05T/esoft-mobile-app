@@ -32,6 +32,7 @@ interface DisplayVehicle {
   additionalServices?: number;
   addedBy?: string;
   createdAt?: string;
+  imageUrl?: string;
 }
 
 // ── Inline SVG Icons ──────────────────────────────────────────────────────────
@@ -236,6 +237,7 @@ export default function VehicleScreen() {
             services: (v.activeJobCategories ?? []).slice(0, 2),
             additionalServices: Math.max(0, (v.activeJobCategories?.length ?? 0) - 2),
             createdAt: v.gateInDateTime,
+            imageUrl: v.vehicle?.imageUrl ?? undefined,
           }),
         );
         setVehicles(gatedIn);
@@ -258,6 +260,7 @@ export default function VehicleScreen() {
             services: [],
             additionalServices: 0,
             createdAt: v.createdAt,
+            imageUrl: v.imageUrl ?? undefined,
           }));
         setRequestedVehicles(requested);
         setFilteredRequestedVehicles(applyFilters(requested, activeFilters));
@@ -417,6 +420,7 @@ export default function VehicleScreen() {
                 additionalServices={vehicle.additionalServices ?? 0}
                 addedBy={vehicle.addedBy}
                 variant={activeTab === 'requested' ? 'scan' : 'default'}
+                imageUrl={vehicle.imageUrl}
               />
             </TouchableOpacity>
           ))}
@@ -448,6 +452,7 @@ export default function VehicleScreen() {
         isOpen={showFilters}
         onClose={() => setShowFilters(false)}
         onApply={handleApplyFilters}
+        initialFilters={activeFilters}
         onVehicleSelected={vehicleId => {
           setShowFilters(false);
           navigation.navigate('VehicleDetail', {vehicleId});

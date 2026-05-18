@@ -1,10 +1,10 @@
 import * as Keychain from 'react-native-keychain';
 
 // API Base URL
-const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
-export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-// const API_BASE_URL = 'https://massage-viewpicture-philadelphia-cyber.trycloudflare.com/api';
-// export const SERVER_ORIGIN = 'https://massage-viewpicture-philadelphia-cyber.trycloudflare.com';
+// const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
+// export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
+const API_BASE_URL = 'https://attacked-empire-rid-winston.trycloudflare.com/api';
+export const SERVER_ORIGIN = 'https://harry-owen-analyzed-gloves.trycloudflare.com';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -595,6 +595,7 @@ export interface CreateVehicleData {
   insuranceProvider?: string;
   odometerReading?: string;
   observations?: string;
+  imageUrl?: string;
 }
 
 export interface VehicleResponse {
@@ -614,6 +615,7 @@ export interface VehicleResponse {
   insuranceProvider: string | null;
   rcCardFrontUrl: string | null;
   rcCardBackUrl: string | null;
+  imageUrl: string | null;
   odometerReading: string | null;
   observations: string | null;
   observationsAudioUrl: string | null;
@@ -713,9 +715,14 @@ export async function getCarBrands() {
   return apiRequest<string[]>('/carmaster/brands', { method: 'GET' });
 }
 
-// Get models for a selected brand
+export interface CarModelOption {
+  model: string;
+  imageUrl: string | null;
+}
+
+// Get models for a selected brand (includes imageUrl from CarModelImages)
 export async function getCarModels(brand: string) {
-  return apiRequest<string[]>(`/carmaster/models?brand=${encodeURIComponent(brand)}`, { method: 'GET' });
+  return apiRequest<CarModelOption[]>(`/carmaster/models?brand=${encodeURIComponent(brand)}`, { method: 'GET' });
 }
 
 // Get available years for a selected brand + model
@@ -785,6 +792,7 @@ export interface VehicleBasicInfo {
   specs: string | null;
   ownerName: string;
   contactNumber: string;
+  imageUrl: string | null;
 }
 
 export interface VehicleVisitResponse {

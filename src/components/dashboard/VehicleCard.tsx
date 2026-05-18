@@ -2,6 +2,7 @@ import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import LinearGradient from 'react-native-linear-gradient';
+import {formatPlateNumber} from '../../utils/formatPlate';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const TOYOTA_CRYSTA = require('../../assets/images/toyota-crysta.png') as number;
@@ -12,6 +13,7 @@ interface VehicleCardProps {
   make: string;
   model: string;
   specs: string;
+  imageUrl?: string | null;
   services?: string[];
   additionalServices?: number;
   variant?: 'default' | 'compact' | 'scan' | 'approve-big';
@@ -55,6 +57,7 @@ export default function VehicleCard({
   make,
   model,
   specs,
+  imageUrl,
   services = [],
   additionalServices = 0,
   variant = 'default',
@@ -62,7 +65,9 @@ export default function VehicleCard({
   onApprove,
   onView,
 }: VehicleCardProps) {
+  const vehicleImage = imageUrl ? {uri: imageUrl} : TOYOTA_CRYSTA;
   const vehicleName = [year, make, model].filter(Boolean).join(' ');
+  const formattedPlate = formatPlateNumber(plateNumber);
 
   const ServiceTags = () => (
     <View style={styles.tagsRow}>
@@ -93,7 +98,7 @@ export default function VehicleCard({
             <Text style={styles.specs}>{specs}</Text>
           </View>
           <View style={styles.plateBadgeWhite}>
-            <Text style={styles.plateTextRed}>{plateNumber}</Text>
+            <Text style={styles.plateTextRed}>{formattedPlate}</Text>
           </View>
         </View>
         {services.length > 0 && <ServiceTags />}
@@ -108,12 +113,12 @@ export default function VehicleCard({
         {/* Vehicle Image */}
         <View style={styles.imageSection}>
           <Image
-            source={TOYOTA_CRYSTA}
+            source={vehicleImage}
             style={styles.vehicleImage}
             resizeMode="cover"
           />
           <View style={styles.plateBadgeGray}>
-            <Text style={styles.plateTextDark}>{plateNumber}</Text>
+            <Text style={styles.plateTextDark}>{formattedPlate}</Text>
           </View>
         </View>
 
@@ -152,7 +157,7 @@ export default function VehicleCard({
         style={styles.approveBigCard}>
         <View style={styles.approveBigTop}>
           <Image
-            source={TOYOTA_CRYSTA}
+            source={vehicleImage}
             style={styles.approveBigImage}
             resizeMode="contain"
           />
@@ -162,7 +167,7 @@ export default function VehicleCard({
             <Text style={styles.specsSmall}>{specs}</Text>
           </View>
           <View style={styles.plateBadgeWhite}>
-            <Text style={styles.plateTextRed}>{plateNumber}</Text>
+            <Text style={styles.plateTextRed}>{formattedPlate}</Text>
           </View>
         </View>
         <View style={styles.approveBigActions}>
@@ -193,12 +198,12 @@ export default function VehicleCard({
       {/* Vehicle Image Section */}
       <View style={styles.imageSection}>
         <Image
-          source={TOYOTA_CRYSTA}
+          source={vehicleImage}
           style={styles.vehicleImage}
           resizeMode="cover"
         />
         <View style={styles.plateBadgeWhiteAbs}>
-          <Text style={styles.plateTextRed}>{plateNumber}</Text>
+          <Text style={styles.plateTextRed}>{formattedPlate}</Text>
         </View>
       </View>
 

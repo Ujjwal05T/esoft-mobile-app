@@ -38,6 +38,7 @@ interface DisplayVehicle {
   services?: string[];
   additionalServices?: number;
   status: 'Active' | 'Inactive' | 'Requested';
+  imageUrl?: string;
 }
 
 // ── Inline SVG Icon ───────────────────────────────────────────────────────────
@@ -92,6 +93,7 @@ export default function StaffVehicleScreen() {
           services: (v.activeJobCategories ?? []).slice(0, 2),
           additionalServices: Math.max(0, (v.activeJobCategories?.length ?? 0) - 2),
           status: 'Active' as const,
+          imageUrl: v.vehicle?.imageUrl ?? undefined,
         }));
         setVehicles(mapped);
       } else {
@@ -192,6 +194,7 @@ export default function StaffVehicleScreen() {
                 specs={vehicle.specs ?? ''}
                 services={vehicle.services ?? []}
                 additionalServices={vehicle.additionalServices ?? 0}
+                imageUrl={vehicle.imageUrl}
               />
             </TouchableOpacity>
           ))}

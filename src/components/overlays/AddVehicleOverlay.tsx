@@ -32,9 +32,10 @@ import Toyota from '../../assets/logos/toyota.svg';
 import Mahindra from '../../assets/logos/mahindra.svg';
 import Suzuki from '../../assets/logos/suzuki.svg';
 import Hyundai from '../../assets/logos/hyundai.svg';
-import {createVehicle, createVehicleWithMedia, gateInVehicle, gateInVehicleWithMedia, scanRcCard, scanVehiclePlate, getCarBrands, getCarModels, getCarYears, getCarVariants, getVehicleByPlate} from '../../services/api';
+import {createVehicle, createVehicleWithMedia, gateInVehicle, gateInVehicleWithMedia, scanRcCard, scanVehiclePlate, getCarBrands, getCarModels, getCarYears, getCarVariants, getVehicleByPlate, type CarModelOption} from '../../services/api';
 import CameraScannerOverlay, {ScanMode} from './CameraScannerOverlay';
 import AppAlert, {AlertState} from './AppAlert';
+import {formatPlateNumber} from '../../utils/formatPlate';
 
 export interface VehicleRequestFormData {
   plateNumber: string;
@@ -220,6 +221,147 @@ const bpStyles = StyleSheet.create({
   tileTextSelected: {color: '#e5383b'},
 });
 
+const TOYOTA_CRYSTA_FALLBACK = require('../../assets/images/brezza.png') as number;
+
+function ModelTileImage({uri}: {uri: string | null}) {
+  const [errored, setErrored] = useState(false);
+  const source = (!uri || errored) ? TOYOTA_CRYSTA_FALLBACK : {uri};
+  return (
+    <Image
+      source={source}
+      style={mpStyles.tileImage}
+      resizeMode="contain"
+      onError={() => setErrored(true)}
+    />
+  );
+}
+
+function ModelPicker({
+  models,
+  selected,
+  onSelect,
+  loading,
+  disabled,
+}: {
+  models: CarModelOption[];
+  selected: string;
+  onSelect: (model: string, imageUrl: string | null) => void;
+  loading: boolean;
+  disabled: boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+
+
+  const handleSelect = (m: CarModelOption) => {
+    onSelect(m.model, m.imageUrl);
+    setOpen(false);
+  };
+
+  return (
+    <View style={mpStyles.wrap}>
+      {selected ? <Text style={mpStyles.floatLabel}>Model</Text> : null}
+      <TouchableOpacity
+        onPress={() => !loading && !disabled && setOpen(o => !o)}
+        activeOpacity={0.8}
+        style={[mpStyles.header, (open || selected) && mpStyles.headerActive, disabled && mpStyles.headerDisabled]}>
+        {loading ? (
+          <ActivityIndicator size="small" color="#e5383b" style={{marginRight: 4}} />
+        ) : null}
+        <Text style={[mpStyles.headerText, !selected && mpStyles.headerPlaceholder]}>
+          {loading ? 'Loading models...' : selected || 'Model'}
+        </Text>
+        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+          <Path
+            d={open ? 'M17 14L12 9L7 14' : 'M7 10L12 15L17 10'}
+            stroke="#828282"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      </TouchableOpacity>
+
+      {open && (
+        <View style={mpStyles.dropdown}>
+          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} style={{maxHeight: 260}}>
+            <View style={mpStyles.grid}>
+              {models.map((m: CarModelOption) => {
+                const isSelected = selected === m.model;
+                return (
+                  <View key={m.model} style={mpStyles.tileWrapper}>
+                    <TouchableOpacity
+                      onPress={() => handleSelect(m)}
+                      activeOpacity={0.75}
+                      style={[mpStyles.tile, isSelected && mpStyles.tileSelected]}>
+                      <ModelTileImage uri={m.imageUrl} />
+                      <Text style={[mpStyles.tileLabel, isSelected && mpStyles.tileLabelSelected]} numberOfLines={1}>
+                        {m.model}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const mpStyles = StyleSheet.create({
+  wrap: {position: 'relative', marginTop: 2},
+  floatLabel: {
+    position: 'absolute',
+    top: -8,
+    left: 12,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 4,
+    fontSize: 10,
+    color: '#828282',
+    zIndex: 2,
+  },
+  header: {
+    borderWidth: 1,
+    borderColor: '#d3d3d3',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+  },
+  headerActive: {borderColor: '#e5383b'},
+  headerDisabled: {opacity: 0.5},
+  headerText: {fontSize: 15, color: '#000', flex: 1},
+  headerPlaceholder: {color: '#828282'},
+  dropdown: {
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderColor: '#e5383b',
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    backgroundColor: '#fff',
+    padding: 8,
+  },
+  grid: {flexDirection: 'row', flexWrap: 'wrap'},
+  tileWrapper: {width: '50%', padding: 4},
+  tile: {
+    flex: 1,
+    height: 130,
+    borderRadius: 10,
+    backgroundColor: '#fafafa',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+  },
+  tileSelected: {backgroundColor: '#fff0f0'},
+  tileImage: {width: '100%', height: 100},
+  tileLabel: {fontSize: 11, color: '#4c4c4c', marginTop: 2, textAlign: 'center'},
+  tileLabelSelected: {color: '#e5383b', fontWeight: '600'},
+});
+
 // Simple inline dropdown component
 export function DropdownField({
   label,
@@ -335,9 +477,10 @@ export default function AddVehicleOverlay({
 
   // Manual dropdown options from API
   const [brandOptions, setBrandOptions] = useState<string[]>([]);
-  const [modelOptions, setModelOptions] = useState<string[]>([]);
+  const [modelOptions, setModelOptions] = useState<CarModelOption[]>([]);
   const [yearOptions, setYearOptions]   = useState<string[]>([]);
   const [variantOptions, setVariantOptions] = useState<string[]>([]);
+  const [selectedModelImageUrl, setSelectedModelImageUrl] = useState<string | null>(null);
 
   // Loading flags per dropdown
   const [loadingBrands, setLoadingBrands]   = useState(false);
@@ -390,7 +533,7 @@ export default function AddVehicleOverlay({
   const [apiError, setApiError] = useState<string | null>(null);
   const [createdVehicleId, setCreatedVehicleId] = useState<number | null>(null);
 
-  const availableModels = modelOptions;
+  const availableModels = modelOptions.map(m => m.model);
 
   const resetAll = () => {
     setCurrentView('search');
@@ -431,6 +574,7 @@ export default function AddVehicleOverlay({
     setModelOptions([]);
     setYearOptions([]);
     setVariantOptions([]);
+    setSelectedModelImageUrl(null);
     setScanMode(null);
     setIsScanProcessing(false);
   };
@@ -453,6 +597,7 @@ export default function AddVehicleOverlay({
     setModelOptions([]);
     setYearOptions([]);
     setVariantOptions([]);
+    setSelectedModelImageUrl(null);
     if (!selectedBrand) return;
     setLoadingModels(true);
     getCarModels(selectedBrand)
@@ -632,6 +777,7 @@ export default function AddVehicleOverlay({
         email: email || undefined,
         gstNumber: gstNumber || undefined,
         insuranceProvider: insuranceProvider || undefined,
+        imageUrl: selectedModelImageUrl || undefined,
       };
 
       const result = (rcFrontImage || rcBackImage)
@@ -892,8 +1038,8 @@ export default function AddVehicleOverlay({
             <View style={styles.searchRow}>
               <View style={styles.plateInput}>
                 <TextInput
-                  value={plateNumber}
-                  onChangeText={v => setPlateNumber(v.toUpperCase())}
+                  value={formatPlateNumber(plateNumber)}
+                  onChangeText={v => setPlateNumber(v.replace(/\s+/g, '').toUpperCase())}
                   placeholder="MP 09 GL 5656"
                   placeholderTextColor="#c4c4c4"
                   style={[styles.plateTextInput, plateNumber ? styles.plateTextInputFilled : null]}
@@ -997,20 +1143,18 @@ export default function AddVehicleOverlay({
                   setOpenManualDropdown(null);
                 }}
               />
-              <DropdownField
-                label={loadingModels ? 'Loading models...' : 'Model'}
-                value={selectedModel}
-                options={availableModels}
-                onSelect={v => {
-                  setSelectedModel(v);
+              <ModelPicker
+                models={modelOptions}
+                selected={selectedModel}
+                loading={loadingModels}
+                disabled={!selectedBrand}
+                onSelect={(model, imageUrl) => {
+                  setSelectedModel(model);
+                  setSelectedModelImageUrl(imageUrl);
                   setSelectedYear('');
                   setSelectedVariant('');
                   setOpenManualDropdown(null);
                 }}
-                disabled={!selectedBrand || loadingModels}
-                isOpen={openManualDropdown === 'model'}
-                onToggle={() => toggleManualDropdown('model')}
-                optional={!isFallbackStarted && !loadingModels}
               />
               <DropdownField
                 label={loadingYears ? 'Loading years...' : 'Year'}
@@ -1041,11 +1185,11 @@ export default function AddVehicleOverlay({
               />
               <FloatingInput
                 label="Vehicle Number"
-                value={vehicleNumber}
+                value={formatPlateNumber(vehicleNumber)}
                 onChange={v => setVehicleNumber(v.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                maxLength={11}
+                maxLength={14}
                 optional={!isFallbackStarted}
-                error={vehicleNumber.trim().length > 0 && !/^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}$/.test(vehicleNumber.trim()) ? 'Enter a valid vehicle number (e.g. MH12AB1234)' : undefined}
+                error={vehicleNumber.trim().length > 0 && !/^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}$/.test(vehicleNumber.trim()) ? 'Enter a valid vehicle number (e.g. MH 12 AB 1234)' : undefined}
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{marginBottom:0}}
               />

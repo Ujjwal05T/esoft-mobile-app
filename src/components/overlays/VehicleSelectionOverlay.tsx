@@ -134,6 +134,7 @@ export default function VehicleSelectionOverlay({
       insuranceProvider: null,
       rcCardFrontUrl: null,
       rcCardBackUrl: null,
+      imageUrl: v.imageUrl,
       odometerReading: null,
       observations: null,
       observationsAudioUrl: null,
@@ -271,6 +272,7 @@ export default function VehicleSelectionOverlay({
                   make={selectedVisit.vehicle.brand ?? ''}
                   model={selectedVisit.vehicle.model ?? ''}
                   specs={selectedVisit.vehicle.specs ?? selectedVisit.vehicle.variant ?? ''}
+                  imageUrl={selectedVisit.vehicle.imageUrl}
                   services={[]}
                   additionalServices={0}
                 />
