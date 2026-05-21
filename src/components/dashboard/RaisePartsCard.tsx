@@ -3,9 +3,8 @@ import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import TataMotors from '../../assets/logos/tata-motors.svg';
 import Toyota from '../../assets/logos/toyota.svg';
 import Mahindra from '../../assets/logos/mahindra.svg';
-import Lumax from '../../assets/logos/lumax.svg';
-import VLogo from '../../assets/logos/v-logo.svg';
-import TwoLogo from '../../assets/logos/two-logo.svg';
+import Suzuki from '../../assets/logos/suzuki.svg';
+import Hyundai from '../../assets/logos/hyundai.svg';
 import ArrowPartsIcon from '../../assets/icons/arrow-parts.svg';
 
 interface RaisePartsCardProps {
@@ -14,7 +13,7 @@ interface RaisePartsCardProps {
   onPress?: () => void;
 }
 
-const brandLogos = [TataMotors, Toyota, Mahindra, Lumax, VLogo, TwoLogo];
+const brandLogos = [TataMotors, Toyota, Mahindra,Hyundai,Suzuki];
 
 export default function RaisePartsCard({
   text1 = 'Raise Parts',

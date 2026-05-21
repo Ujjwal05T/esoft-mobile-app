@@ -136,7 +136,14 @@ function BrandPicker({
                       activeOpacity={0.75}
                       style={[bpStyles.tile, isSelected && bpStyles.tileSelected]}>
                       {Logo ? (
+                        <>
                         <Logo width={56} height={44} />
+                        <Text
+                          style={[bpStyles.tileText,bpStyles.brandText, isSelected && bpStyles.tileTextSelected]}
+                          numberOfLines={2}>
+                          {brand}
+                        </Text>
+                        </>
                       ) : (
                         <Text
                           style={[bpStyles.tileText, isSelected && bpStyles.tileTextSelected]}
@@ -218,6 +225,7 @@ const bpStyles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 13,
   },
+  brandText: {marginTop: 4},
   tileTextSelected: {color: '#e5383b'},
 });
 
@@ -700,7 +708,7 @@ export default function AddVehicleOverlay({
   const handleManualNext = async () => {
     setHasAttemptedManual(true);
     const hasChassisNumber = chassisNumber.trim().length > 0;
-    const hasModelInfo = !!(selectedBrand && selectedModel && selectedYear && selectedVariant && vehicleNumber.trim() && rcFrontImage);
+    const hasModelInfo = !!(selectedBrand && selectedModel && selectedYear && selectedVariant && vehicleNumber.trim());
     if (!hasChassisNumber && !hasModelInfo) return;
 
     const plate = vehicleNumber.trim();
@@ -1076,31 +1084,8 @@ export default function AddVehicleOverlay({
               </TouchableOpacity> */}
             </View>
 
-            <TouchableOpacity style={[styles.redCard, {overflow: 'hidden'}]} onPress={() => setScanMode('rc')}>
-              <View style={{zIndex: 1}}>
-                <Text style={styles.redCardTitle}>Scan RC{'\n'}Card</Text>
-                <View style={styles.diagonalArrow}>
-                  <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
-                    <Circle cx="16" cy="16" r="15" stroke="white" strokeWidth="2" />
-                    <Path
-                      d="M11 21L21 11M21 11H13M21 11V19"
-                      stroke="white"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
-                </View>
-              </View>
-              <Image
-                source={require('../../assets/images/rc-card.png')}
-                style={styles.redCardImage}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-
             <TouchableOpacity
-              style={[styles.redCard, {marginTop: 16, overflow: 'hidden'}]}
+              style={[styles.redCard, { overflow: 'hidden'}]}
               onPress={() => setCurrentView('manual')}>
               <View style={{zIndex: 1}}>
                 <Text style={styles.redCardTitle}>Add Vehicle{'\n'}Manually</Text>
@@ -1120,6 +1105,29 @@ export default function AddVehicleOverlay({
               <Image
                 source={require('../../assets/images/car-suv.png')}
                 style={styles.carSuvImage}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={[styles.redCard, {marginTop: 16,overflow: 'hidden'}]} onPress={() => setScanMode('rc')}>
+              <View style={{zIndex: 1}}>
+                <Text style={styles.redCardTitle}>Scan RC{'\n'}Card</Text>
+                <View style={styles.diagonalArrow}>
+                  <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
+                    <Circle cx="16" cy="16" r="15" stroke="white" strokeWidth="2" />
+                    <Path
+                      d="M11 21L21 11M21 11H13M21 11V19"
+                      stroke="white"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </View>
+              </View>
+              <Image
+                source={require('../../assets/images/rc-card.png')}
+                style={styles.redCardImage}
                 resizeMode="contain"
               />
             </TouchableOpacity>
@@ -1201,14 +1209,12 @@ export default function AddVehicleOverlay({
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{marginBottom: 0}}
               />
-              {hasAttemptedManual && !chassisNumber.trim() && !(selectedBrand && selectedModel && selectedYear && selectedVariant && vehicleNumber.trim() && rcFrontImage) && (
-                <Text style={styles.errorText}>Enter chassis number, or fill in vehicle number + brand/model/year/variant + RC front image</Text>
+              {hasAttemptedManual && !chassisNumber.trim() && !(selectedBrand && selectedModel && selectedYear && selectedVariant && vehicleNumber.trim()) && (
+                <Text style={styles.errorText}>Enter chassis number, or fill in vehicle number + brand/model/year/variant</Text>
               )}
 
               {/* RC Card Images */}
-              <Text style={styles.rcSectionLabel}>
-                RC Card Images{chassisNumber.trim() ? ' (Optional)' : ' (Front required)'}
-              </Text>
+              <Text style={styles.rcSectionLabel}>RC Card Images (Optional)</Text>
               <View style={styles.rcRow}>
                 <TouchableOpacity
                   onPress={() => handlePickRcImage('front')}
@@ -1230,7 +1236,7 @@ export default function AddVehicleOverlay({
                         <Rect x={3} y={3} width={18} height={18} rx={2} stroke="#d3d3d3" strokeWidth={2} />
                         <Path d="M12 8v8M8 12h8" stroke="#e5383b" strokeWidth={2} strokeLinecap="round" />
                       </Svg>
-                      <Text style={styles.rcImageLabel}>RC Front</Text>
+                      <Text style={styles.rcImageLabel}>RC Front (Optional)</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -1266,7 +1272,7 @@ export default function AddVehicleOverlay({
                 style={[
                   styles.primaryBtn,
                   {marginTop: 8},
-                  !(chassisNumber.trim() || (vehicleNumber.trim() && selectedBrand && selectedModel && selectedYear && selectedVariant && rcFrontImage)) && styles.disabledBtn,
+                  !(chassisNumber.trim() || (vehicleNumber.trim() && selectedBrand && selectedModel && selectedYear && selectedVariant)) && styles.disabledBtn,
                 ]}>
                 <Text style={styles.primaryBtnText}>NEXT</Text>
               </TouchableOpacity>

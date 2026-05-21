@@ -185,8 +185,8 @@ export default function AIAssistantScreen() {
               style={[styles.messageRow, msg.type === 'user' && styles.messageRowReverse]}>
               {msg.type === 'ai' ? (
                 <View style={styles.aiAvatar}>
-                  <Text style={styles.aiAvatarLine1}>ETNA</Text>
-                  <Text style={styles.aiAvatarLine2}>SPARES</Text>
+                  <Text style={styles.aiAvatarLine1}>Parts</Text>
+                  <Text style={styles.aiAvatarLine2}>Now</Text>
                 </View>
               ) : (
                 <View style={styles.userAvatar}>
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   aiAvatarLine1: {color: '#e5383b', fontSize: 9, fontWeight: '700', lineHeight: 11},
-  aiAvatarLine2: {color: '#e5383b', fontSize: 6, fontWeight: '400', lineHeight: 8},
+  aiAvatarLine2: {color: '#e5383b', fontSize: 9, fontWeight: '600', lineHeight: 8},
   userAvatar: {
     width: 44,
     height: 44,
