@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Svg, {Path, Circle} from 'react-native-svg';
 import {useNavigation} from '@react-navigation/native';
+import {useTranslation} from 'react-i18next';
 import {useAuth} from '../../context/AuthContext';
 import ContactETNAOverlay from '../overlays/ContactETNAOverlay';
 import DeleteAccountOverlay from '../overlays/DeleteAccountOverlay';
@@ -100,6 +101,7 @@ const BackIcon = () => (
 
 export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
   const navigation = useNavigation<any>();
+  const {t} = useTranslation();
   const {user, signOut, userRole} = useAuth();
   const translateX = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -162,18 +164,18 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
   const menuItems = [
     {
       icon: <PersonIcon />,
-      label: 'My account',
+      label: t('common.my_account'),
       action: () => navigate(isOwner ? 'Profile' : 'StaffProfile'),
     },
     ...(isOwner ? [
-      {icon: <StaffIcon />, label: 'My staff', action: () => navigate('Staff')},
-      {icon: <ReportIcon />, label: 'Generate reports', action: () => navigate('Reports')},
+      {icon: <StaffIcon />, label: t('nav.staff'), action: () => navigate('Staff')},
+      {icon: <ReportIcon />, label: t('nav.reports'), action: () => navigate('Reports')},
     ] : []),
-    {icon: <PhoneIcon />, label: 'Contact Parts Now', action: handleContactETNA},
-    {icon: <FAQIcon />, label: 'FAQs', action: () => navigate('FAQs')},
-    {icon: <PolicyIcon />, label: 'Policies', action: () => navigate('Policies')},
-    {icon: <DeleteIcon />, label: 'Delete account', action: handleDeleteAccount},
-    {icon: <LogoutIcon />, label: 'Logout', action: handleLogout},
+    {icon: <PhoneIcon />, label: t('common.contact_parts_now'), action: handleContactETNA},
+    {icon: <FAQIcon />, label: t('nav.faqs'), action: () => navigate('FAQs')},
+    {icon: <PolicyIcon />, label: t('nav.policies'), action: () => navigate('Policies')},
+    {icon: <DeleteIcon />, label: t('common.delete_account'), action: handleDeleteAccount},
+    {icon: <LogoutIcon />, label: t('nav.logout'), action: handleLogout},
   ];
 
   return (

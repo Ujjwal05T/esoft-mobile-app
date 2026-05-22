@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import Svg, {Path, Circle, Rect} from 'react-native-svg';
 import StatusBadge, {StatusType, normalizeStatus} from '../ui/StatusBadge';
+import {useTranslation} from 'react-i18next';
 const EyeIcon = () => (
   <Svg width={20} height={13} viewBox="0 0 20 13" fill="none">
       <Path
@@ -77,10 +78,11 @@ export default function OrderCard({
   onDownloadInvoice,
   onViewOrder,
 }: OrderCardProps) {
+  const {t} = useTranslation();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const visibleParts = isExpanded ? order.orderedParts.slice(0, 3) : [];
   const remainingCount = order.orderedParts.length - 3;
-  const deliveryLabel = order.status === 'delivered' ? 'Delivered at:' : 'Delivery by:';
+  const deliveryLabel = order.status === 'delivered' ? t('orders.delivered_at_label') : t('orders.delivery_by');
 
   return (
     <View style={styles.card}>
@@ -97,7 +99,7 @@ export default function OrderCard({
         </View>
 
         <Text style={styles.orderId}>{order.orderId}</Text>
-        <Text style={styles.metaText}>Placed: {order.placedDate}</Text>
+        <Text style={styles.metaText}>{t('orders.placed_prefix')}{order.placedDate}</Text>
 
         <View style={styles.deliveryRow}>
           <View>
@@ -112,7 +114,7 @@ export default function OrderCard({
 
       {isExpanded && (
         <View style={styles.expandedContent}>
-          <Text style={styles.partsLabel}>Ordered Parts:</Text>
+          <Text style={styles.partsLabel}>{t('orders.ordered_parts')}</Text>
           <View style={styles.partsList}>
             {visibleParts.map(part => (
               <View key={part.id} style={styles.partRow}>
@@ -127,13 +129,13 @@ export default function OrderCard({
                 )}
                 <View style={styles.partInfo}>
                   <Text style={styles.partName}>{part.name}</Text>
-                  <Text style={styles.partBrand}>Brand: {part.brand}</Text>
+                  <Text style={styles.partBrand}>{t('card.brand')}{part.brand}</Text>
                 </View>
                 <View style={styles.partPrice}>
                   <Text style={styles.partPriceText}>
                     ₹{part.price.toLocaleString('en-IN')}
                   </Text>
-                  <Text style={styles.partQty}>Qty: {part.quantity}</Text>
+                  <Text style={styles.partQty}>{t('card.qty')}{part.quantity}</Text>
                 </View>
               </View>
             ))}
@@ -142,7 +144,7 @@ export default function OrderCard({
           {isExpanded && remainingCount > 0 && (
             <View style={styles.moreRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.moreText}>+{remainingCount} more</Text>
+              <Text style={styles.moreText}>{t('card.more', {count: remainingCount})}</Text>
             </View>
           )}
 
@@ -151,14 +153,14 @@ export default function OrderCard({
               <TouchableOpacity
                 onPress={() => onTrackOrder?.(order.id)}
                 style={styles.actionBtn}>
-                <Text style={styles.actionBtnText}>View Delivery Details</Text>
+                <Text style={styles.actionBtnText}>{t('orders.view_delivery')}</Text>
               </TouchableOpacity>
             ) : (
               <>
                 <TouchableOpacity
                   onPress={() => onTrackOrder?.(order.id)}
                   style={[styles.actionBtn, styles.flex1]}>
-                  <Text style={styles.actionBtnText}>View Order</Text>
+                  <Text style={styles.actionBtnText}>{t('orders.view_order')}</Text>
                 </TouchableOpacity>
                 {/* <TouchableOpacity
                   onPress={() => onViewOrder?.(order.id)}

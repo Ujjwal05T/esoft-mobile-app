@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Text,
@@ -111,9 +112,9 @@ function groupByDate(notifs: Notification[]): Section[] {
   }
 
   const sections: Section[] = [];
-  if (today.length) sections.push({title: 'Today', data: today});
-  if (yesterday.length) sections.push({title: 'Yesterday', data: yesterday});
-  if (older.length) sections.push({title: 'Earlier', data: older});
+  if (today.length) sections.push({title: 'today', data: today});
+  if (yesterday.length) sections.push({title: 'yesterday', data: yesterday});
+  if (older.length) sections.push({title: 'earlier', data: older});
   return sections;
 }
 
@@ -134,6 +135,7 @@ function formatTime(timestamp: number): string {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function NotificationsScreen() {
+  const {t} = useTranslation();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -229,7 +231,7 @@ export default function NotificationsScreen() {
 
   const renderSectionHeader = ({section}: {section: Section}) => (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionLabel}>{section.title}</Text>
+      <Text style={styles.sectionLabel}>{t(`notifications.${section.title}`)}</Text>
     </View>
   );
 
@@ -238,14 +240,14 @@ export default function NotificationsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Notifications</Text>
+          <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
           {unreadCount > 0 && (
-            <Text style={styles.headerSub}>{unreadCount} unread</Text>
+            <Text style={styles.headerSub}>{t('notifications.unread_count', {count: unreadCount})}</Text>
           )}
         </View>
         {unreadCount > 0 && (
           <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead} activeOpacity={0.7}>
-            <Text style={styles.markAllText}>Mark all read</Text>
+            <Text style={styles.markAllText}>{t('notifications.mark_all_read')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -259,8 +261,8 @@ export default function NotificationsScreen() {
               <Path d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21" stroke="#D1D5DB" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"/>
             </Svg>
           </View>
-          <Text style={styles.emptyTitle}>All caught up</Text>
-          <Text style={styles.emptySub}>No notifications yet</Text>
+          <Text style={styles.emptyTitle}>{t('notifications.all_caught_up')}</Text>
+          <Text style={styles.emptySub}>{t('notifications.no_notifications')}</Text>
         </View>
       ) : (
         <SectionList

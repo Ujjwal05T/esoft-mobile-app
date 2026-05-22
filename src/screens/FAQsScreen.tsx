@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Svg, {Path, Circle} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 import {useNavigation} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
@@ -36,6 +37,7 @@ const FAQIcon = () => (
 );
 
 export default function FAQsScreen() {
+  const {t} = useTranslation();
   const navigation = useNavigation();
 
   return (
@@ -48,7 +50,7 @@ export default function FAQsScreen() {
             style={styles.iconBtn}>
             <BackIcon />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>FAQs</Text>
+          <Text style={styles.headerTitle}>{t('faqs.title')}</Text>
         </View>
       </View>
 
@@ -61,12 +63,8 @@ export default function FAQsScreen() {
           <View style={styles.iconContainer}>
             <FAQIcon />
           </View>
-          <Text style={styles.emptyTitle}>Frequently Asked Questions</Text>
-          <Text style={styles.emptySubtitle}>
-            Find answers to common questions about using ETNA, managing your
-            workshop, handling inquiries, and more. Help documentation coming
-            soon.
-          </Text>
+          <Text style={styles.emptyTitle}>{t('faqs.header')}</Text>
+          <Text style={styles.emptySubtitle}>{t('faqs.subtitle')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

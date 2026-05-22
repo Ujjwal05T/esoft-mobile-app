@@ -1,5 +1,6 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import {useTranslation} from 'react-i18next';
 import TataMotors from '../../assets/logos/tata-motors.svg';
 import Toyota from '../../assets/logos/toyota.svg';
 import Mahindra from '../../assets/logos/mahindra.svg';
@@ -16,10 +17,13 @@ interface RaisePartsCardProps {
 const brandLogos = [TataMotors, Toyota, Mahindra,Hyundai,Suzuki];
 
 export default function RaisePartsCard({
-  text1 = 'Raise Parts',
-  text2 = 'Inquiry',
+  text1,
+  text2,
   onPress,
 }: RaisePartsCardProps) {
+  const {t} = useTranslation();
+  const displayText1 = text1 ?? t('raise_parts.title1');
+  const displayText2 = text2 ?? t('raise_parts.title2');
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -27,9 +31,9 @@ export default function RaisePartsCard({
       style={styles.card}>
       {/* Title */}
       <Text style={styles.title}>
-        {text1}
+        {displayText1}
         {'\n'}
-        {text2}
+        {displayText2}
       </Text>
 
       {/* Arrow Icon */}

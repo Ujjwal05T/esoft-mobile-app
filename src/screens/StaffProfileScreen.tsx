@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 import {useNavigation} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import AccordionSection from '../components/ui/AccordionSection';
@@ -86,6 +87,7 @@ interface EditableProfile {
 }
 
 export default function StaffProfileScreen() {
+  const {t} = useTranslation();
   const navigation = useNavigation();
   const [profile, setProfile] = useState<WorkshopStaffResponse | null>(null);
   const [editableProfile, setEditableProfile] = useState<EditableProfile>({
@@ -113,7 +115,7 @@ export default function StaffProfileScreen() {
         address: response.data.address || '',
       });
     } else {
-      setAppAlert({type: 'error', message: response.error || 'Failed to load profile'});
+      setAppAlert({type: 'error', message: response.error || t('profile.failed_to_load')});
     }
     setLoading(false);
   }, []);
@@ -145,10 +147,10 @@ export default function StaffProfileScreen() {
         email: response.data.email || '',
         address: response.data.address || '',
       });
-      setAppAlert({type: 'success', message: 'Profile updated successfully'});
+      setAppAlert({type: 'success', message: t('profile.update_success')});
       setIsEditing(false);
     } else {
-      setAppAlert({type: 'error', message: response.error || 'Failed to update profile'});
+      setAppAlert({type: 'error', message: response.error || t('profile.update_failed')});
     }
   };
 
@@ -180,7 +182,7 @@ export default function StaffProfileScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#e5383b" />
-          <Text style={styles.loadingText}>Loading profile...</Text>
+          <Text style={styles.loadingText}>{t('profile.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -190,9 +192,9 @@ export default function StaffProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.errorText}>Failed to load profile</Text>
+          <Text style={styles.errorText}>{t('profile.failed_to_load')}</Text>
           <TouchableOpacity onPress={fetchProfile} style={styles.retryBtn}>
-            <Text style={styles.retryBtnText}>Retry</Text>
+            <Text style={styles.retryBtnText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -209,7 +211,7 @@ export default function StaffProfileScreen() {
             style={styles.iconBtn}>
             <BackIcon />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Profile</Text>
+          <Text style={styles.headerTitle}>{t('profile.my_profile')}</Text>
         </View>
         <TouchableOpacity
           onPress={handleEditToggle}
@@ -264,19 +266,19 @@ export default function StaffProfileScreen() {
         <View style={styles.accordionsContainer}>
           {/* Personal Information */}
           <AccordionSection
-            title="Personal information"
+            title={t('profile.personal_info')}
             isOpen={personalOpen}
             onToggle={() => setPersonalOpen(!personalOpen)}>
             <View style={styles.accordionContent}>
               <FloatingInput
-                label="Name"
+                label={t('staff.name')}
                 value={editableProfile.name}
                 onChange={v => updateField('name', v)}
                 required
                 editable={isEditing}
               />
               <FloatingInput
-                label="Phone Number"
+                label={t('profile.phone_number')}
                 value={editableProfile.phoneNumber}
                 onChange={v => updateField('phoneNumber', v)}
                 required
@@ -284,14 +286,14 @@ export default function StaffProfileScreen() {
                 keyboardType="phone-pad"
               />
               <FloatingInput
-                label="Email"
+                label={t('profile.email')}
                 value={editableProfile.email}
                 onChange={v => updateField('email', v)}
                 editable={isEditing}
                 keyboardType="email-address"
               />
               <FloatingInput
-                label="Address"
+                label={t('profile.address')}
                 value={editableProfile.address}
                 onChange={v => updateField('address', v)}
                 multiline
@@ -305,7 +307,7 @@ export default function StaffProfileScreen() {
             onPress={handleSupport}
             style={styles.supportBtn}
             activeOpacity={0.8}>
-            <Text style={styles.supportBtnText}>SUPPORT</Text>
+            <Text style={styles.supportBtnText}>{t('profile.support')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -8,6 +8,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 
 const LockIcon = () => (
   <Svg width={48} height={48} viewBox="0 0 24 24" fill="none">
@@ -49,8 +50,10 @@ interface NoPermissionOverlayProps {
 export default function NoPermissionOverlay({
   isOpen,
   onClose,
-  message = 'You do not have permission to perform this action. Please contact your workshop owner.',
+  message,
 }: NoPermissionOverlayProps) {
+  const {t} = useTranslation();
+  const resolvedMessage = message ?? t('permission.default_message');
   return (
     <Modal
       visible={isOpen}
@@ -68,13 +71,13 @@ export default function NoPermissionOverlay({
             <View style={styles.iconBox}>
               <LockIcon />
             </View>
-            <Text style={styles.title}>No Permission</Text>
-            <Text style={styles.description}>{message}</Text>
+            <Text style={styles.title}>{t('permission.no_permission')}</Text>
+            <Text style={styles.description}>{resolvedMessage}</Text>
             <TouchableOpacity
               onPress={onClose}
               style={styles.okBtn}
               activeOpacity={0.8}>
-              <Text style={styles.okText}>Got it</Text>
+              <Text style={styles.okText}>{t('common.got_it')}</Text>
             </TouchableOpacity>
           </View>
         </View>

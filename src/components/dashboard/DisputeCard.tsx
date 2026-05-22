@@ -2,6 +2,7 @@ import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import StatusBadge, {StatusType} from '../ui/StatusBadge';
+import {useTranslation} from 'react-i18next';
 
 export type DisputeStatus = Extract<StatusType, 'open' | 'closed' | 'declined' | 'requested'>;
 export type DisputeAction = 'edit' | 'accept' | 'chat';
@@ -54,13 +55,14 @@ export default function DisputeCard({
   onView,
   onChat,
 }: DisputeCardProps) {
+  const {t} = useTranslation();
   const showVehicleInfo = dispute.showVehicleInfo !== false;
   const action = dispute.action || 'edit';
 
   const getDateText = () => {
-    if (dispute.closedDate) return `Closed: ${dispute.closedDate}`;
-    if (dispute.openedDate) return `Opened: ${dispute.openedDate}`;
-    return `Received: ${dispute.receivedDate || ''}`;
+    if (dispute.closedDate) return `${t('dispute.date_closed')}${dispute.closedDate}`;
+    if (dispute.openedDate) return `${t('dispute.date_opened')}${dispute.openedDate}`;
+    return `${t('dispute.date_received')}${dispute.receivedDate || ''}`;
   };
 
   return (
@@ -80,8 +82,7 @@ export default function DisputeCard({
 
         {dispute.newNotifications && dispute.newNotifications > 0 ? (
           <Text style={styles.notificationText}>
-            {dispute.newNotifications} new notification
-            {dispute.newNotifications > 1 ? 's' : ''}
+            {t(dispute.newNotifications === 1 ? 'dispute.new_notifications_one' : 'dispute.new_notifications_other', {count: dispute.newNotifications})}
           </Text>
         ) : (
           <StatusBadge status={dispute.status} />
@@ -92,12 +93,12 @@ export default function DisputeCard({
 
       {/* Dispute Details */}
       <View style={styles.detailSection}>
-        <Text style={styles.disputeRaisedLabel}>Dispute raised:</Text>
+        <Text style={styles.disputeRaisedLabel}>{t('dispute.dispute_raised')}</Text>
         <Text style={styles.disputeRaisedValue}>{dispute.disputeRaised}</Text>
         {(action === 'chat' || dispute.status === 'closed') &&
           dispute.resolutionStatus && (
             <View style={styles.resolutionRow}>
-              <Text style={styles.resolutionLabel}>Resolution status:</Text>
+              <Text style={styles.resolutionLabel}>{t('dispute.resolution_status')}</Text>
               <Text style={styles.resolutionValue}>
                 {dispute.resolutionStatus}
               </Text>
@@ -112,14 +113,14 @@ export default function DisputeCard({
             <TouchableOpacity
               onPress={() => onEdit?.(dispute.id)}
               style={styles.mainActionBtn}>
-              <Text style={styles.mainActionText}>Edit</Text>
+              <Text style={styles.mainActionText}>{t('common.edit')}</Text>
             </TouchableOpacity>
           )}
           {action === 'accept' && (
             <TouchableOpacity
               onPress={() => onAccept?.(dispute.id)}
               style={styles.mainActionBtn}>
-              <Text style={styles.mainActionText}>Accept Dispute</Text>
+              <Text style={styles.mainActionText}>{t('dispute.accept')}</Text>
             </TouchableOpacity>
           )}
           {action === 'chat' && (
@@ -128,8 +129,8 @@ export default function DisputeCard({
               style={styles.mainActionBtn}>
               <Text style={styles.mainActionText}>
                 {dispute.newMessages && dispute.newMessages > 0
-                  ? `${dispute.newMessages} New Message${dispute.newMessages > 1 ? 's' : ''}`
-                  : 'CHAT WITH US'}
+                  ? t(dispute.newMessages === 1 ? 'dispute.new_messages_one' : 'dispute.new_messages_other', {count: dispute.newMessages})
+                  : t('dispute.chat')}
               </Text>
             </TouchableOpacity>
           )}

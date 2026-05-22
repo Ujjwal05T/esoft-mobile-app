@@ -1,10 +1,10 @@
 import * as Keychain from 'react-native-keychain';
 
 // API Base URL
-// const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
-// export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-const API_BASE_URL = 'https://showers-rico-gear-warrant.trycloudflare.com/api';
-export const SERVER_ORIGIN = 'https://peninsula-teach-optimization-administrative.trycloudflare.com';
+const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
+export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
+// const API_BASE_URL = 'https://showers-rico-gear-warrant.trycloudflare.com/api';
+// export const SERVER_ORIGIN = 'https://peninsula-teach-optimization-administrative.trycloudflare.com';
 
 // ==========================================
 // TOKEN MANAGEMENT

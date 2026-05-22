@@ -12,6 +12,7 @@ import StaffCard, {StaffMember} from '../dashboard/StaffCard';
 import VehicleCard from '../dashboard/VehicleCard';
 import JobCard, {JobCardProps} from '../dashboard/JobCard';
 import {StaffPermissions} from '../../services/api';
+import {useTranslation} from 'react-i18next';
 
 interface ViewStaffOverlayProps {
   isOpen: boolean;
@@ -46,6 +47,7 @@ export default function ViewStaffOverlay({
   vehicles = [],
   jobs = [],
 }: ViewStaffOverlayProps) {
+  const {t} = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('Vehicles');
 
   if (!staff) return null;
@@ -56,9 +58,9 @@ export default function ViewStaffOverlay({
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{t('staff.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Staff Details</Text>
+          <Text style={styles.headerTitle}>{t('staff.details')}</Text>
           <View style={{width: 60}} />
         </View>
 
@@ -75,7 +77,7 @@ export default function ViewStaffOverlay({
               onPress={() => setActiveTab(tab)}
               style={[styles.tab, activeTab === tab && styles.activeTab]}>
               <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                {tab}
+                {tab === 'Vehicles' ? t('staff.vehicles_tab') : t('staff.jobs_tab')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -86,7 +88,7 @@ export default function ViewStaffOverlay({
           {activeTab === 'Vehicles' && (
             <View style={styles.list}>
               {vehicles.length === 0 ? (
-                <Text style={styles.emptyText}>No vehicles assigned</Text>
+                <Text style={styles.emptyText}>{t('staff.no_vehicles')}</Text>
               ) : (
                 vehicles.map(v => (
                   <VehicleCard
@@ -107,7 +109,7 @@ export default function ViewStaffOverlay({
           {activeTab === 'Jobs' && (
             <View style={styles.list}>
               {jobs.length === 0 ? (
-                <Text style={styles.emptyText}>No jobs assigned</Text>
+                <Text style={styles.emptyText}>{t('staff.no_jobs')}</Text>
               ) : (
                 jobs.map(job => (
                   <JobCard key={job.id} {...job} />

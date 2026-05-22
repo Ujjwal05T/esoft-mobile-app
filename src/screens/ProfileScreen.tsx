@@ -10,14 +10,17 @@ import {
   ActivityIndicator,
 } from 'react-native';
 
-import Svg, {Path} from 'react-native-svg';
+import Svg, {Path, Circle} from 'react-native-svg';
 import AccordionSection from '../components/ui/AccordionSection';
 import FloatingInput from '../components/ui/FloatingInput';
 import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {RootStackParamList} from '../navigation/RootNavigator';
 import {useAuth} from '../context/AuthContext';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {getProfile, updateProfile, UpdateProfileData} from '../services/api';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import {useTranslation} from 'react-i18next';
 
 const BackIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -47,6 +50,19 @@ const EditIcon = () => (
       strokeLinecap="round"
       strokeLinejoin="round"
     />
+  </Svg>
+);
+
+const LanguageIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="10" stroke="#e5383b" strokeWidth="1.5" />
+    <Path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="#e5383b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const ChevronRightIcon = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Path d="M9 18l6-6-6-6" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
@@ -94,7 +110,8 @@ interface ProfileData {
 }
 
 export default function ProfileScreen() {
-  const navigation = useNavigation();
+  const {t} = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {user} = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [personalInfoOpen, setPersonalInfoOpen] = useState(false);
@@ -112,7 +129,7 @@ export default function ProfileScreen() {
     if (response.success && response.data?.data) {
       setProfileData(response.data.data);
     } else {
-      setAppAlert({type: 'error', message: response.error || 'Failed to load profile'});
+      setAppAlert({type: 'error', message: response.error || t('profile.failed_to_load')});
     }
     setLoading(false);
   }, []);
@@ -149,12 +166,12 @@ export default function ProfileScreen() {
     setSaving(false);
 
     if (response.success) {
-      setAppAlert({type: 'success', message: 'Profile updated successfully'});
+      setAppAlert({type: 'success', message: t('profile.update_success')});
       setIsEditing(false);
       // Refresh profile data
       fetchProfile();
     } else {
-      setAppAlert({type: 'error', message: response.error || 'Failed to update profile'});
+      setAppAlert({type: 'error', message: response.error || t('profile.update_failed')});
     }
   };
 
@@ -208,7 +225,7 @@ export default function ProfileScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#e5383b" />
-          <Text style={styles.loadingText}>Loading profile...</Text>
+          <Text style={styles.loadingText}>{t('profile.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -218,9 +235,9 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.errorText}>Failed to load profile</Text>
+          <Text style={styles.errorText}>{t('profile.failed_to_load')}</Text>
           <TouchableOpacity onPress={fetchProfile} style={styles.retryBtn}>
-            <Text style={styles.retryBtnText}>Retry</Text>
+            <Text style={styles.retryBtnText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -235,7 +252,7 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
             <BackIcon />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Profile</Text>
+          <Text style={styles.headerTitle}>{t('profile.title')}</Text>
         </View>
         <TouchableOpacity
           onPress={handleEditToggle}
@@ -288,19 +305,19 @@ export default function ProfileScreen() {
         <View style={styles.accordionsContainer}>
           {/* Personal Information */}
           <AccordionSection
-            title="Personal information"
+            title={t('profile.personal_info')}
             isOpen={personalInfoOpen}
             onToggle={() => setPersonalInfoOpen(!personalInfoOpen)}>
             <View style={styles.accordionContent}>
               <FloatingInput
-                label="Owner Name"
+                label={t('profile.owner_name')}
                 value={profileData.personalInfo.ownerName}
                 onChange={v => updatePersonalInfo('ownerName', v)}
                 required
                 editable={isEditing}
               />
               <FloatingInput
-                label="Contact Number"
+                label={t('profile.contact_number')}
                 value={profileData.personalInfo.contactNumber}
                 onChange={v => updatePersonalInfo('contactNumber', v)}
                 required
@@ -308,7 +325,7 @@ export default function ProfileScreen() {
                 keyboardType="phone-pad"
               />
               <FloatingInput
-                label="Email"
+                label={t('profile.email')}
                 value={profileData.personalInfo.email || ''}
                 onChange={v => updatePersonalInfo('email', v)}
                 editable={isEditing}
@@ -319,36 +336,36 @@ export default function ProfileScreen() {
 
           {/* Workshop Details */}
           <AccordionSection
-            title="Workshop details"
+            title={t('profile.workshop_details')}
             isOpen={workshopDetailsOpen}
             onToggle={() => setWorkshopDetailsOpen(!workshopDetailsOpen)}>
             <View style={styles.accordionContent}>
               <FloatingInput
-                label="Workshop Name"
+                label={t('profile.workshop_name')}
                 value={profileData.workshopDetails.workshopName}
                 onChange={v => updateWorkshopDetails('workshopName', v)}
                 editable={isEditing}
               />
               <FloatingInput
-                label="GST Number"
+                label={t('profile.gst_number')}
                 value={profileData.workshopDetails.gstNumber || ''}
                 onChange={v => updateWorkshopDetails('gstNumber', v)}
                 editable={isEditing}
               />
               <FloatingInput
-                label="Trade License"
+                label={t('profile.trade_license')}
                 value={profileData.workshopDetails.tradeLicense || ''}
                 onChange={v => updateWorkshopDetails('tradeLicense', v)}
                 editable={isEditing}
               />
               <FloatingInput
-                label="Aadhaar Number"
+                label={t('profile.aadhaar_number')}
                 value={profileData.workshopDetails.aadhaarNumber}
                 onChange={v => updateWorkshopDetails('aadhaarNumber', v)}
                 editable={isEditing}
               />
               <FloatingInput
-                label="Address"
+                label={t('profile.address')}
                 value={profileData.workshopDetails.address}
                 onChange={v => updateWorkshopDetails('address', v)}
                 multiline
@@ -357,9 +374,21 @@ export default function ProfileScreen() {
             </View>
           </AccordionSection>
 
+          {/* Language */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('LanguageSelection')}
+            style={styles.languageRow}
+            activeOpacity={0.8}>
+            <View style={styles.languageLeft}>
+              <LanguageIcon />
+              <Text style={styles.languageLabel}>{t('profile.language')}</Text>
+            </View>
+            <ChevronRightIcon />
+          </TouchableOpacity>
+
           {/* Support Button */}
           <TouchableOpacity onPress={handleSupport} style={styles.supportBtn} activeOpacity={0.8}>
-            <Text style={styles.supportBtnText}>SUPPORT</Text>
+            <Text style={styles.supportBtnText}>{t('profile.support')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -482,6 +511,27 @@ const styles = StyleSheet.create({
   accordionContent: {
     gap: 16,
     paddingTop: 16,
+  },
+  languageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 52,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  languageLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  languageLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#1a1a1a',
   },
   supportBtn: {
     height: 48,

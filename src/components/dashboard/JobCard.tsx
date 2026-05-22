@@ -4,6 +4,7 @@ import Svg, {Path, Rect} from 'react-native-svg';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import {SERVER_ORIGIN} from '../../services/api';
 import {formatDateIST} from '../../utils/dateUtils';
+import {useTranslation} from 'react-i18next';
 
 export interface JobCardProps {
   id: number;
@@ -43,6 +44,7 @@ export default function JobCard({
   createdAt,
   onClick,
 }: JobCardProps) {
+  const {t} = useTranslation();
   const [isPlaying, setIsPlaying] = useState(false);
 
   const formattedDate = formatDateIST(createdAt);
@@ -98,10 +100,10 @@ export default function JobCard({
       <View style={styles.header}>
         <Text style={styles.category}>{jobCategory}</Text>
         <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>Assigned To: </Text>
+          <Text style={styles.metaLabel}>{t('job.assigned_to')}</Text>
           <Text style={styles.metaValue}>
             {!assignedStaffNames || assignedStaffNames.length === 0
-              ? 'Unassigned'
+              ? t('inquiry.unassigned')
               : assignedStaffNames.length === 1
               ? assignedStaffNames[0]
               : `${assignedStaffNames[0]} +${assignedStaffNames.length - 1}`}

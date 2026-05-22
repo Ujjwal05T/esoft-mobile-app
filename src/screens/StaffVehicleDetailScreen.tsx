@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useCallback, useRef, useMemo} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Text,
@@ -217,6 +218,7 @@ const grid = StyleSheet.create({
 export default function StaffVehicleDetailScreen({navigation, route}: Props) {
   const insets = useSafeAreaInsets();
   const vehicleId = route.params.vehicleId;
+  const {t} = useTranslation();
 
   // ── State ───────────────────────────────────────────────────────────────────
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
@@ -591,7 +593,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
     return (
       <View style={[styles.centered, {paddingTop: insets.top}]}>
         <ActivityIndicator size="large" color="#e5383b" />
-        <Text style={styles.loadingText}>Loading vehicle details...</Text>
+        <Text style={styles.loadingText}>{t('vehicle.loading_details')}</Text>
       </View>
     );
   }
@@ -599,15 +601,13 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
   if (vehicleError || !vehicle) {
     return (
       <View style={[styles.centered, {paddingTop: insets.top}]}>
-        <Text style={styles.errorTitle}>Vehicle Not Found</Text>
-        <Text style={styles.errorSubtitle}>
-          The vehicle you're looking for doesn't exist.
-        </Text>
+        <Text style={styles.errorTitle}>{t('vehicle.not_found')}</Text>
+        <Text style={styles.errorSubtitle}>{t('vehicle.not_found_subtitle')}</Text>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => navigation.goBack()}
           activeOpacity={0.8}>
-          <Text style={styles.backBtnText}>Go Back</Text>
+          <Text style={styles.backBtnText}>{t('screen.go_back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -616,21 +616,21 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
   // ── Derived Values ──────────────────────────────────────────────────────────
 
   const basicInfoFields: InfoField[] = [
-    {label: 'Make Year', value: vehicle.year?.toString() ?? ''},
-    {label: 'Reg. Year', value: vehicle.year?.toString() ?? ''},
-    {label: 'Chassis No.', value: vehicle.chassisNumber ?? ''},
-    {label: 'Fuel', value: ''},
-    {label: 'Transmission', value: ''},
-    {label: 'Variant', value: vehicle.variant ?? vehicle.specs ?? ''},
-    {label: 'Owner Name', value: vehicle.ownerName ?? ''},
-    {label: 'Contact', value: vehicle.contactNumber ?? ''},
-    {label: 'Odometer', value: activeVisit?.gateInOdometerReading ?? vehicle.odometerReading ?? 'N/A'},
+    {label: t('vehicle.make_year'), value: vehicle.year?.toString() ?? ''},
+    {label: t('vehicle.reg_year'), value: vehicle.year?.toString() ?? ''},
+    {label: t('vehicle.chassis_no'), value: vehicle.chassisNumber ?? ''},
+    {label: t('vehicle.fuel'), value: ''},
+    {label: t('vehicle.transmission'), value: ''},
+    {label: t('vehicle.variant_label'), value: vehicle.variant ?? vehicle.specs ?? ''},
+    {label: t('vehicle.owner_name'), value: vehicle.ownerName ?? ''},
+    {label: t('vehicle.contact'), value: vehicle.contactNumber ?? ''},
+    {label: t('vehicle.odometer_label'), value: activeVisit?.gateInOdometerReading ?? vehicle.odometerReading ?? 'N/A'},
   ];
 
   const tabs: {key: ActiveTab; label: string}[] = [
-    {key: 'jobcard', label: 'Job card'},
-    {key: 'inquiry', label: 'Inquiry'},
-    {key: 'disputes', label: 'Disputes'},
+    {key: 'jobcard', label: t('vehicle.job_card_tab')},
+    {key: 'inquiry', label: t('vehicle.inquiry_tab')},
+    {key: 'disputes', label: t('vehicle.disputes_tab')},
   ];
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -645,7 +645,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
           style={styles.topBarBtn}>
           <BackIcon />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Vehicle Details</Text>
+        <Text style={styles.topBarTitle}>{t('vehicle.details')}</Text>
         <View style={styles.topBarBtn} />
       </View>
 
@@ -701,28 +701,28 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
         {activeTab === 'jobcard' && (
           <View style={styles.tabContent}>
             <Accordion
-              title="Basic Info"
+              title={t('vehicle.basic_info')}
               expanded={expandedSections.basicInfo}
               onToggle={() => toggleSection('basicInfo')}>
               <BasicInfoGrid fields={basicInfoFields} />
             </Accordion>
 
             <Accordion
-              title="Problems Shared"
+              title={t('vehicle.problems_shared')}
               expanded={expandedSections.problemsShared}
               onToggle={() => toggleSection('problemsShared')}>
               <Text style={styles.problemText}>
-                {activeVisit?.gateInProblemShared || 'No problems shared for this visit'}
+                {activeVisit?.gateInProblemShared || t('vehicle.no_problems')}
               </Text>
             </Accordion>
 
             <Accordion
-              title="Previous Services"
+              title={t('vehicle.previous_services')}
               expanded={expandedSections.previousServices}
               onToggle={() => toggleSection('previousServices')}>
               {previousVisits.length === 0 ? (
                 <View style={styles.emptyAccordion}>
-                  <Text style={styles.emptyAccordionText}>No previous visits</Text>
+                  <Text style={styles.emptyAccordionText}>{t('vehicle.no_previous_visits')}</Text>
                 </View>
               ) : (
                 <View style={styles.cardList}>
@@ -743,20 +743,18 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
             </Accordion>
 
             <Accordion
-              title="Jobs"
+              title={t('vehicle.jobs')}
               expanded={expandedSections.jobs}
               onToggle={() => toggleSection('jobs')}>
               {loadingJobs ? (
                 <View style={styles.centerRow}>
                   <ActivityIndicator size="small" color="#e5383b" />
-                  <Text style={styles.loadingText}>Loading jobs...</Text>
+                  <Text style={styles.loadingText}>{t('vehicle.loading_jobs')}</Text>
                 </View>
               ) : jobCards.filter(j => j.vehicleVisitId === activeVisit?.id).length === 0 ? (
                 <View style={styles.emptyAccordion}>
-                  <Text style={styles.emptyAccordionText}>No jobs found</Text>
-                  <Text style={styles.emptyAccordionSub}>
-                    Create a new job card to get started
-                  </Text>
+                  <Text style={styles.emptyAccordionText}>{t('vehicle.no_jobs')}</Text>
+                  <Text style={styles.emptyAccordionSub}>{t('vehicle.create_job_card')}</Text>
                 </View>
               ) : (
                 <View style={styles.cardList}>
@@ -789,12 +787,12 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
             {loadingInquiries ? (
               <View style={styles.stateCard}>
                 <ActivityIndicator size="small" color="#e5383b" />
-                <Text style={styles.loadingText}>Loading inquiries...</Text>
+                <Text style={styles.loadingText}>{t('vehicle.loading_inquiries')}</Text>
               </View>
             ) : inquiries.length === 0 ? (
               <View style={styles.stateCard}>
-                <Text style={styles.emptyTitle}>No Inquiries Found</Text>
-                <Text style={styles.emptySubtitle}>No inquiries found for this vehicle</Text>
+                <Text style={styles.emptyTitle}>{t('vehicle.no_inquiries')}</Text>
+                <Text style={styles.emptySubtitle}>{t('vehicle.no_inquiries_subtitle')}</Text>
               </View>
             ) : (
               <View style={styles.cardList}>
@@ -835,12 +833,12 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
             {loadingDisputes ? (
               <View style={styles.stateCard}>
                 <ActivityIndicator size="small" color="#e5383b" />
-                <Text style={styles.loadingText}>Loading disputes...</Text>
+                <Text style={styles.loadingText}>{t('vehicle.loading_disputes')}</Text>
               </View>
             ) : disputes.length === 0 ? (
               <View style={styles.stateCard}>
-                <Text style={styles.emptyTitle}>No Disputes Found</Text>
-                <Text style={styles.emptySubtitle}>No disputes found for this vehicle</Text>
+                <Text style={styles.emptyTitle}>{t('vehicle.no_disputes')}</Text>
+                <Text style={styles.emptySubtitle}>{t('vehicle.no_disputes_subtitle')}</Text>
               </View>
             ) : (
               <View style={styles.cardList}>
@@ -867,21 +865,21 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
       <FloatingActionButton
         style={{bottom: insets.bottom + 54}}
         navigationOptions={[
-          {label: 'Gate Out', onPress: () => setShowGateOut(true)},
+          {label: t('vehicle.gate_out'), onPress: () => setShowGateOut(true)},
           {
-            label: 'Create New Job',
+            label: t('vehicle.create_new_job'),
             onPress: () => setShowNewJob(true),
             disabled: permissions !== null && !permissions.createJobCard,
           },
           {
-            label: 'Raise Dispute',
+            label: t('vehicle.raise_dispute'),
             onPress: () => setShowRaiseDispute(true),
             disabled:
               jobCards.length === 0 ||
               (permissions !== null && !permissions.raiseDispute),
           },
           {
-            label: 'Request Part',
+            label: t('vehicle.request_part'),
             onPress: () => setShowRequestPart(true),
             disabled: permissions !== null && !permissions.createInquiry,
           },

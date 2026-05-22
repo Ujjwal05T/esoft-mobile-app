@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Svg, {Path} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 import VehicleCard from '../dashboard/VehicleCard';
 import {
   getCurrentVehicles,
@@ -193,6 +194,7 @@ export default function FiltersOverlay({
   onVehicleSelected,
   initialFilters,
 }: FiltersOverlayProps) {
+  const {t} = useTranslation();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<ActiveTab>('date');
 
@@ -250,7 +252,7 @@ export default function FiltersOverlay({
 
   const handleVehicleSearch = async () => {
     if (!plateNumber.trim()) {
-      setSearchError('Please enter a plate number');
+      setSearchError(t('filter.enter_plate'));
       return;
     }
     setIsSearching(true);
@@ -292,13 +294,13 @@ export default function FiltersOverlay({
           };
           setFoundVehicle(vehicleData);
         } else {
-          setSearchError('Vehicle not found or not currently in the workshop');
+          setSearchError(t('filter.not_found'));
         }
       } else {
-        setSearchError(result.error || 'Failed to search vehicles');
+        setSearchError(result.error || t('filter.search_failed'));
       }
     } catch {
-      setSearchError('Network error. Please try again.');
+      setSearchError(t('vehicle.network_error'));
     } finally {
       setIsSearching(false);
     }
@@ -402,7 +404,7 @@ export default function FiltersOverlay({
           <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
             <BackIcon />
           </TouchableOpacity>
-          <Text style={s.title}>Filters</Text>
+          <Text style={s.title}>{t('filter.title')}</Text>
         </View>
 
         {/* Tab row + Clear All */}
@@ -419,7 +421,7 @@ export default function FiltersOverlay({
                     s.tabBtnText,
                     activeTab === tab && s.tabBtnTextActive,
                   ]}>
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === 'date' ? t('filter.tab_date') : tab === 'vehicle' ? t('filter.tab_vehicle') : t('filter.tab_sort')}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -428,7 +430,7 @@ export default function FiltersOverlay({
             onPress={handleClearAll}
             style={s.clearBtn}
             activeOpacity={0.8}>
-            <Text style={s.clearBtnText}>CLEAR ALL</Text>
+            <Text style={s.clearBtnText}>{t('filter.clear_all')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -450,7 +452,7 @@ export default function FiltersOverlay({
                     selectingField === 'start' && s.dateFieldActive,
                   ]}
                   activeOpacity={0.8}>
-                  <Text style={s.dateFieldLabel}>START</Text>
+                  <Text style={s.dateFieldLabel}>{t('filter.start')}</Text>
                   <Text
                     style={[
                       s.dateFieldValue,
@@ -467,7 +469,7 @@ export default function FiltersOverlay({
                     selectingField === 'end' && s.dateFieldActive,
                   ]}
                   activeOpacity={0.8}>
-                  <Text style={s.dateFieldLabel}>END</Text>
+                  <Text style={s.dateFieldLabel}>{t('filter.end')}</Text>
                   <Text
                     style={[
                       s.dateFieldValue,
@@ -540,7 +542,7 @@ export default function FiltersOverlay({
                     setPlateNumber(text.toUpperCase());
                     setSearchError(null);
                   }}
-                  placeholder="Enter plate number..."
+                  placeholder={t('filter.plate_placeholder')}
                   placeholderTextColor="#c4c4c4"
                   style={[s.plateTextInput, !!plateNumber && s.plateTextInputFilled]}
                   autoCapitalize="characters"
@@ -595,7 +597,7 @@ export default function FiltersOverlay({
                     imageUrl={foundVehicle.imageUrl}
                   />
                   <View style={s.tapHint}>
-                    <Text style={s.tapHintText}>Tap to view details</Text>
+                    <Text style={s.tapHintText}>{t('filter.tap_to_view')}</Text>
                   </View>
                 </TouchableOpacity>
               )}
@@ -607,15 +609,9 @@ export default function FiltersOverlay({
             <View style={s.tabContent}>
               {(
                 [
-                  {
-                    key: 'amount_low_high' as const,
-                    label: 'Amount (Low To High)',
-                  },
-                  {
-                    key: 'amount_high_low' as const,
-                    label: 'Amount (High To Low)',
-                  },
-                  {key: 'relevance' as const, label: 'Relevance (Default)'},
+                  {key: 'amount_low_high' as const, label: t('filter.sort_low_high')},
+                  {key: 'amount_high_low' as const, label: t('filter.sort_high_low')},
+                  {key: 'relevance' as const, label: t('filter.sort_relevance')},
                 ] as {key: FilterData['sortBy']; label: string}[]
               ).map(opt => (
                 <TouchableOpacity
@@ -645,7 +641,7 @@ export default function FiltersOverlay({
             onPress={handleApply}
             style={s.applyBtn}
             activeOpacity={0.85}>
-            <Text style={s.applyBtnText}>APPLY</Text>
+            <Text style={s.applyBtnText}>{t('filter.apply')}</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -13,6 +13,7 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
@@ -188,6 +189,7 @@ export default function EditInquiryOverlay({
   initialItems,
   onSuccess,
 }: EditInquiryOverlayProps) {
+  const {t} = useTranslation();
   const [parts, setParts] = useState<PartItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
@@ -254,7 +256,7 @@ export default function EditInquiryOverlay({
           {title: 'Audio Permission', message: 'Microphone access needed to record audio.', buttonNeutral: 'Ask Me Later', buttonNegative: 'Cancel', buttonPositive: 'OK'},
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          setAppAlert({type: 'warning', title: 'Permission Denied', message: 'Microphone permission is required.'});
+          setAppAlert({type: 'warning', title: t('audio.permission_denied'), message: t('audio.permission_required')});
           return;
         }
       }
@@ -269,7 +271,7 @@ export default function EditInquiryOverlay({
         setRecordingTime(t => t + 1);
       }, 1000);
     } catch {
-      setAppAlert({type: 'error', message: 'Could not start recording.'});
+      setAppAlert({type: 'error', message: t('audio.record_failed')});
     }
   };
 
@@ -397,12 +399,12 @@ export default function EditInquiryOverlay({
 
       const result = await updateInquiryItemsWithFiles(inquiryId, items, audioFiles, imageFiles);
       if (result.success) {
-        setAppAlert({type: 'success', message: 'Inquiry updated successfully', onDone: () => { onClose(); onSuccess(); }});
+        setAppAlert({type: 'success', message: t('inquiry.update_success'), onDone: () => { onClose(); onSuccess(); }});
       } else {
-        setAppAlert({type: 'error', message: result.error || 'Failed to update inquiry'});
+        setAppAlert({type: 'error', message: result.error || t('inquiry.update_failed')});
       }
     } catch {
-      setAppAlert({type: 'error', message: 'Failed to update inquiry'});
+      setAppAlert({type: 'error', message: t('inquiry.update_failed')});
     } finally {
       setSubmitting(false);
     }
@@ -416,7 +418,7 @@ export default function EditInquiryOverlay({
     const isThisRecording = isRecording && recordingPartId === part.id;
     const isThisPlaying = playingPartId === part.id;
     const filledImages = part.images.filter(Boolean);
-    const title = part.partName.trim() || `Part ${index + 1}`;
+    const title = part.partName.trim() || `${t('inquiry.part_label')} ${index + 1}`;
 
     return (
       <View key={part.id} style={styles.accordionWrap}>
@@ -426,7 +428,7 @@ export default function EditInquiryOverlay({
             <Text style={styles.accordionTitle} numberOfLines={1}>{title}</Text>
             {!!part.quantity && (
               <View style={styles.qtyBadge}>
-                <Text style={styles.qtyBadgeText}>Qty: {part.quantity}</Text>
+                <Text style={styles.qtyBadgeText}>{t('inquiry.qty_badge')} {part.quantity}</Text>
               </View>
             )}
           </View>
@@ -445,10 +447,10 @@ export default function EditInquiryOverlay({
             {/* Part Name */}
             <View style={styles.fieldWrap}>
               <View style={[styles.inputBox, !!part.partName && styles.inputFilled, part.hasAttemptedSubmit && !part.partName.trim() && styles.inputError]}>
-                {!!part.partName && <Text style={styles.floatLabel}>Part Name</Text>}
-                <TextInput value={part.partName} onChangeText={v => updatePart(part.id, {partName: v})} placeholder="Part Name" placeholderTextColor="#828282" style={styles.inputText} />
+                {!!part.partName && <Text style={styles.floatLabel}>{t('inquiry.part_name')}</Text>}
+                <TextInput value={part.partName} onChangeText={v => updatePart(part.id, {partName: v})} placeholder={t('inquiry.part_name')} placeholderTextColor="#828282" style={styles.inputText} />
               </View>
-              {part.hasAttemptedSubmit && !part.partName.trim() && <Text style={styles.errorMsg}>Part name is required</Text>}
+              {part.hasAttemptedSubmit && !part.partName.trim() && <Text style={styles.errorMsg}>{t('inquiry.part_name_required')}</Text>}
             </View>
 
             {/* Brand */}
@@ -456,9 +458,9 @@ export default function EditInquiryOverlay({
               <TouchableOpacity
                 onPress={() => updatePart(part.id, {isBrandDropdownOpen: !part.isBrandDropdownOpen})}
                 style={[styles.inputBox, styles.row, !!part.preferredBrand && styles.inputFilled, part.hasAttemptedSubmit && !part.preferredBrand && styles.inputError]}>
-                {!!part.preferredBrand && <Text style={styles.floatLabel}>Preferred Brand</Text>}
+                {!!part.preferredBrand && <Text style={styles.floatLabel}>{t('inquiry.preferred_brand')}</Text>}
                 <Text style={[styles.inputText, {flex: 1}, !part.preferredBrand && {color: '#828282'}]}>
-                  {part.preferredBrand || 'Preferred Brand'}
+                  {part.preferredBrand || t('inquiry.preferred_brand')}
                 </Text>
                 <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
                   <Path d="M7 10L12 15L17 10" stroke="#e5383b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -473,44 +475,44 @@ export default function EditInquiryOverlay({
                   ))}
                 </View>
               )}
-              {part.hasAttemptedSubmit && !part.preferredBrand && <Text style={styles.errorMsg}>Brand is required</Text>}
+              {part.hasAttemptedSubmit && !part.preferredBrand && <Text style={styles.errorMsg}>{t('inquiry.brand_required')}</Text>}
             </View>
 
             {/* After Market Brand Name */}
             {part.preferredBrand === 'After Market' && (
               <View style={styles.fieldWrap}>
                 <View style={[styles.inputBox, !!part.afterMarketBrandName && styles.inputFilled, part.hasAttemptedSubmit && !part.afterMarketBrandName.trim() && styles.inputError]}>
-                  {!!part.afterMarketBrandName && <Text style={styles.floatLabel}>Brand Name</Text>}
+                  {!!part.afterMarketBrandName && <Text style={styles.floatLabel}>{t('inquiry.brand_name')}</Text>}
                   <TextInput
                     value={part.afterMarketBrandName}
                     onChangeText={v => updatePart(part.id, {afterMarketBrandName: v})}
-                    placeholder="Brand Name"
+                    placeholder={t('inquiry.brand_name')}
                     placeholderTextColor="#828282"
                     style={styles.inputText}
                   />
                 </View>
-                {part.hasAttemptedSubmit && !part.afterMarketBrandName.trim() && <Text style={styles.errorMsg}>Brand name is required</Text>}
+                {part.hasAttemptedSubmit && !part.afterMarketBrandName.trim() && <Text style={styles.errorMsg}>{t('inquiry.brand_name_required')}</Text>}
               </View>
             )}
 
             {/* Quantity */}
             <View style={styles.fieldWrap}>
               <View style={[styles.inputBox, !!part.quantity && styles.inputFilled, part.hasAttemptedSubmit && !part.quantity.trim() && styles.inputError]}>
-                {!!part.quantity && <Text style={styles.floatLabel}>Quantity</Text>}
-                <TextInput value={part.quantity} onChangeText={v => updatePart(part.id, {quantity: v})} placeholder="Quantity" placeholderTextColor="#828282" keyboardType="numeric" style={styles.inputText} />
+                {!!part.quantity && <Text style={styles.floatLabel}>{t('inquiry.quantity')}</Text>}
+                <TextInput value={part.quantity} onChangeText={v => updatePart(part.id, {quantity: v})} placeholder={t('inquiry.quantity')} placeholderTextColor="#828282" keyboardType="numeric" style={styles.inputText} />
               </View>
-              {part.hasAttemptedSubmit && !part.quantity.trim() && <Text style={styles.errorMsg}>Quantity is required</Text>}
+              {part.hasAttemptedSubmit && !part.quantity.trim() && <Text style={styles.errorMsg}>{t('inquiry.quantity_required')}</Text>}
             </View>
 
             {/* Remark + inline record button */}
             <View style={styles.fieldWrap}>
               {!isThisRecording && !part.audioUri && (
                 <View style={[styles.inputBox, styles.row, styles.remarkPad, !!part.remark && styles.inputFilled]}>
-                  {!!part.remark && <Text style={styles.floatLabel}>Remark</Text>}
+                  {!!part.remark && <Text style={styles.floatLabel}>{t('inquiry.remark')}</Text>}
                   <TextInput
                     value={part.remark}
                     onChangeText={v => updatePart(part.id, {remark: v})}
-                    placeholder="Remark (Optional)"
+                    placeholder={t('inquiry.remark_optional')}
                     placeholderTextColor="#828282"
                     style={[styles.inputText, {flex: 1}]}
                   />
@@ -519,7 +521,7 @@ export default function EditInquiryOverlay({
                     disabled={isRecording && recordingPartId !== part.id}
                     style={[styles.recordBtn, isRecording && recordingPartId !== part.id && styles.recordBtnDisabled]}>
                     <MicIcon />
-                    <Text style={styles.recordBtnText}>Record</Text>
+                    <Text style={styles.recordBtnText}>{t('inquiry.record')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -527,7 +529,7 @@ export default function EditInquiryOverlay({
               {isThisRecording && (
                 <View style={styles.recordingRow}>
                   <View style={styles.recordingDot} />
-                  <Text style={styles.recordingLabel}>Recording... {formatTime(recordingTime)}</Text>
+                  <Text style={styles.recordingLabel}>{t('inquiry.recording')} {formatTime(recordingTime)}</Text>
                   <TouchableOpacity onPress={stopRecording} style={styles.stopBtn}>
                     <StopIcon />
                   </TouchableOpacity>
@@ -536,11 +538,11 @@ export default function EditInquiryOverlay({
 
               {!!part.audioUri && !isThisRecording && (
                 <View style={[styles.inputBox, !!part.remark && styles.inputFilled]}>
-                  {!!part.remark && <Text style={styles.floatLabel}>Remark</Text>}
+                  {!!part.remark && <Text style={styles.floatLabel}>{t('inquiry.remark')}</Text>}
                   <TextInput
                     value={part.remark}
                     onChangeText={v => updatePart(part.id, {remark: v})}
-                    placeholder="Remark (Optional)"
+                    placeholder={t('inquiry.remark_optional')}
                     placeholderTextColor="#828282"
                     style={styles.inputText}
                   />
@@ -559,7 +561,7 @@ export default function EditInquiryOverlay({
                     {isThisPlaying ? <PauseIcon /> : <PlayIcon />}
                   </TouchableOpacity>
                   <Text style={styles.audioDuration}>
-                    {part.isServerAudio ? 'Audio' : formatTime(part.audioDuration)}
+                    {part.isServerAudio ? t('inquiry.audio_label') : formatTime(part.audioDuration)}
                   </Text>
                   <TouchableOpacity onPress={() => clearAudio(part.id)} style={styles.mediaDeleteBtn}>
                     <Text style={styles.mediaDeleteX}>✕</Text>
@@ -609,9 +611,9 @@ export default function EditInquiryOverlay({
           <TouchableOpacity onPress={onClose} style={styles.backBtn}>
             <BackIcon />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Parts</Text>
+          <Text style={styles.headerTitle}>{t('inquiry.edit_parts')}</Text>
           <View style={styles.countBadge}>
-            <Text style={styles.countText}>{parts.length} {parts.length === 1 ? 'Part' : 'Parts'}</Text>
+            <Text style={styles.countText}>{parts.length} {parts.length === 1 ? t('inquiry.part_label') : t('inquiry.parts_label')}</Text>
           </View>
         </View>
 
@@ -621,7 +623,7 @@ export default function EditInquiryOverlay({
 
             <TouchableOpacity onPress={addPart} style={styles.addAnotherBtn} activeOpacity={0.8}>
               <PlusIcon />
-              <Text style={styles.addAnotherText}>ADD ANOTHER PART</Text>
+              <Text style={styles.addAnotherText}>{t('inquiry.add_another_part')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -630,7 +632,7 @@ export default function EditInquiryOverlay({
               style={[styles.saveBtn, (!isFormValid || submitting) && styles.saveBtnDisabled]}
               activeOpacity={0.85}>
               <Text style={styles.saveBtnText}>
-                {submitting ? 'Saving...' : `SAVE CHANGES (${parts.length} ${parts.length === 1 ? 'PART' : 'PARTS'})`}
+                {submitting ? t('inquiry.saving') : `${t('inquiry.save_changes')} (${parts.length} ${parts.length === 1 ? t('inquiry.part_label').toUpperCase() : t('inquiry.parts_label').toUpperCase()})`}
               </Text>
             </TouchableOpacity>
           </View>
@@ -647,7 +649,6 @@ export default function EditInquiryOverlay({
       />
       <ImagePickerActionSheet
         visible={pendingPickPartId !== null}
-        title="Add Photo"
         onCamera={() => handleImageSource('camera')}
         onGallery={() => handleImageSource('gallery')}
         onClose={() => setPendingPickPartId(null)}

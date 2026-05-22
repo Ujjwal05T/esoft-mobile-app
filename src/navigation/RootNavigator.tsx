@@ -21,10 +21,12 @@ import RefundPolicyScreen from '../screens/RefundPolicyScreen';
 import StaffProfileScreen from '../screens/StaffProfileScreen';
 import InquiryDetailScreen from '../screens/InquiryDetailScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
+import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
 
 export type RootStackParamList = {
   Auth: undefined;
   MainTabs: undefined;
+  LanguageSelection: undefined;
   AIAssistant: undefined;
   Notifications: undefined;
   VehicleDetail: {vehicleId: number};
@@ -177,6 +179,11 @@ const RootNavigator: React.FC = () => {
             <Stack.Screen
               name="StaffProfile"
               component={StaffProfileScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="LanguageSelection"
+              component={LanguageSelectionScreen}
               options={{animation: 'slide_from_right', headerShown: false}}
             />
           </>

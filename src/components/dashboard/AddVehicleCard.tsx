@@ -2,6 +2,7 @@ import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import ArrowDiagonalIcon from '../../assets/icons/arrow-diagonal.svg';
+import {useTranslation} from 'react-i18next';
 
 interface AddVehicleCardProps {
   onPress?: () => void;
@@ -9,6 +10,7 @@ interface AddVehicleCardProps {
 
 
 export default function AddVehicleCard({onPress}: AddVehicleCardProps) {
+  const {t} = useTranslation();
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
       <LinearGradient
@@ -24,7 +26,7 @@ export default function AddVehicleCard({onPress}: AddVehicleCardProps) {
         />
 
         {/* Title */}
-        <Text style={styles.title}>Add a New{'\n'}Vehicle</Text>
+        <Text style={styles.title}>{t('vehicle.add_new')}</Text>
 
         {/* Arrow Icon */}
         <View style={styles.arrowContainer}>

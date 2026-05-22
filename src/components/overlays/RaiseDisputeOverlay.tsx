@@ -65,7 +65,7 @@ interface RaiseDisputeOverlayProps {
   vehicleInfo?: VehicleInfo;
   orders?: OrderWithParts[];
   reasons?: Reason[];
-  buttonText?: 'CONFIRM' | 'SEND REQUEST';
+  buttonText?: string;
   initialOrderId?: string;      // pre-fill order (matches OrderWithParts.id)
   initialOrderDisplay?: string; // text shown in the order input field
   initialPartId?: string;

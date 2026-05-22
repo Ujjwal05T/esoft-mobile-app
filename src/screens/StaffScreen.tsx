@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Text,
@@ -76,6 +77,7 @@ const PlusIcon = () => (
 );
 
 export default function StaffScreen() {
+  const {t} = useTranslation();
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active');
   const [searchVisible, setSearchVisible] = useState(false);
@@ -318,7 +320,7 @@ export default function StaffScreen() {
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search staff..."
+              placeholder={t('staff.search_placeholder')}
               placeholderTextColor="#999"
               autoFocus
               style={styles.searchInput}
@@ -332,7 +334,7 @@ export default function StaffScreen() {
                 style={styles.iconBtn}>
                 <BackIcon />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>My Staff</Text>
+              <Text style={styles.headerTitle}>{t('staff.title')}</Text>
             </View>
             <TouchableOpacity
               onPress={() => setSearchVisible(true)}
@@ -356,7 +358,7 @@ export default function StaffScreen() {
                   styles.tabText,
                   activeTab === 'active' && styles.tabTextActive,
                 ]}>
-                Active
+                {t('common.active')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -370,7 +372,7 @@ export default function StaffScreen() {
                   styles.tabText,
                   activeTab === 'inactive' && styles.tabTextActive,
                 ]}>
-                Inactive
+                {t('common.inactive')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -394,14 +396,14 @@ export default function StaffScreen() {
           // Loading state
           <View style={styles.emptyState}>
             <ActivityIndicator size="large" color="#e5383b" />
-            <Text style={styles.loadingText}>Loading staff...</Text>
+            <Text style={styles.loadingText}>{t('staff.loading')}</Text>
           </View>
         ) : error ? (
           // Error state
           <View style={styles.emptyState}>
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity onPress={fetchStaffData} style={styles.retryBtn}>
-              <Text style={styles.retryText}>Try again</Text>
+              <Text style={styles.retryText}>{t('staff.try_again')}</Text>
             </TouchableOpacity>
           </View>
         ) : filteredStaff.length > 0 ? (
@@ -440,11 +442,13 @@ export default function StaffScreen() {
                 />
               </Svg>
             </View>
-            <Text style={styles.emptyTitle}>No {activeTab} staff found</Text>
+            <Text style={styles.emptyTitle}>
+              {activeTab === 'active' ? t('staff.no_active') : t('staff.no_inactive')}
+            </Text>
             <Text style={styles.emptySubtitle}>
               {activeTab === 'active'
-                ? 'Add staff members to get started'
-                : 'No inactive staff members'}
+                ? t('staff.add_to_get_started')
+                : t('staff.no_inactive_members')}
             </Text>
           </View>
         )}

@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Text,
@@ -190,6 +191,7 @@ const FilterIcon = () => (
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function StaffInquiryScreen() {
+  const {t} = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -356,8 +358,8 @@ export default function StaffInquiryScreen() {
 
   const getTitle = () => {
     switch (activeTab) {
-      case 'disputes':  return 'Disputes';
-      default:          return 'Inquiries';
+      case 'disputes':  return t('inquiry.disputes_tab');
+      default:          return t('inquiry.title');
     }
   };
 
@@ -623,7 +625,7 @@ export default function StaffInquiryScreen() {
                   styles.tabBtnText,
                   activeTab === 'inquiries' && styles.tabBtnTextActive,
                 ]}>
-                Inquiries
+                {t('inquiry.title')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -638,7 +640,7 @@ export default function StaffInquiryScreen() {
                   styles.tabBtnText,
                   activeTab === 'disputes' && styles.tabBtnTextActive,
                 ]}>
-                Disputes
+                {t('inquiry.disputes_tab')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -648,7 +650,7 @@ export default function StaffInquiryScreen() {
             onPress={() => setShowFilters(true)}
             activeOpacity={0.8}>
             <FilterIcon />
-            <Text style={styles.filterBtnText}>Filter</Text>
+            <Text style={styles.filterBtnText}>{t('screen.filter')}</Text>
             {filterCount > 0 && (
               <View style={styles.filterBadge}>
                 <Text style={styles.filterBadgeText}>{filterCount}</Text>
@@ -663,17 +665,15 @@ export default function StaffInquiryScreen() {
             {loadingInquiries ? (
               <View style={styles.stateCard}>
                 <ActivityIndicator size="small" color="#e5383b" />
-                <Text style={styles.loadingText}>Loading inquiries...</Text>
+                <Text style={styles.loadingText}>{t('inquiry.loading')}</Text>
               </View>
             ) : filteredInquiries.length === 0 ? (
               <View style={styles.stateCard}>
                 <Text style={styles.emptyTitle}>
-                  {filterCount > 0 ? 'No inquiries match your filters' : 'No Inquiries Found'}
+                  {filterCount > 0 ? t('inquiry.no_inquiries_filters') : t('common.no_data')}
                 </Text>
                 <Text style={styles.emptySubtitle}>
-                  {filterCount > 0
-                    ? 'Try adjusting your filter criteria'
-                    : 'Your inquiries will appear here'}
+                  {filterCount > 0 ? t('screen.try_adjusting_filters') : t('inquiry.your_inquiries')}
                 </Text>
                 {filterCount > 0 && (
                   <TouchableOpacity
@@ -690,7 +690,7 @@ export default function StaffInquiryScreen() {
                       sortBy: null,
                     })}
                     activeOpacity={0.8}>
-                    <Text style={styles.clearFiltersBtnText}>Clear Filters</Text>
+                    <Text style={styles.clearFiltersBtnText}>{t('screen.clear_filters')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -727,17 +727,15 @@ export default function StaffInquiryScreen() {
             {loadingDisputes ? (
               <View style={styles.stateCard}>
                 <ActivityIndicator size="small" color="#e5383b" />
-                <Text style={styles.loadingText}>Loading disputes...</Text>
+                <Text style={styles.loadingText}>{t('inquiry.loading_disputes')}</Text>
               </View>
             ) : filteredDisputes.length === 0 ? (
               <View style={styles.stateCard}>
                 <Text style={styles.emptyTitle}>
-                  {filterCount > 0 ? 'No disputes match your filters' : 'No Disputes Found'}
+                  {filterCount > 0 ? t('inquiry.no_disputes_filters') : t('inquiry.no_disputes')}
                 </Text>
                 <Text style={styles.emptySubtitle}>
-                  {filterCount > 0
-                    ? 'Try adjusting your filter criteria'
-                    : 'Your disputes will appear here'}
+                  {filterCount > 0 ? t('screen.try_adjusting_filters') : t('inquiry.your_disputes')}
                 </Text>
                 {filterCount > 0 && (
                   <TouchableOpacity
@@ -754,7 +752,7 @@ export default function StaffInquiryScreen() {
                       sortBy: null,
                     })}
                     activeOpacity={0.8}>
-                    <Text style={styles.clearFiltersBtnText}>Clear Filters</Text>
+                    <Text style={styles.clearFiltersBtnText}>{t('screen.clear_filters')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -800,7 +798,7 @@ export default function StaffInquiryScreen() {
         isOpen={editDisputeItem !== null}
         onClose={() => setEditDisputeItem(null)}
         onConfirm={handleDisputeEditConfirm}
-        buttonText="SEND REQUEST"
+        buttonText={t('inquiry.send_request_btn')}
         initialOrderId={editDisputeItem?.orderNumber}
         initialOrderDisplay={editDisputeItem?.orderNumber}
         initialPartName={editDisputeItem?.partName}
@@ -812,12 +810,12 @@ export default function StaffInquiryScreen() {
       <FloatingActionButton
         navigationOptions={[
           {
-            label: 'Request Part',
+            label: t('inquiry.request_part'),
             onPress: handleRequestPart,
             disabled: permissions !== null && !permissions.createInquiry,
           },
           {
-            label: 'Raise Dispute',
+            label: t('inquiry.raise_dispute_btn'),
             onPress: handleRaiseDispute,
             disabled: permissions !== null && !permissions.raiseDispute,
           },
@@ -831,8 +829,8 @@ export default function StaffInquiryScreen() {
         onVehicleSelected={handleVehicleSelected}
         title={
           targetOverlay === 'requestPart'
-            ? 'Select Vehicle for Request Part'
-            : 'Select Vehicle for Dispute'
+            ? t('inquiry.select_vehicle_parts')
+            : t('inquiry.select_vehicle_dispute')
         }
       />
 
@@ -852,7 +850,7 @@ export default function StaffInquiryScreen() {
           onClose={() => setShowRaiseDispute(false)}
           onConfirm={handleDisputeConfirm}
           orders={vehicleOrders}
-          buttonText="SEND REQUEST"
+          buttonText={t('inquiry.send_request_btn')}
           vehicleInfo={vehicleInfo}
         />
       )}

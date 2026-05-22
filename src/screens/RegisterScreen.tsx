@@ -21,6 +21,7 @@ import {
   submitWorkshopRegistration,
 } from '../services/api';
 import FloatingInput from '../components/ui/FloatingInput';
+import {useTranslation} from 'react-i18next';
 import {DropdownField} from '../components/overlays/AddVehicleOverlay';
 import CheckIcon from '../assets/icons/check.svg';
 
@@ -39,6 +40,7 @@ interface RegisterScreenProps {
 }
 
 const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
+  const {t} = useTranslation();
   const [registerMode, setRegisterMode] = useState<RegisterMode>('email');
   const [currentStep, setCurrentStep] = useState<RegistrationStep>('enter-credentials');
   const [loading, setLoading] = useState(false);
@@ -253,36 +255,36 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                   style={[styles.modeTab, registerMode === 'email' && styles.modeTabActive]}
                   onPress={() => handleModeSwitch('email')}>
                   <Text style={[styles.modeTabText, registerMode === 'email' && styles.modeTabTextActive]}>
-                    Email
+                    {t('auth.email')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modeTab, registerMode === 'phone' && styles.modeTabActive]}
                   onPress={() => handleModeSwitch('phone')}>
                   <Text style={[styles.modeTabText, registerMode === 'phone' && styles.modeTabTextActive]}>
-                    Phone
+                    {t('auth.phone')}
                   </Text>
                 </TouchableOpacity>
               </View>
 
               {registerMode === 'email' ? (
                 <FloatingInput
-                  label="Enter Email Address"
+                  label={t('auth.email_placeholder')}
                   value={email}
                   onChange={setEmail}
                   keyboardType="email-address"
                   required
-                  error={email.length > 0 && !isEmailValid ? 'Enter a valid email address' : undefined}
+                  error={email.length > 0 && !isEmailValid ? t('auth.email_error') : undefined}
                 />
               ) : (
                 <FloatingInput
-                  label="Enter Mobile Number"
+                  label={t('auth.phone_placeholder')}
                   value={phone}
                   onChange={v => setPhone(v.replace(/[^0-9]/g, ''))}
                   keyboardType="number-pad"
                   maxLength={10}
                   required
-                  error={phone.length > 0 && !isPhoneValid ? 'Enter a valid 10-digit mobile number starting with 6-9' : undefined}
+                  error={phone.length > 0 && !isPhoneValid ? t('auth.phone_error') : undefined}
                 />
               )}
 
@@ -297,7 +299,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
           {/* Step 2: Verify OTP */}
           {currentStep === 'verify-otp' && (
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Verify OTP</Text>
+              <Text style={styles.stepTitle}>{t('auth.verify_otp')}</Text>
               <Text style={styles.otpSubtitle}>
                 {registerMode === 'email'
                   ? `Enter the 6-digit code sent to ${email}`

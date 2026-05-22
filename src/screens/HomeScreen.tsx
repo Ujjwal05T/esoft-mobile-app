@@ -1,4 +1,5 @@
 import React, {useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Text,
@@ -54,6 +55,7 @@ interface HomeScreenProps {
 
 const HomeScreen: React.FC<HomeScreenProps> = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  const {t} = useTranslation();
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -250,14 +252,14 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#e5383b" />
-            <Text style={styles.loadingText}>Loading dashboard...</Text>
+            <Text style={styles.loadingText}>{t('home.loading_dashboard')}</Text>
           </View>
         ) : (
           <>
             {/* Status Cards Row */}
             <View style={styles.statusRow}>
               <StatusCard
-                title="Vehicles Assigned"
+                title={t('home.vehicles_assigned')}
                 value={vehiclesCount}
                 bgColor="#e5383b"
                 VectorIcon={VehicleVectorIcon}
@@ -268,7 +270,7 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
                 onPress={() => navigation?.navigate('Vehicle')}
               />
               <StatusCard
-                title="Approved Inquiry"
+                title={t('home.approved_inquiry')}
                 value={`${approvedInquiriesCount}/${totalInquiriesCount}`}
                 bgColor="#2294F2"
                 VectorIcon={InquiryVectorIcon}
@@ -323,7 +325,7 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
         isOpen={showVehicleSelection}
         onClose={() => setShowVehicleSelection(false)}
         onVehicleSelected={handleVehicleSelected}
-        title="Select Vehicle for Parts Request"
+        title={t('home.select_vehicle_parts')}
       />
 
       {/* Request Part Overlay */}

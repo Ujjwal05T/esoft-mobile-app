@@ -3,6 +3,7 @@ import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import LinearGradient from 'react-native-linear-gradient';
 import {formatPlateNumber} from '../../utils/formatPlate';
+import {useTranslation} from 'react-i18next';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const TOYOTA_CRYSTA = require('../../assets/images/toyota-crysta.png') as number;
@@ -65,6 +66,7 @@ export default function VehicleCard({
   onApprove,
   onView,
 }: VehicleCardProps) {
+  const {t} = useTranslation();
   const vehicleImage = imageUrl ? {uri: imageUrl} : TOYOTA_CRYSTA;
   const vehicleName = [year, make, model].filter(Boolean).join(' ');
   const formattedPlate = formatPlateNumber(plateNumber);
@@ -123,7 +125,7 @@ export default function VehicleCard({
         </View>
 
         <View style={styles.scanInfo}>
-          {addedBy && <Text style={styles.addedBy}>Added by {addedBy}</Text>}
+          {addedBy && <Text style={styles.addedBy}>{t('vehicle.added_by', {name: addedBy})}</Text>}
           <Text style={styles.vehicleNameDark}>{vehicleName}</Text>
           <Text style={styles.specs}>{specs}</Text>
         </View>
@@ -162,7 +164,7 @@ export default function VehicleCard({
             resizeMode="contain"
           />
           <View style={styles.flex1}>
-            {addedBy && <Text style={styles.addedBy}>Added by {addedBy}</Text>}
+            {addedBy && <Text style={styles.addedBy}>{t('vehicle.added_by', {name: addedBy})}</Text>}
             <Text style={styles.vehicleNameDark}>{vehicleName}</Text>
             <Text style={styles.specsSmall}>{specs}</Text>
           </View>

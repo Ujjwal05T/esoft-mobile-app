@@ -20,6 +20,7 @@ import FloatingInput from '../ui/FloatingInput';
 import type {InquiryItemResponse} from '../../services/api';
 import {SERVER_ORIGIN} from '../../services/api';
 import AppAlert, {AlertState} from './AppAlert';
+import {useTranslation} from 'react-i18next';
 
 export interface InquiryItemForm {
   id?: string;
@@ -98,6 +99,7 @@ export default function EditInquiryItemOverlay({
   item,
   onSave,
 }: EditInquiryItemOverlayProps) {
+  const {t} = useTranslation();
   const [partName, setPartName] = useState('');
   const [brand, setBrand] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -164,7 +166,7 @@ export default function EditInquiryItemOverlay({
           {title: 'Audio Permission', message: 'Microphone access needed to record audio.', buttonNeutral: 'Ask Me Later', buttonNegative: 'Cancel', buttonPositive: 'OK'},
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          setAppAlert({type: 'warning', title: 'Permission Denied', message: 'Microphone permission is required.'});
+          setAppAlert({type: 'warning', title: t('audio.permission_denied'), message: t('audio.permission_required')});
           return;
         }
       }
@@ -174,10 +176,10 @@ export default function EditInquiryItemOverlay({
       setIsRecording(true);
       recordingTimer.current = setInterval(() => {
         recordingTimeRef.current += 1;
-        setRecordingTime(t => t + 1);
+        setRecordingTime(prev => prev + 1);
       }, 1000);
     } catch {
-      setAppAlert({type: 'error', message: 'Could not start recording.'});
+      setAppAlert({type: 'error', message: t('audio.record_failed')});
     }
   };
 
@@ -274,18 +276,18 @@ export default function EditInquiryItemOverlay({
 
       <View style={styles.sheet}>
         <View style={styles.handle} />
-        <Text style={styles.title}>{item?.id ? 'Edit Part' : 'Add Part'}</Text>
+        <Text style={styles.title}>{item?.id ? t('inquiry.edit_part') : t('inquiry.add_part')}</Text>
 
         <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView} keyboardShouldPersistTaps="handled">
-          <FloatingInput label="Part Name" value={partName} onChange={setPartName} required />
-          <FloatingInput label="Preferred Brand" value={brand} onChange={setBrand} />
-          <FloatingInput label="Quantity" value={quantity} onChange={setQuantity} keyboardType="numeric" />
+          <FloatingInput label={t('inquiry.part_name')} value={partName} onChange={setPartName} required />
+          <FloatingInput label={t('inquiry.preferred_brand')} value={brand} onChange={setBrand} />
+          <FloatingInput label={t('inquiry.quantity')} value={quantity} onChange={setQuantity} keyboardType="numeric" />
 
-          <Text style={styles.sectionLabel}>Remark</Text>
+          <Text style={styles.sectionLabel}>{t('inquiry.remark')}</Text>
           <TextInput
             value={remark}
             onChangeText={setRemark}
-            placeholder="Additional remarks..."
+            placeholder={t('inquiry.additional_remarks')}
             placeholderTextColor="#9ca3af"
             multiline
             numberOfLines={3}
@@ -294,13 +296,13 @@ export default function EditInquiryItemOverlay({
           />
 
           {/* ── Audio section ──────────────────────────────────────────── */}
-          <Text style={styles.sectionLabel}>Audio</Text>
+          <Text style={styles.sectionLabel}>{t('inquiry.audio_section')}</Text>
           <View style={styles.mediaSubSection}>
             {/* No audio yet — show record button */}
             {!audioPath && !isRecording && (
               <TouchableOpacity style={styles.recordBtn} onPress={startRecording} activeOpacity={0.85}>
                 <MicIcon />
-                <Text style={styles.recordBtnText}>Record Audio</Text>
+                <Text style={styles.recordBtnText}>{t('inquiry.record_audio')}</Text>
               </TouchableOpacity>
             )}
 
@@ -308,7 +310,7 @@ export default function EditInquiryItemOverlay({
             {isRecording && (
               <View style={styles.recordingBar}>
                 <View style={styles.recordingDot} />
-                <Text style={styles.recordingText}>Recording... {formatDuration(recordingTime)}</Text>
+                <Text style={styles.recordingText}>{t('inquiry.recording')} {formatDuration(recordingTime)}</Text>
                 <TouchableOpacity onPress={stopRecording} style={styles.stopBtn} activeOpacity={0.8}>
                   <StopIcon />
                 </TouchableOpacity>
@@ -323,7 +325,7 @@ export default function EditInquiryItemOverlay({
                 </TouchableOpacity>
                 <View style={styles.audioInfo}>
                   <Text style={styles.audioLabel}>
-                    {isServerAudio ? 'Existing Recording' : `Recorded — ${formatDuration(audioDuration)}`}
+                    {isServerAudio ? t('inquiry.existing_recording') : `${t('inquiry.recorded')} — ${formatDuration(audioDuration)}`}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={deleteAudio} style={styles.audioDeleteBtn} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
@@ -334,7 +336,7 @@ export default function EditInquiryItemOverlay({
           </View>
 
           {/* ── Photos section ─────────────────────────────────────────── */}
-          <Text style={[styles.sectionLabel, {marginTop: 16}]}>Photos</Text>
+          <Text style={[styles.sectionLabel, {marginTop: 16}]}>{t('inquiry.photos_section')}</Text>
           <View style={styles.mediaSubSection}>
             <View style={styles.imagesRow}>
               {images.map((img, idx) => (
@@ -364,7 +366,7 @@ export default function EditInquiryItemOverlay({
           disabled={!partName.trim()}
           style={[styles.saveBtn, !partName.trim() && styles.disabledBtn]}
           activeOpacity={0.85}>
-          <Text style={styles.saveText}>SAVE CHANGES</Text>
+          <Text style={styles.saveText}>{t('inquiry.save_changes').toUpperCase()}</Text>
         </TouchableOpacity>
       </View>
 
@@ -378,7 +380,6 @@ export default function EditInquiryItemOverlay({
       />
       <ImagePickerActionSheet
         visible={showImagePicker}
-        title="Add Photo"
         onCamera={() => handleImageSource('camera')}
         onGallery={() => handleImageSource('gallery')}
         onClose={() => setShowImagePicker(false)}

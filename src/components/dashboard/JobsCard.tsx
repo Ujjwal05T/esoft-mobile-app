@@ -9,6 +9,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import {getVehicles, type VehicleResponse} from '../../services/api';
 import VehicleCard from './VehicleCard';
+import {useTranslation} from 'react-i18next';
 
 interface DisplayVehicle {
   id: string;
@@ -22,6 +23,7 @@ interface DisplayVehicle {
 }
 
 export default function JobsCard() {
+  const {t} = useTranslation();
   const [vehicles, setVehicles] = useState<DisplayVehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -66,7 +68,7 @@ export default function JobsCard() {
       <Text style={styles.bigNumber}>{jobCount}</Text>
 
       {/* Text Label */}
-      <Text style={styles.label}>Jobs{'\n'}Card Open</Text>
+      <Text style={styles.label}>{t('jobs.card_title')}</Text>
 
       {/* Vehicle Cards Horizontal Scroll */}
       <View style={styles.scrollSection}>
@@ -96,7 +98,7 @@ export default function JobsCard() {
           </ScrollView>
         ) : (
           <View style={styles.center}>
-            <Text style={styles.emptyText}>No requested vehicles</Text>
+            <Text style={styles.emptyText}>{t('jobs.no_vehicles')}</Text>
           </View>
         )}
       </View>

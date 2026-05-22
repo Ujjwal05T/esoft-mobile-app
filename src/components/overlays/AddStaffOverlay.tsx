@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import AppAlert from './AppAlert';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
@@ -145,6 +146,7 @@ export default function AddStaffOverlay({
   onClose,
   onSubmit,
 }: AddStaffOverlayProps) {
+  const {t} = useTranslation();
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -255,7 +257,7 @@ export default function AddStaffOverlay({
     });
     setLoading(false);
     if (result?.success === false) {
-      setError(result.error || 'Failed to add staff. Please try again.');
+      setError(result.error || t('staff.add_failed'));
     }
   };
 
@@ -277,20 +279,20 @@ export default function AddStaffOverlay({
             <TouchableOpacity onPress={() => setShowPermissions(false)} style={styles.iconBtn}>
               <BackIcon />
             </TouchableOpacity>
-            <Text style={styles.title}>Permissions</Text>
+            <Text style={styles.title}>{t('staff.permissions')}</Text>
           </View>
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.permissionsList}>
               {[
-                {key: 'vehicleApprovals', label: 'Vehicle Approvals'},
-                {key: 'inquiryApprovals', label: 'Inquiry Approvals'},
-                {key: 'generateEstimates', label: 'Generate Estimates'},
-                {key: 'createJobCard', label: 'Create Job Card'},
-                {key: 'disputeApprovals', label: 'Dispute Approvals'},
-                {key: 'quoteApprovalsPayments', label: 'Quote Approvals/Payments'},
-                {key: 'addVehicle', label: 'Add Vehicle'},
-                {key: 'raiseDispute', label: 'Raise Dispute'},
-                {key: 'createInquiry', label: 'Create Inquiry'},
+                {key: 'vehicleApprovals', label: t('staff.perm_vehicle_approvals')},
+                {key: 'inquiryApprovals', label: t('staff.perm_inquiry_approvals')},
+                {key: 'generateEstimates', label: t('staff.perm_generate_estimates')},
+                {key: 'createJobCard', label: t('staff.perm_create_job_card')},
+                {key: 'disputeApprovals', label: t('staff.perm_dispute_approvals')},
+                {key: 'quoteApprovalsPayments', label: t('staff.perm_quote_approvals')},
+                {key: 'addVehicle', label: t('staff.perm_add_vehicle')},
+                {key: 'raiseDispute', label: t('staff.perm_raise_dispute')},
+                {key: 'createInquiry', label: t('staff.perm_create_inquiry')},
               ].map(({key, label}) => (
                 <View key={key} style={styles.permissionRow}>
                   <Text style={[styles.permissionLabel, permissions[key as keyof StaffPermissions] && styles.permissionActive]}>
@@ -320,7 +322,7 @@ export default function AddStaffOverlay({
           <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
             <BackIcon />
           </TouchableOpacity>
-          <Text style={styles.title}>Add Staff</Text>
+          <Text style={styles.title}>{t('staff.add_staff')}</Text>
         </View>
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.photoContainer}>
@@ -342,15 +344,15 @@ export default function AddStaffOverlay({
           </View>
           <View style={styles.formFields}>
             <View style={styles.inputWrapper}>
-              {name !== '' && <Text style={styles.floatingLabel}>Name</Text>}
-              <TextInput value={name} onChangeText={setName} placeholder="Name" placeholderTextColor="#828282" style={[styles.input, name && styles.inputFilled]} />
+              {name !== '' && <Text style={styles.floatingLabel}>{t('staff.name')}</Text>}
+              <TextInput value={name} onChangeText={setName} placeholder={t('staff.name')} placeholderTextColor="#828282" style={[styles.input, name && styles.inputFilled]} />
             </View>
             <View style={styles.inputWrapper}>
-              {role !== '' && <Text style={styles.floatingLabel}>Role</Text>}
-              <TextInput value={role} onChangeText={setRole} placeholder="Role" placeholderTextColor="#828282" style={[styles.input, role && styles.inputFilled]} />
+              {role !== '' && <Text style={styles.floatingLabel}>{t('staff.role')}</Text>}
+              <TextInput value={role} onChangeText={setRole} placeholder={t('staff.role')} placeholderTextColor="#828282" style={[styles.input, role && styles.inputFilled]} />
             </View>
             <View style={styles.inputWrapper}>
-              {selectedCategories.length > 0 && <Text style={styles.floatingLabel}>Job Category</Text>}
+              {selectedCategories.length > 0 && <Text style={styles.floatingLabel}>{t('staff.job_category')}</Text>}
               <TouchableOpacity onPress={() => setShowCategoryDropdown(!showCategoryDropdown)} style={[styles.dropdownBtn, selectedCategories.length > 0 && styles.inputFilled]}>
                 <View style={styles.tagsContainer}>
                   {selectedCategories.length > 0 ? (
@@ -366,7 +368,7 @@ export default function AddStaffOverlay({
                       );
                     })
                   ) : (
-                    <Text style={styles.placeholder}>Job Category</Text>
+                    <Text style={styles.placeholder}>{t('staff.job_category')}</Text>
                   )}
                 </View>
                 <ChevronIcon rotated={showCategoryDropdown} />
@@ -385,16 +387,16 @@ export default function AddStaffOverlay({
               )}
             </View>
             <View style={styles.inputWrapper}>
-              {contactNumber !== '' && <Text style={styles.floatingLabel}>Contact Number</Text>}
-              <TextInput value={contactNumber} maxLength={10} onChangeText={setContactNumber} placeholder="Contact Number" placeholderTextColor="#828282" keyboardType="phone-pad" style={[styles.input, contactNumber && styles.inputFilled]} />
+              {contactNumber !== '' && <Text style={styles.floatingLabel}>{t('profile.contact_number')}</Text>}
+              <TextInput value={contactNumber} maxLength={10} onChangeText={setContactNumber} placeholder={t('profile.contact_number')} placeholderTextColor="#828282" keyboardType="phone-pad" style={[styles.input, contactNumber && styles.inputFilled]} />
             </View>
             <View style={styles.inputWrapper}>
-              {email !== '' && <Text style={styles.floatingLabel}>Email</Text>}
-              <TextInput value={email} onChangeText={setEmail} placeholder="Email" placeholderTextColor="#828282" keyboardType="email-address" autoCapitalize="none" style={[styles.input, email && styles.inputFilled]} />
+              {email !== '' && <Text style={styles.floatingLabel}>{t('staff.email')}</Text>}
+              <TextInput value={email} onChangeText={setEmail} placeholder={t('staff.email')} placeholderTextColor="#828282" keyboardType="email-address" autoCapitalize="none" style={[styles.input, email && styles.inputFilled]} />
             </View>
             <View style={styles.inputWrapper}>
-              {address !== '' && <Text style={styles.floatingLabel}>Address</Text>}
-              <TextInput value={address} onChangeText={setAddress} placeholder="Address" placeholderTextColor="#828282" style={[styles.input, address && styles.inputFilled]} />
+              {address !== '' && <Text style={styles.floatingLabel}>{t('profile.address')}</Text>}
+              <TextInput value={address} onChangeText={setAddress} placeholder={t('profile.address')} placeholderTextColor="#828282" style={[styles.input, address && styles.inputFilled]} />
             </View>
           </View>
           {!!error && (
@@ -407,18 +409,18 @@ export default function AddStaffOverlay({
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.submitBtnText}>ADD STAFF</Text>
+                <Text style={styles.submitBtnText}>{t('staff.add_staff_btn')}</Text>
               )}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowPermissions(true)} style={styles.permissionsLinkBtn} activeOpacity={0.8}>
-              <Text style={styles.permissionsLinkText}>MANAGE PERMISSIONS</Text>
+              <Text style={styles.permissionsLinkText}>{t('staff.manage_permissions')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
       <ImagePickerActionSheet
         visible={showPhotoPicker}
-        title="Add Staff Photo"
+        title={t('staff.add_staff_photo')}
         onCamera={() => handlePhotoSource('camera')}
         onGallery={() => handlePhotoSource('gallery')}
         onClose={() => setShowPhotoPicker(false)}

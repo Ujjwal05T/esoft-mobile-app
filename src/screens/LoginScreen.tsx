@@ -16,6 +16,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {sendOtpByEmail, verifyOtpByEmail, sendOtpByWhatsApp, verifyOtpByPhone} from '../services/otpAuth';
 import FloatingInput from '../components/ui/FloatingInput';
 import {useAuth} from '../context/AuthContext';
+import {useTranslation} from 'react-i18next';
 
 type LoginStep = 'enter-credentials' | 'verify-otp';
 type LoginMode = 'email' | 'phone';
@@ -27,6 +28,7 @@ interface LoginScreenProps {
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
+  const {t} = useTranslation();
   const {signIn} = useAuth();
   const [loginMode, setLoginMode] = useState<LoginMode>('email');
   const [currentStep, setCurrentStep] = useState<LoginStep>('enter-credentials');
@@ -179,14 +181,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                   style={[styles.modeTab, loginMode === 'email' && styles.modeTabActive]}
                   onPress={() => handleModeSwitch('email')}>
                   <Text style={[styles.modeTabText, loginMode === 'email' && styles.modeTabTextActive]}>
-                    Email
+                    {t('auth.email')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modeTab, loginMode === 'phone' && styles.modeTabActive]}
                   onPress={() => handleModeSwitch('phone')}>
                   <Text style={[styles.modeTabText, loginMode === 'phone' && styles.modeTabTextActive]}>
-                    Phone
+                    {t('auth.phone')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -194,30 +196,30 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
               {loginMode === 'email' ? (
                 <>
                   <FloatingInput
-                    label="Enter Email Address"
+                    label={t('auth.email_placeholder')}
                     value={email}
                     onChange={setEmail}
                     keyboardType="email-address"
                     required
-                    error={email.length > 0 && !isEmailValid ? 'Enter a valid email address' : undefined}
+                    error={email.length > 0 && !isEmailValid ? t('auth.email_error') : undefined}
                   />
                   <Text style={styles.helperText}>
-                    We'll send you a 6-digit OTP to verify your email
+                    {t('auth.otp_email_hint')}
                   </Text>
                 </>
               ) : (
                 <>
                   <FloatingInput
-                    label="Enter Mobile Number"
+                    label={t('auth.phone_placeholder')}
                     value={phone}
                     onChange={v => setPhone(v.replace(/[^0-9]/g, ''))}
                     keyboardType="number-pad"
                     maxLength={10}
                     required
-                    error={phone.length > 0 && !isPhoneValid ? 'Enter a valid 10-digit mobile number starting with 6-9' : undefined}
+                    error={phone.length > 0 && !isPhoneValid ? t('auth.phone_error') : undefined}
                   />
                   <Text style={styles.helperText}>
-                    We'll send you a 6-digit OTP on WhatsApp
+                    {t('auth.otp_whatsapp_hint')}
                   </Text>
                 </>
               )}
@@ -233,7 +235,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
           {/* Step 2: Verify OTP */}
           {currentStep === 'verify-otp' && (
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Verify OTP</Text>
+              <Text style={styles.stepTitle}>{t('auth.verify_otp')}</Text>
               <Text style={styles.otpSubtitle}>
                 {loginMode === 'email'
                   ? `Enter the 6-digit code sent to ${email}`
@@ -323,9 +325,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
 
           {/* Register link */}
           <View style={styles.registerRow}>
-            <Text style={styles.registerText}>Don't have an account ? </Text>
+            <Text style={styles.registerText}>{t('auth.no_account')} </Text>
             <TouchableOpacity onPress={() => navigation?.navigate('Register')}>
-              <Text style={styles.registerLink}>Register</Text>
+              <Text style={styles.registerLink}>{t('auth.register_link')}</Text>
             </TouchableOpacity>
           </View>
         </View>

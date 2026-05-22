@@ -1,4 +1,5 @@
 import React, {useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Text,
@@ -133,6 +134,7 @@ function countActiveFilters(filters: FilterData): number {
 export default function VehicleScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const {t} = useTranslation();
   const [activeTab, setActiveTab] = useState<'all' | 'requested'>('all');
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -307,7 +309,7 @@ export default function VehicleScreen() {
             onPress={() => setActiveTab('all')}
             activeOpacity={0.8}>
             <Text style={[styles.tabBtnText, activeTab === 'all' && styles.tabBtnTextActive]}>
-              All ({filteredVehicles.length})
+              {t('screen.all')} ({filteredVehicles.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -315,7 +317,7 @@ export default function VehicleScreen() {
             onPress={() => setActiveTab('requested')}
             activeOpacity={0.8}>
             <Text style={[styles.tabBtnText, activeTab === 'requested' && styles.tabBtnTextActive]}>
-              Requested ({filteredRequestedVehicles.length})
+              {t('screen.requested')} ({filteredRequestedVehicles.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -325,7 +327,7 @@ export default function VehicleScreen() {
           onPress={() => setShowFilters(true)}
           activeOpacity={0.8}>
           <FilterIcon />
-          <Text style={styles.filterBtnText}>Filter</Text>
+          <Text style={styles.filterBtnText}>{t('screen.filter')}</Text>
           {filterCount > 0 && (
             <View style={styles.filterBadge}>
               <Text style={styles.filterBadgeText}>{filterCount}</Text>
@@ -338,7 +340,7 @@ export default function VehicleScreen() {
       {isLoading && (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#e5383b" />
-          <Text style={styles.loadingText}>Loading vehicles...</Text>
+          <Text style={styles.loadingText}>{t('screen.loading_vehicles')}</Text>
         </View>
       )}
 
@@ -350,7 +352,7 @@ export default function VehicleScreen() {
             style={styles.actionBtn}
             onPress={fetchVehicles}
             activeOpacity={0.8}>
-            <Text style={styles.actionBtnText}>Try Again</Text>
+            <Text style={styles.actionBtnText}>{t('screen.try_again')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -361,17 +363,17 @@ export default function VehicleScreen() {
           <EmptyCarIcon />
           <Text style={styles.emptyTitle}>
             {filterCount > 0
-              ? 'No vehicles match your filters'
+              ? t('screen.no_vehicles_filters')
               : activeTab === 'all'
-              ? 'No vehicles currently in workshop'
-              : 'No requested vehicles'}
+              ? t('screen.no_vehicles_workshop')
+              : t('screen.no_vehicles_requested')}
           </Text>
           <Text style={styles.emptySubtitle}>
             {filterCount > 0
-              ? 'Try adjusting your filter criteria'
+              ? t('screen.try_adjusting_filters')
               : activeTab === 'all'
-              ? 'Gate in a vehicle to see it here'
-              : 'Staff-added vehicles will appear here'}
+              ? t('screen.gate_in_to_see')
+              : t('screen.staff_added_appear')}
           </Text>
           {filterCount > 0 && (
             <TouchableOpacity
@@ -381,7 +383,7 @@ export default function VehicleScreen() {
                 year: '', vehicleNumber: '', assignedTo: '', addedBy: '', sortBy: null,
               })}
               activeOpacity={0.8}>
-              <Text style={styles.actionBtnText}>Clear Filters</Text>
+              <Text style={styles.actionBtnText}>{t('screen.clear_filters')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -431,7 +433,7 @@ export default function VehicleScreen() {
       <FloatingActionButton
         navigationOptions={[
           {
-            label: 'Add new vehicle',
+            label: t('screen.add_new_vehicle'),
             onPress: () => setShowAddVehicle(true),
           },
         ]}

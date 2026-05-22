@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useTranslation} from 'react-i18next';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/RootNavigator';
@@ -147,8 +148,9 @@ const InfoColumn = ({label, value}: {label: string; value: string}) => (
 );
 
 const OrderSummaryCard = ({order, status}: {order: OrderDetailApiResponse; status: OrderStatus}) => {
+  const {t} = useTranslation();
   const isDelivered = status === 'delivered';
-  const dateLabel = isDelivered ? 'Delivered at:' : 'Delivery by:';
+  const dateLabel = isDelivered ? t('orders.delivered_at') : t('orders.delivery_by');
   const dateValue = formatDateIST(order.estimatedDeliveryDate);
 
   // Build vehicle name from brand + model if vehicleName is null
@@ -181,7 +183,7 @@ const OrderSummaryCard = ({order, status}: {order: OrderDetailApiResponse; statu
           <Text style={styles.plateNumber}>{plateNumber}</Text>
           <Text style={styles.orderNumber}>{order.orderNumber}</Text>
           <Text style={styles.placedDate}>
-            {isDelivered ? 'Delivered: ' : 'Placed: '}
+            {t(isDelivered ? 'orders.delivered_prefix' : 'orders.placed_prefix')}
             {placedDateStr}
           </Text>
         </View>
@@ -200,7 +202,7 @@ const OrderSummaryCard = ({order, status}: {order: OrderDetailApiResponse; statu
           <Text style={styles.amountValue}>{dateValue}</Text>
         </View>
         <View style={styles.amountColumnRight}>
-          <Text style={styles.amountLabel}>Parts Subtotal</Text>
+          <Text style={styles.amountLabel}>{t('orders.parts_subtotal')}</Text>
           <Text style={styles.amountValue}>
             Rs. {partsSubtotal.toLocaleString('en-IN')}
           </Text>
@@ -212,7 +214,7 @@ const OrderSummaryCard = ({order, status}: {order: OrderDetailApiResponse; statu
         {additionalCharges > 0 && (
           <View style={[styles.amountColumn, {flex: 1}]}>
             <Text style={styles.amountLabel}>
-              Additional Charges (Packing + Forwarding + Shipping)
+              {t('vehicle.additional_charges')}
             </Text>
             <Text style={styles.amountValue}>
               Rs. {additionalCharges.toLocaleString('en-IN')}
@@ -220,7 +222,7 @@ const OrderSummaryCard = ({order, status}: {order: OrderDetailApiResponse; statu
           </View>
         )}
         <View style={[styles.amountColumnRight, {width: 80}]}>
-          <Text style={styles.amountLabel}>Grand Total</Text>
+          <Text style={styles.amountLabel}>{t('orders.grand_total')}</Text>
           <Text style={styles.amountValue}>
             Rs. {grandTotal.toLocaleString('en-IN')}
           </Text>
@@ -231,6 +233,7 @@ const OrderSummaryCard = ({order, status}: {order: OrderDetailApiResponse; statu
 };
 
 const DeliveryDetailsSection = ({order}: {order: OrderDetailApiResponse}) => {
+  const {t} = useTranslation();
   const [open, setOpen] = useState(true);
 
   return (
@@ -240,7 +243,7 @@ const DeliveryDetailsSection = ({order}: {order: OrderDetailApiResponse}) => {
         style={styles.deliveryHeader}
         onPress={() => setOpen(o => !o)}
         activeOpacity={0.7}>
-        <Text style={styles.deliveryHeaderText}>Delivery Details</Text>
+        <Text style={styles.deliveryHeaderText}>{t('vehicle.delivery_details')}</Text>
         <ChevronIcon open={open} />
       </TouchableOpacity>
 
@@ -253,26 +256,26 @@ const DeliveryDetailsSection = ({order}: {order: OrderDetailApiResponse}) => {
           {/* Row 1 */}
           <View style={styles.deliveryRow}>
             <InfoColumn
-              label="LR/Tracking No."
+              label={t('vehicle.lr_tracking')}
               value={order.lrNumber ?? '–'}
             />
             <InfoColumn
-              label="Bus/Delivery Service"
+              label={t('vehicle.bus_delivery_service')}
               value={order.deliveryPartnerName ?? '–'}
             />
             <InfoColumn
-              label="Bus/Delivery Contact No."
+              label={t('vehicle.bus_delivery_contact')}
               value={order.workshopPhone ?? '–'}
             />
           </View>
           {/* Row 2 */}
           <View style={styles.deliveryRow}>
             <InfoColumn
-              label="Delivery Driver Name"
+              label={t('vehicle.delivery_driver_name')}
               value={order.deliveryDriverName ?? '–'}
             />
             <InfoColumn
-              label="Delivery Driver Contact No."
+              label={t('vehicle.delivery_driver_contact')}
               value={order.deliveryDriverContact ?? '–'}
             />
           </View>
@@ -289,6 +292,7 @@ const PartRow = ({
   item: OrderItemApiResponse;
   onClick: () => void;
 }) => {
+  const {t} = useTranslation();
   return (
     <TouchableOpacity
       style={styles.partRow}
@@ -319,7 +323,7 @@ const PartRow = ({
         {/* Dispute affordance */}
         <View style={styles.disputeBadgeRow}>
           <View style={styles.disputeBadge}>
-            <Text style={styles.disputeBadgeText}>Raise Dispute</Text>
+            <Text style={styles.disputeBadgeText}>{t('orders.raise_dispute')}</Text>
           </View>
         </View>
       </View>
@@ -330,6 +334,7 @@ const PartRow = ({
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function OrderDetailScreen() {
+  const {t} = useTranslation();
   const navigation = useNavigation<OrderDetailNavigationProp>();
   const route = useRoute<OrderDetailRouteProp>();
   const {orderId} = route.params;
@@ -376,11 +381,11 @@ export default function OrderDetailScreen() {
   const status: OrderStatus = order ? mapStatus(order.status) : 'in-process';
 
   const handleDownloadInvoice = () => {
-    setAppAlert({type: 'info', title: 'Download Invoice', message: 'Invoice download functionality coming soon!'});
+    setAppAlert({type: 'info', title: t('orders.download_invoice'), message: t('orders.invoice_coming_soon')});
   };
 
   const handleTrack = () => {
-    setAppAlert({type: 'info', title: 'Track Order', message: 'Order tracking functionality coming soon!'});
+    setAppAlert({type: 'info', title: t('orders.track_order'), message: t('orders.track_coming_soon')});
   };
 
   const handlePartClick = (item: OrderItemApiResponse) => {
@@ -413,9 +418,9 @@ export default function OrderDetailScreen() {
     if (result.success) {
       setShowRaiseDisputeOverlay(false);
       setSelectedItem(null);
-      setAppAlert({type: 'success', title: 'Dispute Raised', message: `Your dispute for ${data.partName} has been submitted.`});
+      setAppAlert({type: 'success', title: t('orders.dispute_raised_title'), message: t('orders.dispute_raised_msg', {partName: data.partName})});
     } else {
-      setAppAlert({type: 'error', title: 'Failed', message: result.error ?? 'Could not raise dispute. Please try again.'});
+      setAppAlert({type: 'error', title: t('common.failed'), message: result.error ?? t('common.something_wrong')});
     }
   };
 
@@ -425,7 +430,7 @@ export default function OrderDetailScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#e5383b" />
-          <Text style={styles.loadingText}>Loading order details...</Text>
+          <Text style={styles.loadingText}>{t('orders.loading_orders')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -436,13 +441,13 @@ export default function OrderDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContainer}>
-          <Text style={styles.errorTitle}>Failed to Load Order</Text>
-          <Text style={styles.errorText}>{error || 'Order not found'}</Text>
+          <Text style={styles.errorTitle}>{t('orders.failed_to_load')}</Text>
+          <Text style={styles.errorText}>{error || t('orders.order_not_found')}</Text>
           <TouchableOpacity
             style={styles.goBackButton}
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}>
-            <Text style={styles.goBackButtonText}>Go Back</Text>
+            <Text style={styles.goBackButtonText}>{t('screen.go_back')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -461,7 +466,7 @@ export default function OrderDetailScreen() {
             activeOpacity={0.7}>
             <BackArrowIcon />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Order Details</Text>
+          <Text style={styles.headerTitle}>{t('orders.details')}</Text>
         </View>
       </View>
 
@@ -485,13 +490,13 @@ export default function OrderDetailScreen() {
         <DeliveryDetailsSection order={order} />
 
         {/* Parts header */}
-        <Text style={styles.partsHeader}>Ordered Parts:</Text>
+        <Text style={styles.partsHeader}>{t('orders.ordered_parts')}</Text>
 
         {/* Parts list */}
         <View style={styles.partsList}>
           {order.items.length === 0 ? (
             <View style={styles.emptyParts}>
-              <Text style={styles.emptyPartsText}>No parts found.</Text>
+              <Text style={styles.emptyPartsText}>{t('orders.no_parts')}</Text>
             </View>
           ) : (
             order.items.map(item => (
@@ -515,7 +520,7 @@ export default function OrderDetailScreen() {
               onPress={handleDownloadInvoice}
               activeOpacity={0.8}>
               <DownloadIcon />
-              <Text style={styles.primaryButtonText}>Download Invoice</Text>
+              <Text style={styles.primaryButtonText}>{t('orders.download_invoice')}</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.actionButtons}>
@@ -523,7 +528,7 @@ export default function OrderDetailScreen() {
                 style={[styles.primaryButton, styles.flexButton]}
                 onPress={handleDownloadInvoice}
                 activeOpacity={0.8}>
-                <Text style={styles.primaryButtonText}>Download Invoice</Text>
+                <Text style={styles.primaryButtonText}>{t('orders.download_invoice')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.trackButton}
@@ -559,7 +564,7 @@ export default function OrderDetailScreen() {
           setSelectedItem(null);
         }}
         onConfirm={handleDisputeConfirm}
-        buttonText={user?.role === 'staff' ? 'SEND REQUEST' : 'CONFIRM'}
+        buttonText={user?.role === 'staff' ? t('inquiry.send_request_btn') : t('inquiry.confirm_btn')}
         orders={
           order
             ? [{

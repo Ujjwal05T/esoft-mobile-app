@@ -1,6 +1,7 @@
 import React, {useEffect, useRef} from 'react';
 import {View, Text, StyleSheet, Modal, Animated} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 
 interface SuccessOverlayProps {
   isVisible: boolean;
@@ -11,10 +12,12 @@ interface SuccessOverlayProps {
 
 export default function SuccessOverlay({
   isVisible,
-  message = 'Success!',
+  message,
   duration = 2000,
   onClose,
 }: SuccessOverlayProps) {
+  const {t} = useTranslation();
+  const resolvedMessage = message ?? t('common.success');
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.8)).current;
 
@@ -49,7 +52,7 @@ export default function SuccessOverlay({
             />
           </Svg>
         </Animated.View>
-        <Text style={styles.message}>{message}</Text>
+        <Text style={styles.message}>{resolvedMessage}</Text>
       </Animated.View>
     </Modal>
   );

@@ -1,4 +1,5 @@
 import React, {useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Text,
@@ -50,6 +51,7 @@ function mapStatus(backendStatus: string): OrderStatus {
 type OrdersScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function OrdersScreen() {
+  const {t} = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<OrdersScreenNavigationProp>();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -211,7 +213,7 @@ export default function OrdersScreen() {
     <View style={[styles.container, {paddingTop: insets.top}]}>
       {/* ── Title Bar ────────────────────────────────────────────────── */}
       <View style={styles.titleBar}>
-        <Text style={styles.title}>My Orders</Text>
+        <Text style={styles.title}>{t('orders.title')}</Text>
       </View>
 
       <ScrollView
@@ -233,7 +235,7 @@ export default function OrdersScreen() {
         {isLoading && (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color="#e5383b" />
-            <Text style={styles.loadingText}>Loading orders...</Text>
+            <Text style={styles.loadingText}>{t('orders.loading_orders')}</Text>
           </View>
         )}
 
@@ -245,7 +247,7 @@ export default function OrdersScreen() {
               style={styles.retryBtn}
               onPress={() => fetchOrders()}
               activeOpacity={0.8}>
-              <Text style={styles.retryBtnText}>Try Again</Text>
+              <Text style={styles.retryBtnText}>{t('screen.try_again')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -253,8 +255,8 @@ export default function OrdersScreen() {
         {/* ── Empty State ───────────────────────────────────────────── */}
         {!isLoading && error === null && orders.length === 0 && (
           <View style={styles.stateCard}>
-            <Text style={styles.emptyTitle}>No Orders Found</Text>
-            <Text style={styles.emptySubtitle}>Your orders will appear here</Text>
+            <Text style={styles.emptyTitle}>{t('orders.no_orders')}</Text>
+            <Text style={styles.emptySubtitle}>{t('orders.no_orders_subtitle')}</Text>
           </View>
         )}
 
@@ -275,7 +277,7 @@ export default function OrdersScreen() {
       {/* ── Floating Action Button ───────────────────────────────────── */}
       <FloatingActionButton
         navigationOptions={[
-          {label: 'Request Part', onPress: handleRequestPart},
+          {label: t('vehicle.request_part'), onPress: handleRequestPart},
         ]}
       />
 
@@ -284,7 +286,7 @@ export default function OrdersScreen() {
         isOpen={showVehicleSelection}
         onClose={() => setShowVehicleSelection(false)}
         onVehicleSelected={handleVehicleSelected}
-        title="Select Vehicle for Request Part"
+        title={t('orders.select_vehicle_parts')}
       />
 
       {/* ── Request Part Overlay ─────────────────────────────────────── */}

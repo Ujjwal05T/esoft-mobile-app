@@ -18,6 +18,7 @@ import Svg, {Path} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
 import VehicleCard from '../dashboard/VehicleCard';
 import {gateOutVehicle, getActiveVehicleVisit} from '../../services/api';
+import {useTranslation} from 'react-i18next';
 
 const SCREEN_H = Dimensions.get('screen').height;
 
@@ -53,6 +54,7 @@ export default function GateOutOverlay({
   visitId: propVisitId,
   vehicleData,
 }: GateOutOverlayProps) {
+  const {t} = useTranslation();
   const [driverName, setDriverName] = useState('');
   const [driverContact, setDriverContact] = useState('');
   const [gateOutDate, setGateOutDate] = useState<Date>(new Date());
@@ -152,8 +154,8 @@ export default function GateOutOverlay({
         ]),
       ]).start();
 
-      const t = setTimeout(() => onClose(), 1500);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => onClose(), 1500);
+      return () => clearTimeout(timer);
     }
   }, [showSuccess]);
 
@@ -170,7 +172,7 @@ export default function GateOutOverlay({
     if (!driverName.trim() || !driverContact.trim()) return;
 
     if (!activeVisitId) {
-      setApiError('No active visit found for this vehicle.');
+      setApiError(t('vehicle.no_active_visit'));
       return;
     }
 
@@ -185,7 +187,7 @@ export default function GateOutOverlay({
       });
 
       if (!result.success) {
-        setApiError(result.error || 'Failed to complete gate out');
+        setApiError(result.error || t('vehicle.gate_out_failed'));
         return;
       }
 
@@ -199,7 +201,7 @@ export default function GateOutOverlay({
 
       setShowSuccess(true);
     } catch {
-      setApiError('An unexpected error occurred. Please try again.');
+      setApiError(t('vehicle.unexpected_error'));
     } finally {
       setIsLoading(false);
     }
@@ -237,7 +239,7 @@ export default function GateOutOverlay({
                   />
                 </Svg>
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Gate Out</Text>
+              <Text style={styles.headerTitle}>{t('vehicle.gate_out')}</Text>
             </View>
 
             {/* Vehicle Card */}
@@ -256,7 +258,7 @@ export default function GateOutOverlay({
             <View style={styles.formGap}>
               {/* Driver's Name */}
               <FloatingInput
-                label="Drivers Name"
+                label={t('vehicle.driver_name')}
                 value={driverName}
                 onChange={setDriverName}
                 required
@@ -264,14 +266,12 @@ export default function GateOutOverlay({
                 wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 0}}
               />
               {hasAttemptedSubmit && !driverName.trim() && (
-                <Text style={styles.errorText}>
-                  Please enter driver&apos;s name
-                </Text>
+                <Text style={styles.errorText}>{t('vehicle.driver_name_required')}</Text>
               )}
 
               {/* Driver's Contact */}
               <FloatingInput
-                label="Drivers Contact Number"
+                label={t('vehicle.driver_contact')}
                 value={driverContact}
                 onChange={setDriverContact}
                 keyboardType="phone-pad"
@@ -280,9 +280,7 @@ export default function GateOutOverlay({
                 wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 0}}
               />
               {hasAttemptedSubmit && !driverContact.trim() && (
-                <Text style={styles.errorText}>
-                  Please enter driver&apos;s contact number
-                </Text>
+                <Text style={styles.errorText}>{t('vehicle.driver_contact_required')}</Text>
               )}
 
               {/* Gate Out Date and Time */}
@@ -293,7 +291,7 @@ export default function GateOutOverlay({
                   setShowGateOutPicker(true);
                 }}
                 activeOpacity={0.7}>
-                <Text style={styles.dateFloatLabel}>Gate Out Date and Time</Text>
+                <Text style={styles.dateFloatLabel}>{t('vehicle.gate_out_datetime')}</Text>
                 <Text style={styles.dateText}>
                   {gateOutDate.toLocaleDateString('en-IN', {
                     day: 'numeric',
@@ -343,7 +341,7 @@ export default function GateOutOverlay({
 
               {/* Odometer Reading */}
               <FloatingInput
-                label="Odometer Reading"
+                label={t('vehicle.odometer')}
                 value={odometerReading}
                 onChange={setOdometerReading}
                 keyboardType="numeric"
@@ -354,7 +352,7 @@ export default function GateOutOverlay({
 
               {/* Fuel Reading Gauge */}
               <View style={styles.fuelContainer}>
-                <Text style={styles.fuelFloatLabel}>Fuel Reading</Text>
+                <Text style={styles.fuelFloatLabel}>{t('vehicle.fuel_reading')}</Text>
                 <View
                   style={styles.fuelTrack}
                   onLayout={e =>
@@ -404,10 +402,10 @@ export default function GateOutOverlay({
                 {isLoading ? (
                   <View style={styles.loadingRow}>
                     <ActivityIndicator color="#fff" size="small" />
-                    <Text style={styles.completeBtnText}>PROCESSING...</Text>
+                    <Text style={styles.completeBtnText}>{t('vehicle.processing').toUpperCase()}</Text>
                   </View>
                 ) : (
-                  <Text style={styles.completeBtnText}>COMPLETE</Text>
+                  <Text style={styles.completeBtnText}>{t('vehicle.complete').toUpperCase()}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -434,7 +432,7 @@ export default function GateOutOverlay({
             </Svg>
           </Animated.View>
           <Animated.Text style={[styles.successText, {opacity: textFade}]}>
-            GATE OUT COMPLETE
+            {t('vehicle.gate_out_complete').toUpperCase()}
           </Animated.Text>
         </Animated.View>
       )}

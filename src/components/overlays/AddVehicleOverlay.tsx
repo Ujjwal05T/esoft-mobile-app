@@ -16,6 +16,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import {useTranslation} from 'react-i18next';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 
@@ -85,6 +86,7 @@ function BrandPicker({
   onSelect: (v: string) => void;
   loading: boolean;
 }) {
+  const {t} = useTranslation();
   const [open, setOpen] = React.useState(false);
 
   const handleSelect = (brand: string) => {
@@ -97,7 +99,7 @@ function BrandPicker({
   return (
     <View style={bpStyles.wrap}>
       {/* Floating label */}
-      {selected ? <Text style={bpStyles.floatLabel}>Brand</Text> : null}
+      {selected ? <Text style={bpStyles.floatLabel}>{t('vehicle.brand')}</Text> : null}
 
       {/* Toggle header */}
       <TouchableOpacity
@@ -108,7 +110,7 @@ function BrandPicker({
           <ActivityIndicator size="small" color="#e5383b" style={{marginRight: 4}} />
         ) : null}
         <Text style={[bpStyles.headerText, !selected && bpStyles.headerPlaceholder]}>
-          {loading ? 'Loading brands...' : selected || 'Brand'}
+          {loading ? t('vehicle.loading_brands') : selected || t('vehicle.brand')}
         </Text>
         <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
           <Path
@@ -257,6 +259,7 @@ function ModelPicker({
   loading: boolean;
   disabled: boolean;
 }) {
+  const {t} = useTranslation();
   const [open, setOpen] = React.useState(false);
 
 
@@ -267,7 +270,7 @@ function ModelPicker({
 
   return (
     <View style={mpStyles.wrap}>
-      {selected ? <Text style={mpStyles.floatLabel}>Model</Text> : null}
+      {selected ? <Text style={mpStyles.floatLabel}>{t('vehicle.model')}</Text> : null}
       <TouchableOpacity
         onPress={() => !loading && !disabled && setOpen(o => !o)}
         activeOpacity={0.8}
@@ -276,7 +279,7 @@ function ModelPicker({
           <ActivityIndicator size="small" color="#e5383b" style={{marginRight: 4}} />
         ) : null}
         <Text style={[mpStyles.headerText, !selected && mpStyles.headerPlaceholder]}>
-          {loading ? 'Loading models...' : selected || 'Model'}
+          {loading ? t('vehicle.loading_models') : selected || t('vehicle.model')}
         </Text>
         <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
           <Path
@@ -459,6 +462,7 @@ export default function AddVehicleOverlay({
   onClose,
   onSubmitRequest,
 }: AddVehicleOverlayProps) {
+  const {t} = useTranslation();
   type ViewType = 'search' | 'manual' | 'form' | 'gatein' | 'success';
   const [currentView, setCurrentView] = useState<ViewType>('search');
 
@@ -661,8 +665,8 @@ export default function AddVehicleOverlay({
 
   useEffect(() => {
     if (currentView === 'success') {
-      const t = setTimeout(() => onClose(), 1500);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => onClose(), 1500);
+      return () => clearTimeout(timer);
     }
   }, [currentView, onClose]);
 
@@ -699,7 +703,7 @@ export default function AddVehicleOverlay({
         setCurrentView('form');
       }
     } catch {
-      setApiError('Network error. Please try again.');
+      setApiError(t('vehicle.network_error'));
     } finally {
       setIsLoading(false);
     }
@@ -813,7 +817,7 @@ export default function AddVehicleOverlay({
       setDriverContact(contactNumber);
       setCurrentView('gatein');
     } catch {
-      setApiError('An unexpected error occurred. Please try again.');
+      setApiError(t('vehicle.unexpected_error'));
     } finally {
       setIsLoading(false);
     }
@@ -822,7 +826,7 @@ export default function AddVehicleOverlay({
   const handleGateIn = async () => {
     setApiError(null);
     if (!createdVehicleId) {
-      setApiError('Vehicle not created. Please go back and try again.');
+      setApiError(t('vehicle.not_created_error'));
       return;
     }
 
@@ -848,12 +852,12 @@ export default function AddVehicleOverlay({
           : await gateInVehicle(visitData);
 
       if (!result.success) {
-        setApiError(result.error || 'Failed to gate in vehicle');
+        setApiError(result.error || t('vehicle.unexpected_error'));
         return;
       }
       setCurrentView('success');
     } catch {
-      setApiError('An unexpected error occurred. Please try again.');
+      setApiError(t('vehicle.unexpected_error'));
     } finally {
       setIsLoading(false);
     }
@@ -996,8 +1000,8 @@ export default function AddVehicleOverlay({
         setAppAlert({
           type: 'success',
           message: currentScanMode === 'rc'
-            ? 'RC card scanned successfully! Fields have been auto-filled.'
-            : 'Number plate scanned successfully!',
+            ? t('vehicle.scan_success_rc')
+            : t('vehicle.scan_success_plate'),
           onDone: () => {
             // Switch to appropriate view based on what was scanned
             if (currentScanMode === 'rc') {
@@ -1012,8 +1016,8 @@ export default function AddVehicleOverlay({
         // Show error message
         setAppAlert({
           type: 'error',
-          title: 'Scan Failed',
-          message: ocrResult?.error || 'Could not read the document. Please try again with a clearer image.',
+          title: t('vehicle.scan_failed'),
+          message: ocrResult?.error || t('vehicle.scan_error'),
         });
       }
     } catch (error) {
@@ -1022,7 +1026,7 @@ export default function AddVehicleOverlay({
       console.error('Error processing scanned image:', error);
       setAppAlert({
         type: 'error',
-        message: 'Failed to process the image. Please try again.',
+        message: t('vehicle.scan_process_error'),
       });
     }
   };
@@ -1041,7 +1045,7 @@ export default function AddVehicleOverlay({
         {/* SEARCH VIEW */}
         {currentView === 'search' && (
           <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.bigTitle}>Add by Car Number{'\n'}Plate</Text>
+            <Text style={styles.bigTitle}>{t('vehicle.add_plate')}</Text>
 
             <View style={styles.searchRow}>
               <View style={styles.plateInput}>
@@ -1088,7 +1092,7 @@ export default function AddVehicleOverlay({
               style={[styles.redCard, { overflow: 'hidden'}]}
               onPress={() => setCurrentView('manual')}>
               <View style={{zIndex: 1}}>
-                <Text style={styles.redCardTitle}>Add Vehicle{'\n'}Manually</Text>
+                <Text style={styles.redCardTitle}>{t('vehicle.add_manually')}</Text>
                 <View style={styles.diagonalArrow}>
                   <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
                     <Circle cx="16" cy="16" r="15" stroke="white" strokeWidth="2" />
@@ -1111,7 +1115,7 @@ export default function AddVehicleOverlay({
             
             <TouchableOpacity style={[styles.redCard, {marginTop: 16,overflow: 'hidden'}]} onPress={() => setScanMode('rc')}>
               <View style={{zIndex: 1}}>
-                <Text style={styles.redCardTitle}>Scan RC{'\n'}Card</Text>
+                <Text style={styles.redCardTitle}>{t('vehicle.scan_rc')}</Text>
                 <View style={styles.diagonalArrow}>
                   <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
                     <Circle cx="16" cy="16" r="15" stroke="white" strokeWidth="2" />
@@ -1137,7 +1141,7 @@ export default function AddVehicleOverlay({
         {/* MANUAL VIEW */}
         {currentView === 'manual' && (
           <ScrollView showsVerticalScrollIndicator={false}>
-            {renderHeader('Add Vehicle Details')}
+            {renderHeader(t('vehicle.add_vehicle_details'))}
             <View style={styles.formGap}>
               <BrandPicker
                 brands={brandOptions}
@@ -1165,7 +1169,7 @@ export default function AddVehicleOverlay({
                 }}
               />
               <DropdownField
-                label={loadingYears ? 'Loading years...' : 'Year'}
+                label={loadingYears ? t('vehicle.loading_years') : t('vehicle.year')}
                 value={selectedYear}
                 options={yearOptions}
                 onSelect={v => {
@@ -1179,7 +1183,7 @@ export default function AddVehicleOverlay({
                 optional={!isFallbackStarted && !loadingYears}
               />
               <DropdownField
-                label={loadingVariants ? 'Loading variants...' : 'Select Variant'}
+                label={loadingVariants ? t('vehicle.loading_variants') : t('vehicle.variant')}
                 value={selectedVariant}
                 options={variantOptions}
                 onSelect={v => {
@@ -1192,7 +1196,7 @@ export default function AddVehicleOverlay({
                 optional={!isFallbackStarted && !loadingVariants}
               />
               <FloatingInput
-                label="Vehicle Number"
+                label={t('vehicle.vehicle_number')}
                 value={formatPlateNumber(vehicleNumber)}
                 onChange={v => setVehicleNumber(v.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                 maxLength={14}
@@ -1202,7 +1206,7 @@ export default function AddVehicleOverlay({
                 wrapperStyle={{marginBottom:0}}
               />
               <FloatingInput
-                label="Chassis Number"
+                label={t('vehicle.chassis_number')}
                 value={chassisNumber}
                 onChange={v => setChassisNumber(v.toUpperCase())}
                 optional={isFallbackStarted}
@@ -1214,7 +1218,7 @@ export default function AddVehicleOverlay({
               )}
 
               {/* RC Card Images */}
-              <Text style={styles.rcSectionLabel}>RC Card Images (Optional)</Text>
+              <Text style={styles.rcSectionLabel}>{t('vehicle.rc_images')}</Text>
               <View style={styles.rcRow}>
                 <TouchableOpacity
                   onPress={() => handlePickRcImage('front')}
@@ -1236,7 +1240,7 @@ export default function AddVehicleOverlay({
                         <Rect x={3} y={3} width={18} height={18} rx={2} stroke="#d3d3d3" strokeWidth={2} />
                         <Path d="M12 8v8M8 12h8" stroke="#e5383b" strokeWidth={2} strokeLinecap="round" />
                       </Svg>
-                      <Text style={styles.rcImageLabel}>RC Front (Optional)</Text>
+                      <Text style={styles.rcImageLabel}>{t('vehicle.rc_front')}</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -1261,7 +1265,7 @@ export default function AddVehicleOverlay({
                         <Rect x={3} y={3} width={18} height={18} rx={2} stroke="#d3d3d3" strokeWidth={2} />
                         <Path d="M12 8v8M8 12h8" stroke="#e5383b" strokeWidth={2} strokeLinecap="round" />
                       </Svg>
-                      <Text style={styles.rcImageLabel}>RC Back (Optional)</Text>
+                      <Text style={styles.rcImageLabel}>{t('vehicle.rc_back')}</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -1274,7 +1278,7 @@ export default function AddVehicleOverlay({
                   {marginTop: 8},
                   !(chassisNumber.trim() || (vehicleNumber.trim() && selectedBrand && selectedModel && selectedYear && selectedVariant)) && styles.disabledBtn,
                 ]}>
-                <Text style={styles.primaryBtnText}>NEXT</Text>
+                <Text style={styles.primaryBtnText}>{t('common.next').toUpperCase()}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -1283,7 +1287,7 @@ export default function AddVehicleOverlay({
         {/* FORM VIEW (Owner Details) */}
         {currentView === 'form' && (
           <ScrollView showsVerticalScrollIndicator={false}>
-            {renderHeader('Add Owner Info(Optional)')}
+            {renderHeader(t('vehicle.owner_info'))}
             {vehicleData && (
               <View style={styles.vehicleCardWrapper}>
                 <VehicleCard
@@ -1304,7 +1308,7 @@ export default function AddVehicleOverlay({
               ) : null}
 
               <FloatingInput
-                label="Registration Name"
+                label={t('vehicle.registration_name')}
                 value={registrationName}
                 onChange={setRegistrationName}
                 optional
@@ -1313,7 +1317,7 @@ export default function AddVehicleOverlay({
               />
 
               <FloatingInput
-                label="Owner Name"
+                label={t('vehicle.owner_name')}
                 value={ownerName}
                 onChange={setOwnerName}
                 optional
@@ -1322,7 +1326,7 @@ export default function AddVehicleOverlay({
               />
 
               <FloatingInput
-                label="Contact Number"
+                label={t('vehicle.contact_number')}
                 value={contactNumber}
                 onChange={setContactNumber}
                 maxLength={10}
@@ -1333,7 +1337,7 @@ export default function AddVehicleOverlay({
               />
 
               <FloatingInput
-                label="Email Id"
+                label={t('vehicle.email')}
                 value={email}
                 onChange={setEmail}
                 keyboardType="email-address"
@@ -1344,7 +1348,7 @@ export default function AddVehicleOverlay({
 
               {/* GST with Verify */}
               <FloatingInput
-                label="GST NO."
+                label={t('vehicle.gst_no')}
                 value={gstNumber}
                 onChange={v => {
                   setGstNumber(v.toUpperCase());
@@ -1355,19 +1359,19 @@ export default function AddVehicleOverlay({
                 wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 8}}
                 rightElement={
                   isGstVerified ? (
-                    <Text style={styles.verifiedText}>VERIFIED</Text>
+                    <Text style={styles.verifiedText}>{t('estimate.verified').toUpperCase()}</Text>
                   ) : (
                     <TouchableOpacity
                       onPress={() => gstNumber.trim() && setIsGstVerified(true)}
                       style={styles.verifyBtn}>
-                      <Text style={styles.verifyBtnText}>Verify</Text>
+                      <Text style={styles.verifyBtnText}>{t('estimate.verify')}</Text>
                     </TouchableOpacity>
                   )
                 }
               />
 
               <DropdownField
-                label="Insurance Provider"
+                label={t('vehicle.insurance_provider')}
                 value={insuranceProvider}
                 optional
                 options={[
@@ -1389,7 +1393,7 @@ export default function AddVehicleOverlay({
                   {isLoading ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.primaryBtnText}>PROCEED TO GATE IN</Text>
+                    <Text style={styles.primaryBtnText}>{t('vehicle.proceed_gate_in')}</Text>
                   )}
                 </TouchableOpacity>
               ) : (
@@ -1397,7 +1401,7 @@ export default function AddVehicleOverlay({
                   onPress={handleSendRequest}
                   disabled={isLoading}
                   style={[styles.skipBtnOutline, {marginTop: 8}]}>
-                  <Text style={styles.skipBtnOutlineText}>Skip</Text>
+                  <Text style={styles.skipBtnOutlineText}>{t('common.skip')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -1407,7 +1411,7 @@ export default function AddVehicleOverlay({
         {/* GATE IN VIEW */}
         {currentView === 'gatein' && (
           <ScrollView showsVerticalScrollIndicator={false}>
-            {renderHeader('Gate In')}
+            {renderHeader(t('vehicle.gate_in_title'))}
             <View style={styles.formGap}>
               {apiError ? (
                 <View style={styles.errorBanner}>
@@ -1416,7 +1420,7 @@ export default function AddVehicleOverlay({
               ) : null}
 
               <FloatingInput
-                label="Driver's Name"
+                label={t('vehicle.driver_name')}
                 value={driverName}
                 onChange={setDriverName}
                 optional
@@ -1425,7 +1429,7 @@ export default function AddVehicleOverlay({
               />
 
               <FloatingInput
-                label="Driver's Contact Number"
+                label={t('vehicle.driver_contact')}
                 value={driverContact}
                 onChange={setDriverContact}
                 maxLength={10}
@@ -1443,7 +1447,7 @@ export default function AddVehicleOverlay({
                   setShowGateInPicker(true);
                 }}
                 activeOpacity={0.7}>
-                <Text style={styles.dropdownFloatLabel}>Gate In Date and Time</Text>
+                <Text style={styles.dropdownFloatLabel}>{t('vehicle.gate_in_datetime')}</Text>
                 <Text style={styles.gateInDateInput}>
                   {gateInDate.toLocaleDateString('en-IN', {
                     day: 'numeric', month: 'long', year: 'numeric',
@@ -1482,7 +1486,7 @@ export default function AddVehicleOverlay({
               )}
 
               <FloatingInput
-                label="Odometer Reading"
+                label={t('vehicle.odometer')}
                 value={odometerReading}
                 onChange={setOdometerReading}
                 keyboardType="numeric"
@@ -1492,7 +1496,7 @@ export default function AddVehicleOverlay({
 
               {/* Fuel Level */}
               <View style={styles.fuelContainer}>
-                <Text style={styles.fuelFloatLabel}>Fuel Reading{fuelLevel === 0 ? ' (Optional)' : ''}</Text>
+                <Text style={styles.fuelFloatLabel}>{t('vehicle.fuel_reading')}{fuelLevel === 0 ? ' (Optional)' : ''}</Text>
                 <View
                   style={styles.fuelTrack}
                   onLayout={e => setFuelTrackWidth(e.nativeEvent.layout.width)}
@@ -1527,7 +1531,7 @@ export default function AddVehicleOverlay({
                 <TextInput
                   value={problemShared}
                   onChangeText={setProblemShared}
-                  placeholder={problemShared ? 'Problem Shared' : 'Problem Shared (Optional)'}
+                  placeholder={problemShared ? t('vehicle.problem_shared_label') : t('vehicle.problem_shared')}
                   placeholderTextColor="#828282"
                   style={styles.problemInput}
                 />
@@ -1565,7 +1569,7 @@ export default function AddVehicleOverlay({
                     </Svg>
                   )}
                   <Text style={[styles.recordBtnText, isRecording && styles.recordBtnTextActive]}>
-                    {isRecording ? 'Stop' : recordedAudioPath ? 'Re-record' : 'Record'}
+                    {isRecording ? t('vehicle.stop') : recordedAudioPath ? t('vehicle.re_record') : t('vehicle.record')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1589,7 +1593,7 @@ export default function AddVehicleOverlay({
                       strokeLinejoin="round"
                     />
                   </Svg>
-                  <Text style={styles.audioChipText}>Problem audio recorded</Text>
+                  <Text style={styles.audioChipText}>{t('vehicle.problem_audio_recorded')}</Text>
                   <TouchableOpacity onPress={() => setRecordedAudioPath(null)} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
                     <Text style={styles.audioChipRemove}>✕</Text>
                   </TouchableOpacity>
@@ -1645,7 +1649,7 @@ export default function AddVehicleOverlay({
                 {isLoading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.primaryBtnText}>GATE IN</Text>
+                  <Text style={styles.primaryBtnText}>{t('vehicle.gate_in')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1672,7 +1676,7 @@ export default function AddVehicleOverlay({
             </Svg>
           </Animated.View>
           <Animated.Text style={[styles.successText, {opacity: textFade}]}>
-            REQUEST SENT
+            {t('vehicle.request_sent')}
           </Animated.Text>
         </Animated.View>
       )}
@@ -1692,7 +1696,7 @@ export default function AddVehicleOverlay({
       )}
       <ImagePickerActionSheet
         visible={showVehicleImagePicker}
-        title="Add Vehicle Photo"
+        title={t('vehicle.add_vehicle_photo')}
         onCamera={() => handleVehicleImageSource('camera')}
         onGallery={() => handleVehicleImageSource('gallery')}
         onClose={() => setShowVehicleImagePicker(false)}
@@ -1709,7 +1713,7 @@ export default function AddVehicleOverlay({
         </TouchableWithoutFeedback>
         <View style={styles.actionSheet}>
           <View style={styles.handle} />
-          <Text style={styles.actionSheetTitle}>Add RC Image</Text>
+          <Text style={styles.actionSheetTitle}>{t('vehicle.add_rc_image')}</Text>
           <TouchableOpacity
             style={styles.actionSheetBtn}
             onPress={() => handleRcImageSource('camera')}
@@ -1721,7 +1725,7 @@ export default function AddVehicleOverlay({
               />
               <Path d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="#e5383b" strokeWidth="2" />
             </Svg>
-            <Text style={styles.actionSheetBtnText}>Take Photo</Text>
+            <Text style={styles.actionSheetBtnText}>{t('image.take_photo')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionSheetBtn}
@@ -1732,13 +1736,13 @@ export default function AddVehicleOverlay({
               <Path d="M3 9l4-4 4 4 4-4 4 4" stroke="#e5383b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               <Path d="M3 15l5 5 8-8 5 5" stroke="#e5383b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
-            <Text style={styles.actionSheetBtnText}>Choose from Gallery</Text>
+            <Text style={styles.actionSheetBtnText}>{t('image.choose_gallery')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionSheetBtn, styles.actionSheetCancel]}
             onPress={() => setRcPickerSide(null)}
             activeOpacity={0.7}>
-            <Text style={styles.actionSheetCancelText}>Cancel</Text>
+            <Text style={styles.actionSheetCancelText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </View>
       </Modal>

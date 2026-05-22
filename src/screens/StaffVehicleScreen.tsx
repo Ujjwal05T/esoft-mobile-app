@@ -1,4 +1,5 @@
 import React, {useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Text,
@@ -62,6 +63,7 @@ function EmptyCarIcon() {
 export default function StaffVehicleScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<StaffVehicleScreenNavigationProp>();
+  const {t} = useTranslation();
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [vehicles, setVehicles] = useState<DisplayVehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -127,7 +129,7 @@ export default function StaffVehicleScreen() {
       {isLoading && (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#e5383b" />
-          <Text style={styles.loadingText}>Loading vehicles...</Text>
+          <Text style={styles.loadingText}>{t('screen.loading_vehicles')}</Text>
         </View>
       )}
 
@@ -139,7 +141,7 @@ export default function StaffVehicleScreen() {
             style={styles.actionBtn}
             onPress={fetchVehicles}
             activeOpacity={0.8}>
-            <Text style={styles.actionBtnText}>Try Again</Text>
+            <Text style={styles.actionBtnText}>{t('screen.try_again')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -148,16 +150,14 @@ export default function StaffVehicleScreen() {
       {!isLoading && error === null && vehicles.length === 0 && (
         <View style={styles.centerContainer}>
           <EmptyCarIcon />
-          <Text style={styles.emptyTitle}>No vehicles found</Text>
-          <Text style={styles.emptySubtitle}>
-            Add your first vehicle to get started
-          </Text>
+          <Text style={styles.emptyTitle}>{t('screen.no_vehicles_found')}</Text>
+          <Text style={styles.emptySubtitle}>{t('screen.add_first_vehicle')}</Text>
           {(permissions === null || permissions.addVehicle) && (
             <TouchableOpacity
               style={[styles.actionBtn, {marginTop: 8}]}
               onPress={() => setShowAddVehicle(true)}
               activeOpacity={0.8}>
-              <Text style={styles.actionBtnText}>Add Vehicle</Text>
+              <Text style={styles.actionBtnText}>{t('screen.add_vehicle')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -205,7 +205,7 @@ export default function StaffVehicleScreen() {
       <FloatingActionButton
         navigationOptions={[
           {
-            label: 'Add new vehicle',
+            label: t('screen.add_new_vehicle'),
             onPress: () => setShowAddVehicle(true),
             disabled: permissions !== null && !permissions.addVehicle,
           },

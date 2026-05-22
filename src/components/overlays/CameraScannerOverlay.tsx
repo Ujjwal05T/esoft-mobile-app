@@ -13,6 +13,7 @@ import {
 import {Camera, useCameraDevice, useCameraPermission} from 'react-native-vision-camera';
 import {launchImageLibrary} from 'react-native-image-picker';
 import Svg, {Path} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 
 const {width: SCREEN_W, height: SCREEN_H} = Dimensions.get('window');
 
@@ -80,6 +81,7 @@ export default function CameraScannerOverlay({
   onClose,
   isProcessing = false,
 }: Props) {
+  const {t} = useTranslation();
   const cameraRef = useRef<Camera>(null);
   const device = useCameraDevice('back');
   const {hasPermission, requestPermission} = useCameraPermission();
@@ -135,9 +137,9 @@ export default function CameraScannerOverlay({
   if (!hasPermission) {
     return (
       <View style={styles.permissionContainer}>
-        <Text style={styles.permissionText}>Camera permission required</Text>
+        <Text style={styles.permissionText}>{t('camera.permission_required')}</Text>
         <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
-          <Text style={styles.permissionBtnText}>Grant Permission</Text>
+          <Text style={styles.permissionBtnText}>{t('camera.grant_permission')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -213,7 +215,7 @@ export default function CameraScannerOverlay({
             </Svg>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-            {mode === 'plate' ? 'Scan Number Plate' : 'Scan RC Card'}
+            {mode === 'plate' ? t('camera.scan_plate') : t('camera.scan_rc')}
           </Text>
           {/* Spacer to centre the title */}
           <View style={styles.closeBtn} />
@@ -222,9 +224,7 @@ export default function CameraScannerOverlay({
 
       {/* Hint below frame */}
       <Text style={[styles.hint, {top: FRAME_TOP + frameH + 20}]}>
-        {mode === 'plate'
-          ? 'Align the number plate within the frame'
-          : 'Align the RC card within the frame'}
+        {mode === 'plate' ? t('camera.align_plate') : t('camera.align_rc')}
       </Text>
 
       {/* Capture + Upload buttons */}
@@ -250,7 +250,7 @@ export default function CameraScannerOverlay({
                 strokeLinecap="round"
               />
             </Svg>
-            <Text style={styles.uploadBtnText}>Gallery</Text>
+            <Text style={styles.uploadBtnText}>{t('camera.gallery')}</Text>
           </TouchableOpacity>
 
           {/* Shutter */}
@@ -293,7 +293,7 @@ export default function CameraScannerOverlay({
           <View style={[styles.processingIndicator, {top: FRAME_TOP + frameH + 30}]}>
             <ActivityIndicator size="large" color="#ffffff" />
             <Text style={styles.processingText}>
-              {mode === 'plate' ? 'Reading Number Plate...' : 'Reading RC Card...'}
+              {mode === 'plate' ? t('camera.reading_plate') : t('camera.reading_rc')}
             </Text>
           </View>
         </View>

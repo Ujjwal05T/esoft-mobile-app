@@ -1,5 +1,6 @@
 import React from 'react';
 import LinearGradient from 'react-native-linear-gradient';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Text,
@@ -65,11 +66,13 @@ const defaultProducts: ProductItem[] = [
 ];
 
 export default function RunningPartsCard({
-  title = 'Running Parts for Your Workshop',
+  title,
   products = defaultProducts,
   onCreateRequest,
 }: RunningPartsCardProps) {
-  const words = title.split(' ');
+  const {t} = useTranslation();
+  const displayTitle = title ?? t('running_parts.title');
+  const words = displayTitle.split(' ');
   const firstLine = words.slice(0, 3).join(' ');
   const secondLine = words.slice(3).join(' ');
 
@@ -125,12 +128,12 @@ export default function RunningPartsCard({
                 </TouchableOpacity>
               </View>
               <Text style={styles.brand}>{product.brand}</Text>
-              <Text style={styles.partNo}>Part No - {product.partNo}</Text>
+              <Text style={styles.partNo}>{t('running_parts.part_no')}{product.partNo}</Text>
               <Text style={styles.compatibility} numberOfLines={2}>
                 {product.compatibility}
               </Text>
               <TouchableOpacity onPress={() => onCreateRequest?.(product.id)}>
-                <Text style={styles.createRequestBtn}>CREATE REQUEST</Text>
+                <Text style={styles.createRequestBtn}>{t('running_parts.create_request')}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -2,12 +2,14 @@ import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import ArrowDiagonalIcon from '../../assets/icons/arrow-diagonal.svg';
+import {useTranslation} from 'react-i18next';
 
 interface AddStaffCardProps {
   onPress?: () => void;
 }
 
 export default function AddStaffCard({onPress}: AddStaffCardProps) {
+  const {t} = useTranslation();
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
       <LinearGradient
@@ -23,7 +25,7 @@ export default function AddStaffCard({onPress}: AddStaffCardProps) {
         />
 
         {/* Title */}
-        <Text style={styles.title}>Add a New{'\n'}Staff</Text>
+        <Text style={styles.title}>{t('staff.add_new')}</Text>
 
         {/* Arrow Icon */}
         <View style={styles.arrowContainer}>

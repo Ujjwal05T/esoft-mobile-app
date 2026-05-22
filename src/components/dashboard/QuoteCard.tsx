@@ -2,6 +2,7 @@ import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
 import StatusBadge, {StatusType} from '../ui/StatusBadge';
+import {useTranslation} from 'react-i18next';
 
 export type QuoteStatus = Extract<StatusType, 'pending_review' | 'accepted' | 'expired'>;
 
@@ -65,6 +66,7 @@ export default function QuoteCard({
   maxVisibleAvailable = 2,
   maxVisibleUnavailable = 2,
 }: QuoteCardProps) {
+  const {t} = useTranslation();
   const availableItems = quote.items.filter(i => i.isAvailable);
   const unavailableItems = quote.items.filter(i => !i.isAvailable);
   const visibleAvailable = availableItems.slice(0, maxVisibleAvailable);
@@ -86,13 +88,13 @@ export default function QuoteCard({
         </View>
 
         <Text style={styles.quoteId}>{quote.quoteId}</Text>
-        <Text style={styles.dateText}>Submitted: {quote.submittedDate}</Text>
+        <Text style={styles.dateText}>{t('quote.submitted_prefix')}{quote.submittedDate}</Text>
 
         <View style={styles.divider} />
 
         {!isExpanded && (
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Estimated Total:</Text>
+            <Text style={styles.totalLabel}>{t('quote.estimated_total')}</Text>
             <Text style={styles.totalValue}>{formatPrice(quote.estimatedTotal)}</Text>
           </View>
         )}
@@ -103,7 +105,7 @@ export default function QuoteCard({
           {/* Available Parts */}
           {availableItems.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Available Parts:</Text>
+              <Text style={styles.sectionTitle}>{t('quote.available_parts')}</Text>
               <View style={styles.itemList}>
                 {visibleAvailable.map(item => (
                   <View key={item.id} style={styles.itemRow}>
@@ -122,22 +124,22 @@ export default function QuoteCard({
                       <View style={styles.flex1}>
                         <Text style={styles.itemName}>{item.itemName}</Text>
                         {item.brand && (
-                          <Text style={styles.itemMeta}>Brand: {item.brand}</Text>
+                          <Text style={styles.itemMeta}>{t('card.brand')}{item.brand}</Text>
                         )}
                         {item.mrp && (
-                          <Text style={styles.itemMeta}>MRP: {formatPrice(item.mrp)}</Text>
+                          <Text style={styles.itemMeta}>{t('card.mrp')}{formatPrice(item.mrp)}</Text>
                         )}
                       </View>
                       <View style={styles.priceCol}>
                         <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
-                        <Text style={styles.itemQty}>Qty: {item.quantity}</Text>
+                        <Text style={styles.itemQty}>{t('card.qty')}{item.quantity}</Text>
                       </View>
                     </View>
                   </View>
                 ))}
               </View>
               {extraAvailable > 0 && (
-                <Text style={styles.moreText}>+{extraAvailable} more</Text>
+                <Text style={styles.moreText}>{t('card.more', {count: extraAvailable})}</Text>
               )}
             </View>
           )}
@@ -145,7 +147,7 @@ export default function QuoteCard({
           {/* Unavailable Parts */}
           {unavailableItems.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.unavailableTitle}>Unavailable Parts:</Text>
+              <Text style={styles.unavailableTitle}>{t('quote.unavailable_parts')}</Text>
               <View style={styles.itemList}>
                 {visibleUnavailable.map(item => (
                   <View key={item.id} style={[styles.itemRow, styles.unavailableItem]}>
@@ -164,16 +166,16 @@ export default function QuoteCard({
                       <View style={styles.flex1}>
                         <Text style={styles.itemName}>{item.itemName}</Text>
                         {item.brand && (
-                          <Text style={styles.itemMeta}>Brand: {item.brand}</Text>
+                          <Text style={styles.itemMeta}>{t('card.brand')}{item.brand}</Text>
                         )}
                       </View>
-                      <Text style={styles.itemQty}>Qty: {item.quantity}</Text>
+                      <Text style={styles.itemQty}>{t('card.qty')}{item.quantity}</Text>
                     </View>
                   </View>
                 ))}
               </View>
               {extraUnavailable > 0 && (
-                <Text style={styles.moreText}>+{extraUnavailable} more</Text>
+                <Text style={styles.moreText}>{t('card.more', {count: extraUnavailable})}</Text>
               )}
             </View>
           )}
@@ -181,7 +183,7 @@ export default function QuoteCard({
           <View style={styles.divider} />
 
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Estimated Total:</Text>
+            <Text style={styles.totalLabel}>{t('quote.estimated_total')}</Text>
             <Text style={styles.totalValue}>{formatPrice(quote.estimatedTotal)}</Text>
           </View>
 

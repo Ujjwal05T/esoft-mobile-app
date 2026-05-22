@@ -11,6 +11,8 @@ import notifee, {AndroidImportance} from '@notifee/react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
+import {I18nextProvider} from 'react-i18next';
+import i18n from './src/i18n';
 import {RootNavigator} from './src/navigation';
 import {SplashScreen} from './src/components';
 import {AuthProvider} from './src/context/AuthContext';
@@ -146,6 +148,7 @@ function App(): React.JSX.Element {
   }, []);
 
   return (
+    <I18nextProvider i18n={i18n}>
     <SafeAreaProvider>
       <AuthProvider>
         <StatusBar
@@ -172,6 +175,7 @@ function App(): React.JSX.Element {
         </View>
       </AuthProvider>
     </SafeAreaProvider>
+    </I18nextProvider>
   );
 }
 

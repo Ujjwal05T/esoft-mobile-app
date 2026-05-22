@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import Svg, {Path, Circle} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 
 const UpdateIcon = () => (
   <Svg width={48} height={48} viewBox="0 0 24 24" fill="none">
@@ -39,6 +40,7 @@ const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   releaseNotes,
   onDismiss,
 }) => {
+  const {t} = useTranslation();
   const isForced = updateType === 'forced';
 
   const handleUpdate = () => {
@@ -60,31 +62,29 @@ const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
           </View>
 
           <Text style={styles.title}>
-            {isForced ? 'Update Required' : 'Update Available'}
+            {isForced ? t('update.required') : t('update.available')}
           </Text>
 
-          <Text style={styles.version}>Version {latestVersion}</Text>
+          <Text style={styles.version}>{t('update.version')} {latestVersion}</Text>
 
           <Text style={styles.body}>
-            {isForced
-              ? 'A required update is available. Please update the app to continue using Parts Now.'
-              : 'A new version of Parts Now is available with improvements and bug fixes.'}
+            {isForced ? t('update.body_forced') : t('update.body_optional')}
           </Text>
 
           {!!releaseNotes && (
             <View style={styles.notesBox}>
-              <Text style={styles.notesLabel}>What's new</Text>
+              <Text style={styles.notesLabel}>{t('update.whats_new')}</Text>
               <Text style={styles.notesText}>{releaseNotes}</Text>
             </View>
           )}
 
           <TouchableOpacity style={styles.updateBtn} onPress={handleUpdate} activeOpacity={0.85}>
-            <Text style={styles.updateBtnText}>Update Now</Text>
+            <Text style={styles.updateBtnText}>{t('update.now')}</Text>
           </TouchableOpacity>
 
           {!isForced && (
             <TouchableOpacity style={styles.laterBtn} onPress={onDismiss} activeOpacity={0.7}>
-              <Text style={styles.laterBtnText}>Later</Text>
+              <Text style={styles.laterBtnText}>{t('update.later')}</Text>
             </TouchableOpacity>
           )}
         </View>

@@ -8,6 +8,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import Svg, {Path, Circle} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 
 export type AlertType = 'success' | 'error' | 'confirm' | 'warning' | 'info';
 
@@ -34,12 +35,12 @@ interface AppAlertProps {
   okText?: string;
 }
 
-const TYPE_CONFIG: Record<AlertType, {color: string; defaultTitle: string}> = {
-  success: {color: '#22c55e', defaultTitle: 'Success'},
-  error:   {color: '#e5383b', defaultTitle: 'Error'},
-  confirm: {color: '#f59e0b', defaultTitle: 'Confirm'},
-  warning: {color: '#f97316', defaultTitle: 'Warning'},
-  info:    {color: '#3b82f6', defaultTitle: 'Info'},
+const TYPE_CONFIG: Record<AlertType, {color: string; defaultTitleKey: string}> = {
+  success: {color: '#22c55e', defaultTitleKey: 'common.success'},
+  error:   {color: '#e5383b', defaultTitleKey: 'common.error'},
+  confirm: {color: '#f59e0b', defaultTitleKey: 'common.confirm'},
+  warning: {color: '#f97316', defaultTitleKey: 'common.warning'},
+  info:    {color: '#3b82f6', defaultTitleKey: 'common.info'},
 };
 
 const SuccessIcon = ({color}: {color: string}) => (
@@ -213,13 +214,18 @@ export default function AppAlert({
   message,
   onClose,
   onConfirm,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
-  okText = 'Got it',
+  confirmText,
+  cancelText,
+  okText,
 }: AppAlertProps) {
-  const {color, defaultTitle} = TYPE_CONFIG[type];
+  const {t} = useTranslation();
+  const {color, defaultTitleKey} = TYPE_CONFIG[type];
   const Icon = ICONS[type];
   const isConfirm = type === 'confirm';
+  const resolvedTitle = title ?? t(defaultTitleKey);
+  const resolvedConfirm = confirmText ?? t('common.confirm');
+  const resolvedCancel = cancelText ?? t('common.cancel');
+  const resolvedOk = okText ?? t('common.got_it');
 
   return (
     <Modal
@@ -238,7 +244,7 @@ export default function AppAlert({
             <View style={styles.iconBox}>
               <Icon color={color} />
             </View>
-            <Text style={styles.title}>{title ?? defaultTitle}</Text>
+            <Text style={styles.title}>{resolvedTitle}</Text>
             <Text style={styles.message}>{message}</Text>
 
             {isConfirm ? (
@@ -247,13 +253,13 @@ export default function AppAlert({
                   onPress={onClose}
                   style={styles.cancelBtn}
                   activeOpacity={0.8}>
-                  <Text style={styles.cancelText}>{cancelText}</Text>
+                  <Text style={styles.cancelText}>{resolvedCancel}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={onConfirm}
                   style={[styles.confirmBtn, {backgroundColor: color}]}
                   activeOpacity={0.8}>
-                  <Text style={styles.confirmText}>{confirmText}</Text>
+                  <Text style={styles.confirmText}>{resolvedConfirm}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -261,7 +267,7 @@ export default function AppAlert({
                 onPress={onClose}
                 style={[styles.okBtn, {backgroundColor: color}]}
                 activeOpacity={0.8}>
-                <Text style={styles.okText}>{okText}</Text>
+                <Text style={styles.okText}>{resolvedOk}</Text>
               </TouchableOpacity>
             )}
           </View>

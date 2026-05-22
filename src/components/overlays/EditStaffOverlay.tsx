@@ -14,6 +14,7 @@ import {
 import Svg, {Path} from 'react-native-svg';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
+import {useTranslation} from 'react-i18next';
 
 interface EditStaffOverlayProps {
   isOpen: boolean;
@@ -76,6 +77,7 @@ const ToggleSwitch = ({enabled, onChange}: {enabled: boolean; onChange: (value: 
 );
 
 export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleActive, onDelete, staffData}: EditStaffOverlayProps) {
+  const {t} = useTranslation();
   const [name, setName] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [email, setEmail] = useState('');
@@ -174,7 +176,7 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
     const result = await onUpdate?.({...staffData, name, contactNumber, email, address, role, photo, photoUri, isActive, permissions});
     setLoading(false);
     if (result?.success === false) {
-      setError(result.error || 'Failed to update staff. Please try again.');
+      setError(result.error || t('staff.update_failed'));
     }
   };
 
@@ -210,19 +212,21 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
             <TrashIcon />
           </View>
           <Text style={styles.confirmTitle}>
-            {confirmAction === 'delete' ? 'DELETE STAFF' : confirmAction === 'inactive' ? 'MARK AS INACTIVE' : 'MARK AS ACTIVE'}
+            {confirmAction === 'delete' ? t('staff.delete_staff').toUpperCase() : confirmAction === 'inactive' ? t('staff.mark_inactive').toUpperCase() : t('staff.mark_active').toUpperCase()}
           </Text>
           <Text style={styles.confirmMessage}>
             {confirmAction === 'delete'
-              ? `Are you sure you want to delete ${name}?`
-              : `Are you sure you want to mark ${name} ${confirmAction === 'inactive' ? 'Inactive' : 'Active'}?`}
+              ? t('staff.confirm_delete_msg', {name})
+              : confirmAction === 'inactive'
+              ? t('staff.confirm_inactive_msg', {name})
+              : t('staff.confirm_active_msg', {name})}
           </Text>
           <View style={styles.confirmButtons}>
             <TouchableOpacity onPress={() => setShowConfirmDialog(false)} style={styles.confirmCancelBtn}>
-              <Text style={styles.confirmCancelText}>Cancel</Text>
+              <Text style={styles.confirmCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleConfirmAction} style={styles.confirmYesBtn}>
-              <Text style={styles.confirmYesText}>Yes</Text>
+              <Text style={styles.confirmYesText}>{t('common.yes')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -242,20 +246,20 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
             <TouchableOpacity onPress={() => setShowPermissions(false)} style={styles.iconBtn}>
               <BackIcon />
             </TouchableOpacity>
-            <Text style={styles.title}>Permissions</Text>
+            <Text style={styles.title}>{t('staff.permissions')}</Text>
           </View>
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.permissionsList}>
               {[
-                {key: 'vehicleApprovals', label: 'Vehicle Approvals'},
-                {key: 'inquiryApprovals', label: 'Inquiry Approvals'},
-                {key: 'generateEstimates', label: 'Generate Estimates'},
-                {key: 'createJobCard', label: 'Create Job Card'},
-                {key: 'disputeApprovals', label: 'Dispute Approvals'},
-                {key: 'quoteApprovalsPayments', label: 'Quote Approvals/Payments'},
-                {key: 'addVehicle', label: 'Add Vehicle'},
-                {key: 'raiseDispute', label: 'Raise Dispute'},
-                {key: 'createInquiry', label: 'Create Inquiry'},
+                {key: 'vehicleApprovals', label: t('staff.perm_vehicle_approvals')},
+                {key: 'inquiryApprovals', label: t('staff.perm_inquiry_approvals')},
+                {key: 'generateEstimates', label: t('staff.perm_generate_estimates')},
+                {key: 'createJobCard', label: t('staff.perm_create_job_card')},
+                {key: 'disputeApprovals', label: t('staff.perm_dispute_approvals')},
+                {key: 'quoteApprovalsPayments', label: t('staff.perm_quote_approvals')},
+                {key: 'addVehicle', label: t('staff.perm_add_vehicle')},
+                {key: 'raiseDispute', label: t('staff.perm_raise_dispute')},
+                {key: 'createInquiry', label: t('staff.perm_create_inquiry')},
               ].map(({key, label}) => (
                 <View key={key} style={styles.permissionRow}>
                   <Text style={[styles.permissionLabel, permissions[key as keyof StaffPermissions] && styles.permissionActive]}>
@@ -285,7 +289,7 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
           <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
             <BackIcon />
           </TouchableOpacity>
-          <Text style={styles.title}>Staff Details</Text>
+          <Text style={styles.title}>{t('staff.details')}</Text>
         </View>
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.photoContainer}>
@@ -304,23 +308,23 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
           </View>
           <View style={styles.formFields}>
             <View style={styles.inputWrapper}>
-              <Text style={styles.floatingLabel}>Name</Text>
+              <Text style={styles.floatingLabel}>{t('staff.name')}</Text>
               <TextInput value={name} onChangeText={setName} style={styles.input} />
             </View>
             <View style={styles.inputWrapper}>
-              <Text style={styles.floatingLabel}>Contact Number</Text>
+              <Text style={styles.floatingLabel}>{t('staff.contact_number')}</Text>
               <TextInput value={contactNumber} onChangeText={setContactNumber} keyboardType="phone-pad" style={styles.input} />
             </View>
             <View style={styles.inputWrapper}>
-              <Text style={styles.floatingLabel}>Email</Text>
+              <Text style={styles.floatingLabel}>{t('staff.email')}</Text>
               <TextInput value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" style={styles.input} />
             </View>
             <View style={styles.inputWrapper}>
-              <Text style={styles.floatingLabel}>Address</Text>
+              <Text style={styles.floatingLabel}>{t('staff.address')}</Text>
               <TextInput value={address} onChangeText={setAddress} style={styles.input} />
             </View>
             <View style={styles.inputWrapper}>
-              <Text style={styles.floatingLabel}>Role</Text>
+              <Text style={styles.floatingLabel}>{t('staff.role')}</Text>
               <TextInput value={role} onChangeText={setRole} style={styles.input} />
             </View>
           </View>
@@ -334,7 +338,7 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.updateBtnText}>UPDATE DETAILS</Text>
+                <Text style={styles.updateBtnText}>{t('staff.update_details').toUpperCase()}</Text>
               )}
             </TouchableOpacity>
             <TouchableOpacity
@@ -344,7 +348,7 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
               }}
               style={styles.toggleActiveBtn}
               activeOpacity={0.8}>
-              <Text style={styles.toggleActiveBtnText}>{isActive ? 'MARK AS INACTIVE' : 'MARK AS ACTIVE'}</Text>
+              <Text style={styles.toggleActiveBtnText}>{isActive ? t('staff.mark_inactive').toUpperCase() : t('staff.mark_active').toUpperCase()}</Text>
             </TouchableOpacity>
             {!isActive && (
               <TouchableOpacity
@@ -354,18 +358,18 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
                 }}
                 style={styles.deleteBtn}
                 activeOpacity={0.8}>
-                <Text style={styles.deleteBtnText}>DELETE STAFF</Text>
+                <Text style={styles.deleteBtnText}>{t('staff.delete_staff').toUpperCase()}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={() => setShowPermissions(true)} style={styles.permissionsLinkBtn} activeOpacity={0.8}>
-              <Text style={styles.permissionsLinkText}>MANAGE PERMISSIONS</Text>
+              <Text style={styles.permissionsLinkText}>{t('staff.manage_permissions').toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
       <ImagePickerActionSheet
         visible={showPhotoPicker}
-        title="Update Staff Photo"
+        title={t('staff.update_photo')}
         onCamera={() => handlePhotoSource('camera')}
         onGallery={() => handlePhotoSource('gallery')}
         onClose={() => setShowPhotoPicker(false)}

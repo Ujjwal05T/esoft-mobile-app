@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 import {useNavigation} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
@@ -131,6 +132,7 @@ const PolicyRow = ({icon, title, subtitle, onPress}: PolicyRowProps) => (
 );
 
 export default function PoliciesScreen() {
+  const {t} = useTranslation();
   const navigation = useNavigation<any>();
 
   return (
@@ -142,7 +144,7 @@ export default function PoliciesScreen() {
             style={styles.iconBtn}>
             <BackIcon />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Policies</Text>
+          <Text style={styles.headerTitle}>{t('policies.title')}</Text>
         </View>
       </View>
 
@@ -150,27 +152,27 @@ export default function PoliciesScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionLabel}>Legal</Text>
+        <Text style={styles.sectionLabel}>{t('policies.legal')}</Text>
 
         <View style={styles.card}>
           <PolicyRow
             icon={<DocumentIcon />}
-            title="Terms and Conditions"
-            subtitle="Rules governing use of the Parts Now platform"
+            title={t('policies.terms_title')}
+            subtitle={t('policies.terms_subtitle')}
             onPress={() => navigation.navigate('TermsAndConditions')}
           />
           <View style={styles.divider} />
           <PolicyRow
             icon={<ShieldIcon />}
-            title="Privacy Policy"
-            subtitle="How we collect, use and protect your data"
+            title={t('policies.privacy_title')}
+            subtitle={t('policies.privacy_subtitle')}
             onPress={() => navigation.navigate('PrivacyPolicy')}
           />
           <View style={styles.divider} />
           <PolicyRow
             icon={<RefundIcon />}
-            title="Refund & Return Policy"
-            subtitle="Cancellations, returns and refund timelines"
+            title={t('policies.refund_title')}
+            subtitle={t('policies.refund_subtitle')}
             onPress={() => navigation.navigate('RefundPolicy')}
           />
         </View>

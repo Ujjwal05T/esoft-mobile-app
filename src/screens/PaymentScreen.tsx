@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import {useTranslation} from 'react-i18next';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Svg, {Path} from 'react-native-svg';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
@@ -49,6 +50,7 @@ const ArrowBackIcon = () => (
 );
 
 export default function PaymentScreen() {
+  const {t} = useTranslation();
   const navigation = useNavigation<PaymentNavProp>();
   const route = useRoute<PaymentRouteProp>();
   const {quoteId, selectedItemIds} = route.params;
@@ -111,7 +113,7 @@ export default function PaymentScreen() {
 
       if (!RazorpayCheckout) {
         console.error('[Payment] RazorpayCheckout module not found');
-        setAppAlert({type: 'warning', title: 'Payment Unavailable', message: 'Payment gateway is not configured. Please contact support.'});
+        setAppAlert({type: 'warning', title: t('payment.unavailable'), message: t('payment.gateway_not_configured')});
         return;
       }
 
@@ -128,7 +130,7 @@ export default function PaymentScreen() {
 
         if (!orderResult.success || !orderResult.data) {
           console.error('[Payment] Order creation failed:', orderResult);
-          setAppAlert({type: 'error', message: 'Failed to create payment order. Please try again.'});
+          setAppAlert({type: 'error', message: t('payment.order_failed')});
           setPaymentLoading(false);
           return;
         }
@@ -165,10 +167,10 @@ export default function PaymentScreen() {
         console.log('[Payment] Verify result:', JSON.stringify(verifyResult));
 
         if (verifyResult.success) {
-          setAppAlert({type: 'success', message: 'Payment successful! Your order has been placed.', onDone: () => navigation.navigate('QuoteDetail', {quoteId: quote.id})});
+          setAppAlert({type: 'success', message: t('payment.success'), onDone: () => navigation.navigate('QuoteDetail', {quoteId: quote.id})});
         } else {
           console.error('[Payment] Verification failed:', verifyResult);
-          setAppAlert({type: 'error', message: 'Payment verification failed. Please contact support.'});
+          setAppAlert({type: 'error', message: t('payment.verify_failed')});
         }
       } catch (error: unknown) {
         // Razorpay errors are objects with code + description — JSON.stringify gives {}
@@ -183,7 +185,7 @@ export default function PaymentScreen() {
 
         // code 0 = user dismissed the modal, not a real error
         if (rzpError?.code !== 0) {
-          setAppAlert({type: 'error', title: 'Payment Failed', message: `${rzpError?.description || 'Payment was not completed.'} (code: ${rzpError?.code})`});
+          setAppAlert({type: 'error', title: t('payment.failed'), message: `${rzpError?.description || 'Payment was not completed.'} (code: ${rzpError?.code})`});
         } else {
           console.log('[Payment] User dismissed the payment modal');
         }
@@ -200,7 +202,7 @@ export default function PaymentScreen() {
     return (
       <SafeAreaView style={styles.centered}>
         <ActivityIndicator size="large" color="#e5383b" />
-        <Text style={styles.loadingText}>Loading payment details...</Text>
+        <Text style={styles.loadingText}>{t('payment.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -208,7 +210,7 @@ export default function PaymentScreen() {
   if (!quote) {
     return (
       <SafeAreaView style={styles.centered}>
-        <Text style={styles.notFoundText}>Quote not found</Text>
+        <Text style={styles.notFoundText}>{t('orders.quote_not_found')}</Text>
       </SafeAreaView>
     );
   }
@@ -225,7 +227,7 @@ export default function PaymentScreen() {
           style={styles.backBtn}>
           <ArrowBackIcon />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payment</Text>
+        <Text style={styles.headerTitle}>{t('payment.title')}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -250,7 +252,7 @@ export default function PaymentScreen() {
               )}
               <Text style={styles.quoteNumber}>{quote.quoteNumber}</Text>
               <Text style={styles.dateText}>
-                Submitted: {formatDateIST(quote.createdAt)}
+                {t('quote.submitted')} {formatDateIST(quote.createdAt)}
               </Text>
             </View>
             <View style={styles.summaryRight}>
@@ -265,7 +267,7 @@ export default function PaymentScreen() {
               />
               {expiresLabel && expiresLabel !== 'Expired' && (
                 <Text style={styles.expiresText}>
-                  Expires in{' '}
+                  {t('quote.expires_in')}{' '}
                   <Text style={styles.expiresValue}>{expiresLabel}</Text>
                 </Text>
               )}
@@ -277,13 +279,13 @@ export default function PaymentScreen() {
           {/* Delivery + Parts Subtotal */}
           <View style={styles.financialRow}>
             <View>
-              <Text style={styles.financialLabel}>Delivery by:</Text>
+              <Text style={styles.financialLabel}>{t('orders.delivery_by')}</Text>
               <Text style={styles.financialValue}>
                 {quote.expiresAt ? formatDateIST(quote.expiresAt) : '-'}
               </Text>
             </View>
             <View>
-              <Text style={styles.financialLabel}>Parts Subtotal</Text>
+              <Text style={styles.financialLabel}>{t('orders.parts_subtotal')}</Text>
               <Text style={styles.financialValue}>
                 {formatPrice(partsSubtotal)}
               </Text>
@@ -294,14 +296,14 @@ export default function PaymentScreen() {
           <View style={styles.financialRow}>
             <View style={styles.flex1}>
               <Text style={styles.financialLabel}>
-                Additional Charges (Shipping and Labor)
+                {t('payment.additional_charges')}
               </Text>
               <Text style={styles.financialValue}>
                 {formatPrice(additionalCharges)}
               </Text>
             </View>
             <View style={styles.grandTotalCol}>
-              <Text style={styles.financialLabel}>Grand Total</Text>
+              <Text style={styles.financialLabel}>{t('orders.grand_total')}</Text>
               <Text style={styles.financialValue}>
                 {formatPrice(grandTotal)}
               </Text>
@@ -313,7 +315,7 @@ export default function PaymentScreen() {
             SELECT PAYMENT METHOD
             ════════════════════════════════════════ */}
         <View style={styles.methodCard}>
-          <Text style={styles.methodTitle}>Select Payment Method</Text>
+          <Text style={styles.methodTitle}>{t('orders.select_payment')}</Text>
 
           <View style={styles.methodList}>
             {/* ── Credit / Debit Card ── */}
@@ -333,7 +335,7 @@ export default function PaymentScreen() {
                   resizeMode="contain"
                 />
               </View>
-              <Text style={styles.methodLabel}>CREDIT/DEBIT CARD</Text>
+              <Text style={styles.methodLabel}>{t('orders.credit_debit')}</Text>
             </TouchableOpacity>
 
             {/* ── Net Banking ── */}
@@ -349,7 +351,7 @@ export default function PaymentScreen() {
               <View style={styles.methodIconBox}>
                 <BankIcon width={36} height={34} />
               </View>
-              <Text style={styles.methodLabel}>NET BANKING</Text>
+              <Text style={styles.methodLabel}>{t('orders.net_banking')}</Text>
             </TouchableOpacity>
 
             {/* ── UPI ── */}
@@ -395,7 +397,7 @@ export default function PaymentScreen() {
           <View style={styles.processingCard}>
             <ActivityIndicator size="small" color="#e5383b" />
             <Text style={styles.processingText}>
-              Opening payment gateway...
+              {t('payment.opening_gateway')}
             </Text>
           </View>
         )}

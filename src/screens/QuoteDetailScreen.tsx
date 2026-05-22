@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import {useTranslation} from 'react-i18next';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Svg, {Path} from 'react-native-svg';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
@@ -55,6 +56,7 @@ const CheckIcon = () => (
 );
 
 export default function QuoteDetailScreen() {
+  const {t} = useTranslation();
   const navigation = useNavigation<QuoteDetailNavProp>();
   const route = useRoute<QuoteDetailRouteProp>();
   const {quoteId} = route.params;
@@ -101,9 +103,9 @@ export default function QuoteDetailScreen() {
     if (!quote) return;
     setAppAlert({
       type: 'confirm',
-      title: 'Decline Quote',
-      message: 'Are you sure you want to decline this quote?',
-      confirmText: 'Decline',
+      title: t('quote.decline_title'),
+      message: t('quote.decline_message'),
+      confirmText: t('quote.decline_btn'),
       onConfirm: () => {
         (async () => {
           try {
@@ -115,10 +117,10 @@ export default function QuoteDetailScreen() {
                 setQuote(refreshed.data);
               }
             } else {
-              setAppAlert({type: 'error', message: 'Failed to decline quote. Please try again.'});
+              setAppAlert({type: 'error', message: t('quote.decline_failed')});
             }
           } catch {
-            setAppAlert({type: 'error', message: 'Something went wrong. Please try again.'});
+            setAppAlert({type: 'error', message: t('common.something_wrong')});
           } finally {
             setDeclining(false);
           }
@@ -131,16 +133,16 @@ export default function QuoteDetailScreen() {
     if (!quote) return;
     setAppAlert({
       type: 'confirm',
-      title: 'Re-request',
-      message: 'Create a new inquiry with the same items?',
-      confirmText: 'Re-request',
+      title: t('quote.re_request_title'),
+      message: t('quote.re_request_message'),
+      confirmText: t('quote.re_request_title'),
       onConfirm: () => {
         (async () => {
           try {
             setReRequesting(true);
             const inquiryResult = await getInquiryById(quote.inquiryId);
             if (!inquiryResult.success || !inquiryResult.data) {
-              setAppAlert({type: 'error', message: 'Could not load original inquiry.'});
+              setAppAlert({type: 'error', message: t('quote.re_request_load_failed')});
               return;
             }
             const inq = inquiryResult.data;
@@ -165,14 +167,14 @@ export default function QuoteDetailScreen() {
             if (result.success) {
               setAppAlert({
                 type: 'success',
-                message: 'Inquiry re-requested successfully.',
+                message: t('quote.re_request_success'),
                 onDone: () => navigation.goBack(),
               });
             } else {
-              setAppAlert({type: 'error', message: 'Failed to re-request. Please try again.'});
+              setAppAlert({type: 'error', message: t('quote.re_request_failed')});
             }
           } catch {
-            setAppAlert({type: 'error', message: 'Something went wrong. Please try again.'});
+            setAppAlert({type: 'error', message: t('common.something_wrong')});
           } finally {
             setReRequesting(false);
           }
@@ -251,7 +253,7 @@ export default function QuoteDetailScreen() {
     return (
       <SafeAreaView style={styles.centered}>
         <ActivityIndicator size="large" color="#e5383b" />
-        <Text style={styles.loadingText}>Loading quote details...</Text>
+        <Text style={styles.loadingText}>{t('quote.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -259,14 +261,12 @@ export default function QuoteDetailScreen() {
   if (!quote) {
     return (
       <SafeAreaView style={styles.centered}>
-        <Text style={styles.notFoundTitle}>Quote Not Found</Text>
-        <Text style={styles.notFoundDesc}>
-          The quote you&apos;re looking for doesn&apos;t exist.
-        </Text>
+        <Text style={styles.notFoundTitle}>{t('quote.not_found')}</Text>
+        <Text style={styles.notFoundDesc}>{t('quote.not_found_subtitle')}</Text>
         <TouchableOpacity
           style={styles.goBackBtn}
           onPress={() => navigation.goBack()}>
-          <Text style={styles.goBackBtnText}>Go Back</Text>
+          <Text style={styles.goBackBtnText}>{t('screen.go_back')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -284,7 +284,7 @@ export default function QuoteDetailScreen() {
           style={styles.backBtn}>
           <ArrowBackIcon />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Quote Details</Text>
+        <Text style={styles.headerTitle}>{t('quote.details')}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -312,15 +312,15 @@ export default function QuoteDetailScreen() {
               <Text style={styles.quoteNumber}>{quote.quoteNumber}</Text>
               <Text style={styles.dateText}>
                 {isExpired
-                  ? `expired: ${formatShortDate(quote.expiresAt!)}`
-                  : `Submitted: ${formatShortDate(quote.createdAt)}`}
+                  ? `${t('quote.expired_label')}${formatShortDate(quote.expiresAt!)}`
+                  : `${t('quote.submitted')} ${formatShortDate(quote.createdAt)}`}
               </Text>
             </View>
             <View style={styles.infoRight}>
               <StatusBadge status={getBadgeStatus()} />
               {!isExpired && expiresInText && (
                 <Text style={styles.expiresText}>
-                  Expires in{' '}
+                  {t('quote.expires_in')}{' '}
                   <Text style={styles.expiresValue}>{expiresInText}</Text>
                 </Text>
               )}
@@ -333,11 +333,10 @@ export default function QuoteDetailScreen() {
           {isExpired && (
             <View style={styles.expiredRow}>
               <Text style={styles.expiredMsg}>
-                The quote is expired. Kindly re-request for current availability
-                and prices
+                {t('quote.expired_message')}
               </Text>
               <View style={styles.totalCol}>
-                <Text style={styles.summaryLabel}>Grand Total</Text>
+                <Text style={styles.summaryLabel}>{t('orders.grand_total')}</Text>
                 <Text style={styles.summaryValue}>{formatPrice(grandTotal)}</Text>
               </View>
             </View>
@@ -348,13 +347,13 @@ export default function QuoteDetailScreen() {
             <>
               <View style={styles.summaryRow}>
                 <View>
-                  <Text style={styles.summaryLabel}>Delivery by:</Text>
+                  <Text style={styles.summaryLabel}>{t('orders.delivery_by')}</Text>
                   <Text style={styles.summaryValue}>
                     {formatShortDate(deliveryByDate || quote.createdAt)}
                   </Text>
                 </View>
                 <View>
-                  <Text style={styles.summaryLabel}>Parts Subtotal</Text>
+                  <Text style={styles.summaryLabel}>{t('orders.parts_subtotal')}</Text>
                   <Text style={styles.summaryValue}>
                     {formatPrice(partsSubtotal)}
                   </Text>
@@ -363,14 +362,14 @@ export default function QuoteDetailScreen() {
               <View style={styles.summaryRow}>
                 <View style={styles.flex1}>
                   <Text style={styles.summaryLabel}>
-                    Additional Charges (Shipping and Labor)
+                    {t('payment.additional_charges')}
                   </Text>
                   <Text style={styles.summaryValue}>
                     {formatPrice(additionalCharges)}
                   </Text>
                 </View>
                 <View style={styles.totalCol}>
-                  <Text style={styles.summaryLabel}>Grand Total</Text>
+                  <Text style={styles.summaryLabel}>{t('orders.grand_total')}</Text>
                   <Text style={styles.summaryValue}>
                     {formatPrice(grandTotal)}
                   </Text>
@@ -413,7 +412,7 @@ export default function QuoteDetailScreen() {
                       <View />
                     )}
                     <View style={styles.availableBadge}>
-                      <Text style={styles.availableText}>Available</Text>
+                      <Text style={styles.availableText}>{t('quote.available')}</Text>
                     </View>
                   </View>
 
@@ -428,7 +427,7 @@ export default function QuoteDetailScreen() {
                   {/* Delivery + qty */}
                   <View style={styles.metaRow}>
                     <Text style={styles.metaText}>
-                      Exp. Delivery{' '}
+                      {t('quote.exp_delivery')}{' '}
                       {formatDeliveryDateIST(item.estimatedDelivery)}
                     </Text>
                     <Text style={styles.metaText}>
@@ -452,14 +451,14 @@ export default function QuoteDetailScreen() {
                   <View style={styles.partRow}>
                     <Text style={styles.partName}>{item.partName}</Text>
                     <View style={styles.unavailableBadge}>
-                      <Text style={styles.unavailableText}>Unavailable</Text>
+                      <Text style={styles.unavailableText}>{t('quote.unavailable')}</Text>
                     </View>
                   </View>
 
                   {/* Delivery + qty */}
                   <View style={styles.metaRow}>
                     <Text style={styles.metaText}>
-                      Exp. Arrival by{' '}
+                      {t('quote.exp_arrival')}{' '}
                       {formatDeliveryDateIST(item.estimatedDelivery)}
                     </Text>
                     <Text style={styles.metaText}>
@@ -517,7 +516,7 @@ export default function QuoteDetailScreen() {
             {reRequesting ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.primaryBtnText}>RE-REQUEST</Text>
+              <Text style={styles.primaryBtnText}>{t('quote.re_request_btn')}</Text>
             )}
           </TouchableOpacity>
         ) : isAccepted ? (
@@ -531,7 +530,7 @@ export default function QuoteDetailScreen() {
               })
             }
             activeOpacity={0.85}>
-            <Text style={styles.primaryBtnText}>REORDER</Text>
+            <Text style={styles.primaryBtnText}>{t('quote.reorder')}</Text>
           </TouchableOpacity>
         ) : isDeclined ? (
           /* Declined: disabled state */
@@ -539,7 +538,7 @@ export default function QuoteDetailScreen() {
             style={[styles.approveBtn, styles.approveBtnDisabled]}
             disabled
             activeOpacity={1}>
-            <Text style={styles.approveBtnText}>DECLINED</Text>
+            <Text style={styles.approveBtnText}>{t('quote.declined')}</Text>
           </TouchableOpacity>
         ) : (
           /* Pending: APPROVE AND PAY + DECLINE */
@@ -554,7 +553,7 @@ export default function QuoteDetailScreen() {
                 })
               }
               activeOpacity={0.85}>
-              <Text style={styles.approveBtnText}>APPROVE AND PAY</Text>
+              <Text style={styles.approveBtnText}>{t('quote.approve_pay')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.declineBtn}
@@ -564,7 +563,7 @@ export default function QuoteDetailScreen() {
               {declining ? (
                 <ActivityIndicator size="small" color="#e5383b" />
               ) : (
-                <Text style={styles.declineBtnText}>DECLINE</Text>
+                <Text style={styles.declineBtnText}>{t('inquiry.decline')}</Text>
               )}
             </TouchableOpacity>
           </>

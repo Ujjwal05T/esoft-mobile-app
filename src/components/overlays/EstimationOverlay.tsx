@@ -18,6 +18,7 @@ import VehicleCard from '../dashboard/VehicleCard';
 import {generatePDF} from 'react-native-html-to-pdf';
 import RNFS from 'react-native-fs';
 import RNShare from 'react-native-share';
+import {useTranslation} from 'react-i18next';
 
 interface VehicleInfo {
   plateNumber: string;
@@ -190,6 +191,7 @@ export default function EstimationOverlay({
   workshopName,
   workshopAddress,
 }: EstimationOverlayProps) {
+  const {t} = useTranslation();
   const vehicle = vehicleInfo || defaultVehicle;
   const shopName = workshopName || 'Your Workshop';
 
@@ -442,7 +444,7 @@ export default function EstimationOverlay({
       setPdfPath(result.filePath);
       setPdfBase64(result.base64 ?? null);
     } catch (e) {
-      Alert.alert('Error', 'Could not generate PDF. Please try again.');
+      Alert.alert(t('estimate.error'), t('estimate.pdf_error'));
     } finally {
       setGeneratingPDF(false);
     }
@@ -451,7 +453,7 @@ export default function EstimationOverlay({
 
   const handleDownload = async () => {
     if (!pdfPath) {
-      Alert.alert('Not ready', 'PDF is still generating.');
+      Alert.alert(t('estimate.not_ready'), t('estimate.pdf_not_ready'));
       return;
     }
     if (Platform.OS === 'android') {
@@ -460,7 +462,7 @@ export default function EstimationOverlay({
         await RNFS.copyFile(pdfPath, dest);
         ToastAndroid.show('PDF saved to Downloads', ToastAndroid.SHORT);
       } catch {
-        Alert.alert('Error', 'Could not save to Downloads.');
+        Alert.alert(t('estimate.error'), t('estimate.save_error'));
       }
     } else {
       await RNShare.open({url: pdfPath, type: 'application/pdf', failOnCancel: false});
@@ -469,7 +471,7 @@ export default function EstimationOverlay({
 
   const handleShare = async () => {
     if (!pdfBase64) {
-      Alert.alert('Not ready', 'PDF is still generating.');
+      Alert.alert(t('estimate.not_ready'), t('estimate.pdf_not_ready'));
       return;
     }
     const sharePath = `${RNFS.CachesDirectoryPath}/estimate_${vehicle.plateNumber.replace(/\s+/g, '_')}.pdf`;
@@ -509,7 +511,7 @@ export default function EstimationOverlay({
             <TouchableOpacity onPress={handleBack} style={{padding: 4}}>
               <BackIcon />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Estimate</Text>
+            <Text style={styles.headerTitle}>{t('estimate.header')}</Text>
           </View>
 
           {/* ========== ESTIMATE VIEW ========== */}
@@ -521,7 +523,7 @@ export default function EstimationOverlay({
                   onPress={() => setIsPartsOpen(o => !o)}
                   style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>
-                    Parts{partsTotal > 0 ? ` - ${formatCurrency(partsTotal)}` : ''}
+                    {t('estimate.parts')}{partsTotal > 0 ? ` - ${formatCurrency(partsTotal)}` : ''}
                   </Text>
                   <ChevronIcon isOpen={isPartsOpen} />
                 </TouchableOpacity>
@@ -529,10 +531,10 @@ export default function EstimationOverlay({
                 {isPartsOpen && (
                   <View style={styles.sectionBody}>
                     <View style={styles.colHeaders}>
-                      <Text style={styles.colHeaderText}>Part Name</Text>
+                      <Text style={styles.colHeaderText}>{t('estimate.part_name')}</Text>
                       <View style={styles.colHeaderRight}>
-                        <Text style={[styles.colHeaderText, {width: 80, textAlign: 'center'}]}>QTY</Text>
-                        <Text style={[styles.colHeaderText, {width: 70, textAlign: 'right'}]}>Rate (Rs)</Text>
+                        <Text style={[styles.colHeaderText, {width: 80, textAlign: 'center'}]}>{t('estimate.col_qty')}</Text>
+                        <Text style={[styles.colHeaderText, {width: 70, textAlign: 'right'}]}>{t('estimate.col_rate')}</Text>
                       </View>
                     </View>
 
@@ -605,7 +607,7 @@ export default function EstimationOverlay({
                       }
                       style={styles.addBtn}>
                       <PlusIcon />
-                      <Text style={styles.addBtnText}>Add parts</Text>
+                      <Text style={styles.addBtnText}>{t('estimate.add_parts')}</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -617,7 +619,7 @@ export default function EstimationOverlay({
                   onPress={() => setIsLabourOpen(o => !o)}
                   style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>
-                    Labour{labourTotal > 0 ? ` - ${formatCurrency(labourTotal)}` : ''}
+                    {t('estimate.labour')}{labourTotal > 0 ? ` - ${formatCurrency(labourTotal)}` : ''}
                   </Text>
                   <ChevronIcon isOpen={isLabourOpen} />
                 </TouchableOpacity>
@@ -625,8 +627,8 @@ export default function EstimationOverlay({
                 {isLabourOpen && (
                   <View style={styles.sectionBody}>
                     <View style={styles.colHeaders}>
-                      <Text style={styles.colHeaderText}>Labour Type</Text>
-                      <Text style={[styles.colHeaderText, {width: 70, textAlign: 'right'}]}>Rate (Rs)</Text>
+                      <Text style={styles.colHeaderText}>{t('estimate.labour_type')}</Text>
+                      <Text style={[styles.colHeaderText, {width: 70, textAlign: 'right'}]}>{t('estimate.col_rate')}</Text>
                     </View>
 
                     {labour.map(l => (
@@ -662,7 +664,7 @@ export default function EstimationOverlay({
                       <TextInput
                         value={newLabourName}
                         onChangeText={setNewLabourName}
-                        placeholder="Labour Name"
+                        placeholder={t('estimate.labour_name')}
                         placeholderTextColor="#9e9e9e"
                         style={styles.newRowInput}
                       />
@@ -688,7 +690,7 @@ export default function EstimationOverlay({
                       }}
                       style={styles.addBtn}>
                       <PlusIcon />
-                      <Text style={styles.addBtnText}>Add</Text>
+                      <Text style={styles.addBtnText}>{t('estimate.add')}</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -700,7 +702,7 @@ export default function EstimationOverlay({
                   onPress={() => setIsExtrasOpen(o => !o)}
                   style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>
-                    Extras{extrasTotal > 0 ? ` - ${formatCurrency(extrasTotal)}` : ''}
+                    {t('estimate.extras')}{extrasTotal > 0 ? ` - ${formatCurrency(extrasTotal)}` : ''}
                   </Text>
                   <ChevronIcon isOpen={isExtrasOpen} />
                 </TouchableOpacity>
@@ -708,8 +710,8 @@ export default function EstimationOverlay({
                 {isExtrasOpen && (
                   <View style={styles.sectionBody}>
                     <View style={styles.colHeaders}>
-                      <Text style={styles.colHeaderText}>Description</Text>
-                      <Text style={[styles.colHeaderText, {width: 70, textAlign: 'right'}]}>Rate (Rs)</Text>
+                      <Text style={styles.colHeaderText}>{t('estimate.description')}</Text>
+                      <Text style={[styles.colHeaderText, {width: 70, textAlign: 'right'}]}>{t('estimate.col_rate')}</Text>
                     </View>
 
                     {extras.map(e => (
@@ -745,7 +747,7 @@ export default function EstimationOverlay({
                       <TextInput
                         value={newExtraDescription}
                         onChangeText={setNewExtraDescription}
-                        placeholder="Description"
+                        placeholder={t('estimate.description')}
                         placeholderTextColor="#9e9e9e"
                         style={styles.newRowInput}
                       />
@@ -771,7 +773,7 @@ export default function EstimationOverlay({
                       }}
                       style={styles.addBtn}>
                       <PlusIcon />
-                      <Text style={styles.addBtnText}>Add</Text>
+                      <Text style={styles.addBtnText}>{t('estimate.add')}</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -781,12 +783,12 @@ export default function EstimationOverlay({
               {allFilled && (
                 <View style={styles.totals}>
                   <View style={styles.totalRow}>
-                    <Text style={styles.totalLabel}>Sub Total</Text>
+                    <Text style={styles.totalLabel}>{t('estimate.sub_total')}</Text>
                     <Text style={styles.totalValue}>{formatCurrencyShort(subTotal)}</Text>
                   </View>
 
                   <View style={styles.totalRow}>
-                    <Text style={styles.totalLabel}>Discounts</Text>
+                    <Text style={styles.totalLabel}>{t('estimate.discount')}</Text>
                     <View style={styles.discountRow}>
                       <TextInput
                         value={discountPercent}
@@ -815,14 +817,14 @@ export default function EstimationOverlay({
                   </View>
 
                   <View style={styles.totalRow}>
-                    <Text style={styles.totalLabel}>Total Payable</Text>
+                    <Text style={styles.totalLabel}>{t('estimate.total')}</Text>
                     <Text style={styles.grandTotal}>{formatCurrencyShort(totalPayable)}</Text>
                   </View>
                 </View>
               )}
 
               <TouchableOpacity onPress={handleReviewEstimate} style={styles.primaryBtn}>
-                <Text style={styles.primaryBtnText}>REVIEW ESTIMATE</Text>
+                <Text style={styles.primaryBtnText}>{t('estimate.review_estimate').toUpperCase()}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -841,12 +843,12 @@ export default function EstimationOverlay({
 
               <View style={[styles.inputBox, !!customerName && {borderColor: '#e5383b'}]}>
                 {!!customerName && (
-                  <Text style={styles.floatLabel}>Customer/Company Name</Text>
+                  <Text style={styles.floatLabel}>{t('estimate.customer_name')}</Text>
                 )}
                 <TextInput
                   value={customerName}
                   onChangeText={setCustomerName}
-                  placeholder="Customer/Company Name"
+                  placeholder={t('estimate.customer_name')}
                   placeholderTextColor="#828282"
                   style={styles.inputBoxText}
                 />
@@ -854,7 +856,7 @@ export default function EstimationOverlay({
 
               <View style={styles.gstWrapper}>
                 {!!gstNumber && (
-                  <Text style={styles.floatLabel}>GST NO.</Text>
+                  <Text style={styles.floatLabel}>{t('estimate.gst_no')}</Text>
                 )}
                 <View style={[styles.gstBox, !!gstNumber && {borderColor: '#e5383b'}]}>
                   <TextInput
@@ -863,17 +865,17 @@ export default function EstimationOverlay({
                       setGstNumber(v);
                       setIsGstVerified(false);
                     }}
-                    placeholder="GST NO."
+                    placeholder={t('estimate.gst_no')}
                     placeholderTextColor="#828282"
                     style={[styles.inputBoxText, {flex: 1}]}
                   />
                   {isGstVerified ? (
-                    <Text style={styles.verifiedText}>VERIFIED</Text>
+                    <Text style={styles.verifiedText}>{t('estimate.verified').toUpperCase()}</Text>
                   ) : (
                     <TouchableOpacity
                       onPress={() => gstNumber.trim() && setIsGstVerified(true)}
                       style={styles.verifyBtn}>
-                      <Text style={styles.verifyBtnText}>Verify</Text>
+                      <Text style={styles.verifyBtnText}>{t('estimate.verify')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -881,10 +883,10 @@ export default function EstimationOverlay({
 
               <View style={styles.breakdownSection}>
                 {[
-                  {label: 'PART', value: partsTotal},
-                  {label: 'LABOUR', value: labourTotal},
-                  {label: 'EXTRAS', value: extrasTotal},
-                  {label: 'DISCOUNT', value: discountValue},
+                  {label: t('estimate.parts').toUpperCase(), value: partsTotal},
+                  {label: t('estimate.labour').toUpperCase(), value: labourTotal},
+                  {label: t('estimate.extras').toUpperCase(), value: extrasTotal},
+                  {label: t('estimate.discount').toUpperCase(), value: discountValue},
                 ].map(row => (
                   <View key={row.label} style={styles.breakdownRow}>
                     <Text style={styles.breakdownLabel}>{row.label}</Text>
@@ -892,7 +894,7 @@ export default function EstimationOverlay({
                   </View>
                 ))}
                 <View style={[styles.breakdownRow, {paddingTop: 8, borderTopWidth: 1, borderTopColor: '#e0e0e0'}]}>
-                  <Text style={[styles.breakdownLabel, {fontWeight: '700', color: '#000'}]}>GRAND TOTAL</Text>
+                  <Text style={[styles.breakdownLabel, {fontWeight: '700', color: '#000'}]}>{t('estimate.grand_total').toUpperCase()}</Text>
                   <Text style={styles.grandTotal}>Rs. {totalPayable.toLocaleString('en-IN')}</Text>
                 </View>
               </View>
@@ -904,7 +906,7 @@ export default function EstimationOverlay({
                 {generatingPDF ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.primaryBtnText}>GENERATE PDF</Text>
+                  <Text style={styles.primaryBtnText}>{t('estimate.generate_pdf').toUpperCase()}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -948,12 +950,12 @@ export default function EstimationOverlay({
                   {/* Bill To / Ship To */}
                   <View style={styles.pdfBillRow}>
                     <View style={styles.pdfBillCell}>
-                      <Text style={styles.pdfBillHead}>Bill To</Text>
+                      <Text style={styles.pdfBillHead}>{t('estimate.bill_to')}</Text>
                       <Text style={styles.pdfBillName} numberOfLines={1}>{customerName || '—'}</Text>
                       {!!gstNumber && <Text style={styles.pdfBillSub}>Gst No. : {gstNumber}</Text>}
                     </View>
                     <View style={[styles.pdfBillCell, styles.pdfBillRight]}>
-                      <Text style={styles.pdfBillHead}>Ship To</Text>
+                      <Text style={styles.pdfBillHead}>{t('estimate.ship_to')}</Text>
                       <Text style={styles.pdfBillSub}>Same as Bill To</Text>
                     </View>
                   </View>
@@ -988,12 +990,12 @@ export default function EstimationOverlay({
                   {/* Totals */}
                   <View style={styles.pdfTotalsWrap}>
                     <View style={styles.pdfTotalsBox}>
-                      <View style={styles.pdfTotalRow}><Text style={styles.pdfTotalLbl}>Sub Total</Text><Text style={styles.pdfTotalVal}>₹{subTotal.toLocaleString('en-IN')}</Text></View>
+                      <View style={styles.pdfTotalRow}><Text style={styles.pdfTotalLbl}>{t('estimate.sub_total')}</Text><Text style={styles.pdfTotalVal}>₹{subTotal.toLocaleString('en-IN')}</Text></View>
                       {discountValue > 0 && (
-                        <View style={styles.pdfTotalRow}><Text style={styles.pdfTotalLbl}>Discount</Text><Text style={styles.pdfTotalVal}>₹{discountValue.toLocaleString('en-IN')}</Text></View>
+                        <View style={styles.pdfTotalRow}><Text style={styles.pdfTotalLbl}>{t('estimate.discount')}</Text><Text style={styles.pdfTotalVal}>₹{discountValue.toLocaleString('en-IN')}</Text></View>
                       )}
-                      <View style={styles.pdfTotalRow}><Text style={styles.pdfTotalLbl}>Total Payable</Text><Text style={styles.pdfTotalVal}>₹{totalPayable.toLocaleString('en-IN')}</Text></View>
-                      <View style={styles.pdfBalanceRow}><Text style={styles.pdfBalanceTxt}>Balance Due</Text><Text style={styles.pdfBalanceTxt}>₹{totalPayable.toLocaleString('en-IN')}</Text></View>
+                      <View style={styles.pdfTotalRow}><Text style={styles.pdfTotalLbl}>{t('estimate.total')}</Text><Text style={styles.pdfTotalVal}>₹{totalPayable.toLocaleString('en-IN')}</Text></View>
+                      <View style={styles.pdfBalanceRow}><Text style={styles.pdfBalanceTxt}>{t('estimate.balance_due')}</Text><Text style={styles.pdfBalanceTxt}>₹{totalPayable.toLocaleString('en-IN')}</Text></View>
                     </View>
                   </View>
 
@@ -1007,11 +1009,11 @@ export default function EstimationOverlay({
               <View style={styles.pdfActions}>
                 <TouchableOpacity style={styles.pdfBtn} onPress={handleDownload}>
                   <DownloadIcon />
-                  <Text style={styles.pdfBtnText}>Download</Text>
+                  <Text style={styles.pdfBtnText}>{t('estimate.download')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.pdfBtn} onPress={handleShare}>
                   <ShareIcon />
-                  <Text style={styles.pdfBtnText}>Share</Text>
+                  <Text style={styles.pdfBtnText}>{t('estimate.share')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

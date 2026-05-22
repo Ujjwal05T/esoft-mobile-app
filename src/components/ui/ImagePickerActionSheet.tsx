@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 
 interface ImagePickerActionSheetProps {
   visible: boolean;
@@ -19,11 +20,12 @@ interface ImagePickerActionSheetProps {
 
 export default function ImagePickerActionSheet({
   visible,
-  title = 'Add Photo',
+  title,
   onCamera,
   onGallery,
   onClose,
 }: ImagePickerActionSheetProps) {
+  const {t} = useTranslation();
   return (
     <Modal
       visible={visible}
@@ -35,7 +37,7 @@ export default function ImagePickerActionSheet({
       </TouchableWithoutFeedback>
       <View style={styles.actionSheet}>
         <View style={styles.handle} />
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title}>{title ?? t('image.add_photo')}</Text>
         <TouchableOpacity style={styles.btn} onPress={onCamera} activeOpacity={0.7}>
           <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
             <Path
@@ -51,7 +53,7 @@ export default function ImagePickerActionSheet({
               strokeWidth="2"
             />
           </Svg>
-          <Text style={styles.btnText}>Take Photo</Text>
+          <Text style={styles.btnText}>{t('image.take_photo')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.btn} onPress={onGallery} activeOpacity={0.7}>
           <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -71,13 +73,13 @@ export default function ImagePickerActionSheet({
               strokeLinejoin="round"
             />
           </Svg>
-          <Text style={styles.btnText}>Choose from Gallery</Text>
+          <Text style={styles.btnText}>{t('image.choose_gallery')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.btn, styles.cancelBtn]}
           onPress={onClose}
           activeOpacity={0.7}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
       </View>
     </Modal>

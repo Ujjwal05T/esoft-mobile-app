@@ -1,4 +1,5 @@
 import React from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Text,
@@ -60,6 +61,7 @@ const ReportIcon = () => (
 );
 
 export default function ReportsScreen() {
+  const {t} = useTranslation();
   const navigation = useNavigation();
 
   return (
@@ -72,7 +74,7 @@ export default function ReportsScreen() {
             style={styles.iconBtn}>
             <BackIcon />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Reports</Text>
+          <Text style={styles.headerTitle}>{t('reports.title')}</Text>
         </View>
       </View>
 
@@ -85,12 +87,8 @@ export default function ReportsScreen() {
           <View style={styles.iconContainer}>
             <ReportIcon />
           </View>
-          <Text style={styles.emptyTitle}>Reports Coming Soon</Text>
-          <Text style={styles.emptySubtitle}>
-            Generate comprehensive reports for your workshop operations,
-            including vehicle history, staff performance, and financial
-            summaries.
-          </Text>
+          <Text style={styles.emptyTitle}>{t('reports.coming_soon')}</Text>
+          <Text style={styles.emptySubtitle}>{t('reports.coming_soon_subtitle')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

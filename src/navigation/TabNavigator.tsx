@@ -3,6 +3,7 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import type {BottomTabBarProps} from '@react-navigation/bottom-tabs';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useTranslation} from 'react-i18next';
 import {
   HomeScreen,
   VehicleScreen,
@@ -38,6 +39,13 @@ const iconMap: Record<string, SvgIcon> = {
 
 function TabBar({state, navigation}: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const {t} = useTranslation();
+  const tabLabels: Record<string, string> = {
+    Home: t('nav.home'),
+    Vehicle: t('nav.vehicles'),
+    Orders: t('nav.orders'),
+    Inquiry: t('nav.inquiry'),
+  };
 
   return (
     <View style={[styles.container, {paddingBottom: insets.bottom + 6}]}>
@@ -74,7 +82,7 @@ function TabBar({state, navigation}: BottomTabBarProps) {
                 )}
                 <Text
                   style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
-                  {route.name}
+                  {tabLabels[route.name] ?? route.name}
                 </Text>
               </TouchableOpacity>
             );

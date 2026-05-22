@@ -2,6 +2,7 @@ import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
 import StatusBadge, {StatusType} from '../ui/StatusBadge';
+import {useTranslation} from 'react-i18next';
 
 export type InquiryStatus = Extract<
   StatusType,
@@ -76,6 +77,7 @@ export default function InquiryCard({
   action = 'edit',
   maxVisibleItems = 3,
 }: InquiryCardProps) {
+  const {t} = useTranslation();
   const visibleItems = inquiry.items?.slice(0, maxVisibleItems) || [];
   const extraItemsCount = Math.max(
     0,
@@ -93,19 +95,19 @@ export default function InquiryCard({
 
   const getDateText = () => {
     if (inquiry.status === 'closed' && inquiry.closedDate) {
-      return `Closed: ${inquiry.closedDate}`;
+      return `${t('inquiry.date_closed_prefix')}${inquiry.closedDate}`;
     }
     if (inquiry.status === 'declined' && inquiry.declinedDate) {
-      return `Declined: ${inquiry.declinedDate}`;
+      return `${t('inquiry.date_declined_prefix')}${inquiry.declinedDate}`;
     }
-    return `Placed: ${inquiry.placedDate}`;
+    return `${t('inquiry.date_placed_prefix')}${inquiry.placedDate}`;
   };
 
   const getActionLabel = () => {
     switch (effectiveAction) {
-      case 're-request': return 'Re-request';
-      case 'approve': return 'Approve Inquiry';
-      default: return 'Edit';
+      case 're-request': return t('inquiry.re_request_action');
+      case 'approve': return t('inquiry.approve_inquiry');
+      default: return t('common.edit');
     }
   };
 
@@ -148,17 +150,17 @@ export default function InquiryCard({
 
         <View style={styles.metaRow}>
           <Text style={styles.metaText}>
-            Inquiry by: <Text style={styles.metaRed}>{inquiry.inquiryBy}</Text>
+            {t('inquiry.inquiry_by')}<Text style={styles.metaRed}>{inquiry.inquiryBy}</Text>
           </Text>
           <Text style={styles.metaText}>
-            Job Category:{' '}
+            {t('inquiry.job_category')}
             <Text style={styles.metaRed}>
               {inquiry.jobCategories.length > 0
                 ? inquiry.jobCategories[0] +
                   (inquiry.jobCategories.length > 1
                     ? ` +${inquiry.jobCategories.length - 1}`
                     : '')
-                : 'N/A'}
+                : t('card.na')}
             </Text>
           </Text>
         </View>
@@ -171,7 +173,7 @@ export default function InquiryCard({
 
           {inquiry.items && inquiry.items.length > 0 && (
             <View style={styles.partsSection}>
-              <Text style={styles.partsSectionTitle}>Required Parts:</Text>
+              <Text style={styles.partsSectionTitle}>{t('inquiry.required_parts')}</Text>
               <View style={styles.partsList}>
                 {visibleItems.map(item => (
                   <View key={item.id} style={styles.partItem}>
@@ -191,14 +193,14 @@ export default function InquiryCard({
                         <Text style={styles.itemName}>{item.itemName}</Text>
                         {item.preferredBrand && (
                           <Text style={styles.itemMeta}>
-                            Preferred Brand: {item.preferredBrand}
+                            {t('inquiry.preferred_brand_prefix')}{item.preferredBrand}
                           </Text>
                         )}
                         {item.notes && (
-                          <Text style={styles.itemMeta}>Notes: {item.notes}</Text>
+                          <Text style={styles.itemMeta}>{t('inquiry.notes_prefix')}{item.notes}</Text>
                         )}
                       </View>
-                      <Text style={styles.qty}>Qty: {item.quantity}</Text>
+                      <Text style={styles.qty}>{t('card.qty')}{item.quantity}</Text>
                     </View>
                   </View>
                 ))}
@@ -207,7 +209,7 @@ export default function InquiryCard({
               {extraItemsCount > 0 && (
                 <View style={styles.moreIndicator}>
                   <View style={styles.dividerLine} />
-                  <Text style={styles.moreText}>+{extraItemsCount} more</Text>
+                  <Text style={styles.moreText}>{t('card.more', {count: extraItemsCount})}</Text>
                 </View>
               )}
             </View>

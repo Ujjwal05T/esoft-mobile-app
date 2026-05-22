@@ -9,6 +9,7 @@ import {
   Linking,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 
 interface ContactETNAOverlayProps {
   isOpen: boolean;
@@ -45,25 +46,26 @@ export default function ContactETNAOverlay({
   emailGeneral = 'info@partsnow.in',
   emailSales = 'sales@partsnow.in',
 }: ContactETNAOverlayProps) {
+  const {t} = useTranslation();
   const contactOptions = [
     {
       icon: <PhoneIcon />,
-      label: 'Call',
+      label: t('contact.call'),
       action: () => Linking.openURL(`tel:${whatsappNumber}`),
     },
     {
       icon: <WhatsAppIcon />,
-      label: 'WhatsApp',
+      label: t('contact.whatsapp'),
       action: () => Linking.openURL(`whatsapp://send?phone=${whatsappNumber}`),
     },
     {
       icon: <EmailIcon />,
-      label: 'General Query & Returns',
+      label: t('contact.general_query'),
       action: () => Linking.openURL(`mailto:${emailGeneral}`),
     },
     {
       icon: <EmailIcon />,
-      label: 'Sales Inquiry',
+      label: t('contact.sales_inquiry'),
       action: () => Linking.openURL(`mailto:${emailSales}`),
     },
   ];
@@ -76,8 +78,8 @@ export default function ContactETNAOverlay({
 
       <View style={styles.sheet}>
         <View style={styles.handle} />
-        <Text style={styles.title}>Contact Parts Now</Text>
-        <Text style={styles.subtitle}>Choose how you'd like to reach us</Text>
+        <Text style={styles.title}>{t('common.contact_parts_now')}</Text>
+        <Text style={styles.subtitle}>{t('contact.choose_how')}</Text>
 
         <View style={styles.options}>
           {contactOptions.map((opt, i) => (
@@ -96,7 +98,7 @@ export default function ContactETNAOverlay({
         </View>
 
         <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
       </View>
     </Modal>

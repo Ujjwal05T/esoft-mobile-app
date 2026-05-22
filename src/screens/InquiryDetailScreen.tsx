@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Text,
@@ -63,6 +64,7 @@ const SearchIcon = () => (
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function InquiryDetailScreen() {
+  const {t} = useTranslation();
   const navigation = useNavigation<InquiryDetailNavigationProp>();
   const route = useRoute<InquiryDetailRouteProp>();
   const {inquiryId} = route.params;
@@ -113,12 +115,12 @@ export default function InquiryDetailScreen() {
   // Get the date label based on status
   const getDateLabel = () => {
     if (isDeclined && inquiry?.declinedDate) {
-      return `Declined: ${formatDateIST(inquiry.declinedDate)}`;
+      return `${t('inquiry.date_declined')}${formatDateIST(inquiry.declinedDate)}`;
     }
     if (isClosed && inquiry?.closedDate) {
-      return `Closed: ${formatDateIST(inquiry.closedDate)}`;
+      return `${t('inquiry.date_closed')}${formatDateIST(inquiry.closedDate)}`;
     }
-    return `Placed: ${formatDateIST(inquiry?.placedDate || '')}`;
+    return `${t('inquiry.date_placed')}${formatDateIST(inquiry?.placedDate || '')}`;
   };
 
   // Handle status updates
@@ -127,8 +129,8 @@ export default function InquiryDetailScreen() {
 
     setAppAlert({
       type: 'confirm',
-      title: 'Re-request Inquiry',
-      message: 'Are you sure you want to re-request this inquiry?',
+      title: t('inquiry.re_request_title'),
+      message: t('inquiry.re_request_confirm'),
       onConfirm: () => {
         (async () => {
           try {
@@ -155,15 +157,15 @@ export default function InquiryDetailScreen() {
             if (result.success) {
               setAppAlert({
                 type: 'success',
-                message: 'Inquiry re-requested successfully',
+                message: t('inquiry.re_request_success'),
                 onDone: () => navigation.goBack(),
               });
             } else {
-              setAppAlert({type: 'error', message: result.error || 'Failed to re-request inquiry'});
+              setAppAlert({type: 'error', message: result.error || t('inquiry.re_request_failed_msg')});
             }
           } catch (error) {
             console.error('Failed to re-request inquiry:', error);
-            setAppAlert({type: 'error', message: 'Failed to re-request inquiry'});
+            setAppAlert({type: 'error', message: t('inquiry.re_request_failed_msg')});
           } finally {
             setActionLoading(false);
           }
@@ -177,26 +179,26 @@ export default function InquiryDetailScreen() {
 
     setAppAlert({
       type: 'confirm',
-      title: 'Cancel Request',
-      message: 'Are you sure you want to cancel this inquiry request?',
+      title: t('inquiry.cancel_title'),
+      message: t('inquiry.cancel_confirm'),
       onConfirm: () => {
         (async () => {
           try {
             setActionLoading(true);
             const result = await updateInquiryStatus(inquiry.id, 'Closed');
             if (result.success) {
-              setAppAlert({type: 'success', message: 'Inquiry cancelled successfully'});
+              setAppAlert({type: 'success', message: t('inquiry.cancel_success')});
               // Refresh inquiry data
               const updatedInquiry = await getInquiryById(inquiryId);
               if (updatedInquiry.success && updatedInquiry.data) {
                 setInquiry(updatedInquiry.data);
               }
             } else {
-              setAppAlert({type: 'error', message: result.error || 'Failed to cancel inquiry'});
+              setAppAlert({type: 'error', message: result.error || t('inquiry.cancel_failed_msg')});
             }
           } catch (error) {
             console.error('Failed to cancel inquiry:', error);
-            setAppAlert({type: 'error', message: 'Failed to cancel inquiry'});
+            setAppAlert({type: 'error', message: t('inquiry.cancel_failed_msg')});
           } finally {
             setActionLoading(false);
           }
@@ -210,26 +212,26 @@ export default function InquiryDetailScreen() {
 
     setAppAlert({
       type: 'confirm',
-      title: 'Approve and Send',
-      message: 'Are you sure you want to approve and send this inquiry?',
+      title: t('inquiry.approve_send_title'),
+      message: t('inquiry.approve_send_confirm'),
       onConfirm: () => {
         (async () => {
           try {
             setActionLoading(true);
             const result = await updateInquiryStatus(inquiry.id, 'open');
             if (result.success) {
-              setAppAlert({type: 'success', message: 'Inquiry approved and sent successfully'});
+              setAppAlert({type: 'success', message: t('inquiry.approve_send_success')});
               // Refresh inquiry data
               const updatedInquiry = await getInquiryById(inquiryId);
               if (updatedInquiry.success && updatedInquiry.data) {
                 setInquiry(updatedInquiry.data);
               }
             } else {
-              setAppAlert({type: 'error', message: result.error || 'Failed to approve inquiry'});
+              setAppAlert({type: 'error', message: result.error || t('inquiry.approve_send_failed_msg')});
             }
           } catch (error) {
             console.error('Failed to approve inquiry:', error);
-            setAppAlert({type: 'error', message: 'Failed to approve inquiry'});
+            setAppAlert({type: 'error', message: t('inquiry.approve_send_failed_msg')});
           } finally {
             setActionLoading(false);
           }
@@ -243,26 +245,26 @@ export default function InquiryDetailScreen() {
 
     setAppAlert({
       type: 'confirm',
-      title: 'Decline Inquiry',
-      message: 'Are you sure you want to decline this inquiry?',
+      title: t('inquiry.decline_confirm_title'),
+      message: t('inquiry.decline_confirm_msg'),
       onConfirm: () => {
         (async () => {
           try {
             setActionLoading(true);
             const result = await updateInquiryStatus(inquiry.id, 'Closed');
             if (result.success) {
-              setAppAlert({type: 'success', message: 'Inquiry declined successfully'});
+              setAppAlert({type: 'success', message: t('inquiry.decline_success')});
               // Refresh inquiry data
               const updatedInquiry = await getInquiryById(inquiryId);
               if (updatedInquiry.success && updatedInquiry.data) {
                 setInquiry(updatedInquiry.data);
               }
             } else {
-              setAppAlert({type: 'error', message: result.error || 'Failed to decline inquiry'});
+              setAppAlert({type: 'error', message: result.error || t('inquiry.decline_failed_msg')});
             }
           } catch (error) {
             console.error('Failed to decline inquiry:', error);
-            setAppAlert({type: 'error', message: 'Failed to decline inquiry'});
+            setAppAlert({type: 'error', message: t('inquiry.decline_failed_msg')});
           } finally {
             setActionLoading(false);
           }
@@ -288,18 +290,18 @@ export default function InquiryDetailScreen() {
       const result = await updateInquiryItem(selectedItem.id, updatedItem);
 
       if (result.success) {
-        setAppAlert({type: 'success', message: 'Inquiry item updated successfully!'});
+        setAppAlert({type: 'success', message: t('inquiry.item_updated')});
         // Refresh inquiry data to show updated item
         const refreshResult = await getInquiryById(inquiryId);
         if (refreshResult.success && refreshResult.data) {
           setInquiry(refreshResult.data);
         }
       } else {
-        setAppAlert({type: 'error', message: result.error || 'Failed to update inquiry item'});
+        setAppAlert({type: 'error', message: result.error || t('inquiry.item_update_failed')});
       }
     } catch (error) {
       console.error('Error updating inquiry item:', error);
-      setAppAlert({type: 'error', message: 'An error occurred while updating the inquiry item'});
+      setAppAlert({type: 'error', message: t('inquiry.item_update_error')});
     } finally {
       setActionLoading(false);
       setShowEditOverlay(false);
@@ -313,7 +315,7 @@ export default function InquiryDetailScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#e5383b" />
-          <Text style={styles.loadingText}>Loading inquiry details...</Text>
+          <Text style={styles.loadingText}>{t('inquiry.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -324,15 +326,15 @@ export default function InquiryDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContainer}>
-          <Text style={styles.notFoundTitle}>Inquiry Not Found</Text>
+          <Text style={styles.notFoundTitle}>{t('inquiry.not_found')}</Text>
           <Text style={styles.notFoundText}>
-            The inquiry you're looking for doesn't exist.
+            {t('inquiry.not_found_subtitle')}
           </Text>
           <TouchableOpacity
             style={styles.goBackButton}
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}>
-            <Text style={styles.goBackButtonText}>Go Back</Text>
+            <Text style={styles.goBackButtonText}>{t('screen.go_back')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -351,7 +353,7 @@ export default function InquiryDetailScreen() {
             activeOpacity={0.7}>
             <BackArrowIcon />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Inquiry Details</Text>
+          <Text style={styles.headerTitle}>{t('inquiry.details')}</Text>
         </View>
         <TouchableOpacity style={styles.headerIconBtn} activeOpacity={0.7}>
           <SearchIcon />
@@ -405,13 +407,13 @@ export default function InquiryDetailScreen() {
           {/* Inquiry by + Job Category */}
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>Inquiry by: </Text>
+              <Text style={styles.metaLabel}>{t('inquiry.by')}</Text>
               <Text style={styles.metaValue}>
                 {inquiry.requestedByName || 'Owner'}
               </Text>
             </View>
             <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>Job Categories: </Text>
+              <Text style={styles.metaLabel}>{t('inquiry.job_categories')}</Text>
               <Text style={styles.metaValue}>
                 {(inquiry.jobCategories ?? []).join(', ') || 'N/A'}
               </Text>
@@ -485,14 +487,14 @@ export default function InquiryDetailScreen() {
                   onPress={() => setShowEditInquiryOverlay(true)}
                   disabled={actionLoading}
                   activeOpacity={0.8}>
-                  <Text style={styles.primaryButtonText}>EDIT</Text>
+                  <Text style={styles.primaryButtonText}>{t('inquiry.edit')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.secondaryButton, actionLoading && styles.buttonDisabled]}
                   onPress={handleCancelRequest}
                   disabled={actionLoading}
                   activeOpacity={0.8}>
-                  <Text style={styles.secondaryButtonText}>CANCEL REQUEST</Text>
+                  <Text style={styles.secondaryButtonText}>{t('inquiry.cancel_request')}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -508,7 +510,7 @@ export default function InquiryDetailScreen() {
                   {actionLoading ? (
                     <ActivityIndicator size="small" color="#ffffff" />
                   ) : (
-                    <Text style={styles.primaryButtonText}>APPROVE AND SEND</Text>
+                    <Text style={styles.primaryButtonText}>{t('inquiry.approve_send')}</Text>
                   )}
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -516,7 +518,7 @@ export default function InquiryDetailScreen() {
                   onPress={handleDecline}
                   disabled={actionLoading}
                   activeOpacity={0.8}>
-                  <Text style={styles.secondaryButtonText}>DECLINE</Text>
+                  <Text style={styles.secondaryButtonText}>{t('inquiry.decline')}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -535,7 +537,7 @@ export default function InquiryDetailScreen() {
                 {actionLoading ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Text style={styles.primaryButtonText}>RE REQUEST</Text>
+                  <Text style={styles.primaryButtonText}>{t('inquiry.re_request')}</Text>
                 )}
               </TouchableOpacity>
             )}
@@ -554,7 +556,7 @@ export default function InquiryDetailScreen() {
                 {actionLoading ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Text style={styles.primaryButtonText}>RE REQUEST</Text>
+                  <Text style={styles.primaryButtonText}>{t('inquiry.re_request')}</Text>
                 )}
               </TouchableOpacity>
             )}

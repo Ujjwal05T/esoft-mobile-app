@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Text,
@@ -223,6 +224,7 @@ const FilterIcon = () => (
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function InquiryScreen() {
+  const {t} = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -479,9 +481,9 @@ export default function InquiryScreen() {
 
   const getTitle = () => {
     switch (activeTab) {
-      case 'quotes':    return 'Quotes';
-      case 'disputes':  return 'Disputes';
-      default:          return 'Inquiries';
+      case 'quotes':    return t('inquiry.quotes_tab');
+      case 'disputes':  return t('inquiry.disputes_tab');
+      default:          return t('inquiry.title');
     }
   };
 
@@ -715,7 +717,7 @@ export default function InquiryScreen() {
                   styles.tabBtnText,
                   activeTab === 'inquiries' && styles.tabBtnTextActive,
                 ]}>
-                Inquiries
+                {t('inquiry.title')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -730,7 +732,7 @@ export default function InquiryScreen() {
                   styles.tabBtnText,
                   activeTab === 'quotes' && styles.tabBtnTextActive,
                 ]}>
-                Quotes
+                {t('inquiry.quotes_tab')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -745,7 +747,7 @@ export default function InquiryScreen() {
                   styles.tabBtnText,
                   activeTab === 'disputes' && styles.tabBtnTextActive,
                 ]}>
-                Disputes
+                {t('inquiry.disputes_tab')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -755,7 +757,7 @@ export default function InquiryScreen() {
             onPress={() => setShowFilters(true)}
             activeOpacity={0.8}>
             <FilterIcon />
-            <Text style={styles.filterBtnText}>Filter</Text>
+            <Text style={styles.filterBtnText}>{t('screen.filter')}</Text>
             {filterCount > 0 && (
               <View style={styles.filterBadge}>
                 <Text style={styles.filterBadgeText}>{filterCount}</Text>
@@ -770,17 +772,15 @@ export default function InquiryScreen() {
             {loadingInquiries ? (
               <View style={styles.stateCard}>
                 <ActivityIndicator size="small" color="#e5383b" />
-                <Text style={styles.loadingText}>Loading inquiries...</Text>
+                <Text style={styles.loadingText}>{t('inquiry.loading')}</Text>
               </View>
             ) : filteredInquiries.length === 0 ? (
               <View style={styles.stateCard}>
                 <Text style={styles.emptyTitle}>
-                  {filterCount > 0 ? 'No inquiries match your filters' : 'No Inquiries Found'}
+                  {filterCount > 0 ? t('inquiry.no_inquiries_filters') : t('common.no_data')}
                 </Text>
                 <Text style={styles.emptySubtitle}>
-                  {filterCount > 0
-                    ? 'Try adjusting your filter criteria'
-                    : 'Your inquiries will appear here'}
+                  {filterCount > 0 ? t('screen.try_adjusting_filters') : t('inquiry.your_inquiries')}
                 </Text>
                 {filterCount > 0 && (
                   <TouchableOpacity
@@ -797,7 +797,7 @@ export default function InquiryScreen() {
                       sortBy: null,
                     })}
                     activeOpacity={0.8}>
-                    <Text style={styles.clearFiltersBtnText}>Clear Filters</Text>
+                    <Text style={styles.clearFiltersBtnText}>{t('screen.clear_filters')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -840,17 +840,15 @@ export default function InquiryScreen() {
             {loadingQuotes ? (
               <View style={styles.stateCard}>
                 <ActivityIndicator size="small" color="#e5383b" />
-                <Text style={styles.loadingText}>Loading quotes...</Text>
+                <Text style={styles.loadingText}>{t('inquiry.loading_quotes')}</Text>
               </View>
             ) : filteredQuotes.length === 0 ? (
               <View style={styles.stateCard}>
                 <Text style={styles.emptyTitle}>
-                  {filterCount > 0 ? 'No quotes match your filters' : 'No Quotes Found'}
+                  {filterCount > 0 ? t('inquiry.no_quotes_filters') : t('inquiry.no_quotes')}
                 </Text>
                 <Text style={styles.emptySubtitle}>
-                  {filterCount > 0
-                    ? 'Try adjusting your filter criteria'
-                    : 'Your quotes will appear here'}
+                  {filterCount > 0 ? t('screen.try_adjusting_filters') : t('inquiry.your_quotes')}
                 </Text>
                 {filterCount > 0 && (
                   <TouchableOpacity
@@ -867,7 +865,7 @@ export default function InquiryScreen() {
                       sortBy: null,
                     })}
                     activeOpacity={0.8}>
-                    <Text style={styles.clearFiltersBtnText}>Clear Filters</Text>
+                    <Text style={styles.clearFiltersBtnText}>{t('screen.clear_filters')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -898,17 +896,15 @@ export default function InquiryScreen() {
             {loadingDisputes ? (
               <View style={styles.stateCard}>
                 <ActivityIndicator size="small" color="#e5383b" />
-                <Text style={styles.loadingText}>Loading disputes...</Text>
+                <Text style={styles.loadingText}>{t('inquiry.loading_disputes')}</Text>
               </View>
             ) : filteredDisputes.length === 0 ? (
               <View style={styles.stateCard}>
                 <Text style={styles.emptyTitle}>
-                  {filterCount > 0 ? 'No disputes match your filters' : 'No Disputes Found'}
+                  {filterCount > 0 ? t('inquiry.no_disputes_filters') : t('inquiry.no_disputes')}
                 </Text>
                 <Text style={styles.emptySubtitle}>
-                  {filterCount > 0
-                    ? 'Try adjusting your filter criteria'
-                    : 'Your disputes will appear here'}
+                  {filterCount > 0 ? t('screen.try_adjusting_filters') : t('inquiry.your_disputes')}
                 </Text>
                 {filterCount > 0 && (
                   <TouchableOpacity
@@ -925,7 +921,7 @@ export default function InquiryScreen() {
                       sortBy: null,
                     })}
                     activeOpacity={0.8}>
-                    <Text style={styles.clearFiltersBtnText}>Clear Filters</Text>
+                    <Text style={styles.clearFiltersBtnText}>{t('screen.clear_filters')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -976,7 +972,7 @@ export default function InquiryScreen() {
         isOpen={editDisputeItem !== null}
         onClose={() => setEditDisputeItem(null)}
         onConfirm={handleDisputeEditConfirm}
-        buttonText={user?.role === 'staff' ? 'SEND REQUEST' : 'CONFIRM'}
+        buttonText={user?.role === 'staff' ? t('inquiry.send_request_btn') : t('inquiry.confirm_btn')}
         initialOrderId={editDisputeItem?.orderNumber}
         initialOrderDisplay={editDisputeItem?.orderNumber}
         initialPartName={editDisputeItem?.partName}
@@ -987,8 +983,8 @@ export default function InquiryScreen() {
       {/* ── Floating Action Button ───────────────────────────────────── */}
       <FloatingActionButton
         navigationOptions={[
-          {label: 'Request Part', onPress: handleRequestPart},
-          {label: 'Raise Dispute', onPress: handleRaiseDispute},
+          {label: t('inquiry.request_part'), onPress: handleRequestPart},
+          {label: t('inquiry.raise_dispute_btn'), onPress: handleRaiseDispute},
         ]}
       />
 
@@ -999,8 +995,8 @@ export default function InquiryScreen() {
         onVehicleSelected={handleVehicleSelected}
         title={
           targetOverlay === 'requestPart'
-            ? 'Select Vehicle for Request Part'
-            : 'Select Vehicle for Dispute'
+            ? t('inquiry.select_vehicle_parts')
+            : t('inquiry.select_vehicle_dispute')
         }
       />
 
@@ -1020,7 +1016,7 @@ export default function InquiryScreen() {
           onClose={() => setShowRaiseDispute(false)}
           onConfirm={handleDisputeConfirm}
           orders={vehicleOrders}
-          buttonText="SEND REQUEST"
+          buttonText={t('inquiry.send_request_btn')}
           vehicleInfo={vehicleInfo}
         />
       )}

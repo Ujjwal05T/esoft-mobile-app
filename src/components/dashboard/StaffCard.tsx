@@ -2,6 +2,7 @@ import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import {SERVER_ORIGIN} from '../../services/api';
+import {useTranslation} from 'react-i18next';
 
 export interface StaffMember {
   id: string;
@@ -49,6 +50,7 @@ export default function StaffCard({
   onView,
   showActions = true,
 }: StaffCardProps) {
+  const {t} = useTranslation();
   const avatarUri = staff.avatar?.startsWith('http')
     ? staff.avatar
     : `${SERVER_ORIGIN}${staff.avatar}`;
@@ -84,7 +86,7 @@ export default function StaffCard({
               onEdit?.();
             }}
             style={styles.editBtn}>
-            <Text style={styles.editBtnText}>Edit</Text>
+            <Text style={styles.editBtnText}>{t('staff.edit')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => onView?.()}

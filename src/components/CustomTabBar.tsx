@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {BottomTabBarProps} from '@react-navigation/bottom-tabs';
+import {useTranslation} from 'react-i18next';
 
 // Import SVG icons
 import HomeIcon from '../assets/icons/home.svg';
@@ -34,17 +35,18 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({
   role = 'staff',
 }) => {
   const insets = useSafeAreaInsets();
+  const {t} = useTranslation();
 
   // Define navigation items based on role (matching Next.js pattern)
   const getNavItems = (): NavItem[] => {
     const baseItems: NavItem[] = [
       {
-        label: 'Home',
+        label: t('nav.home'),
         routeName: 'Home',
         Icon: HomeIcon,
       },
       {
-        label: 'Vehicle',
+        label: t('nav.vehicles'),
         routeName: 'Vehicle',
         Icon: VehicleIcon,
       },
@@ -53,7 +55,7 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({
     // Add Orders for admin/owner roles (3rd position)
     if (role === 'admin' || role === 'owner') {
       baseItems.push({
-        label: 'Orders',
+        label: t('nav.orders'),
         routeName: 'Orders',
         Icon: OrderIcon,
       });
@@ -61,7 +63,7 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({
 
     // Add Inquiry for all roles
     baseItems.push({
-      label: 'Inquiry',
+      label: t('nav.inquiry'),
       routeName: 'Inquiry',
       Icon: InquiryIcon,
     });
