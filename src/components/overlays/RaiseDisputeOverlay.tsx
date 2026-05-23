@@ -19,6 +19,7 @@ import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import {formatDateIST} from '../../utils/dateUtils';
+import {useTranslation} from 'react-i18next';
 
 const SCREEN_H = Dimensions.get('screen').height;
 
@@ -159,6 +160,7 @@ export default function RaiseDisputeOverlay({
   initialReason,
   initialRemark,
 }: RaiseDisputeOverlayProps) {
+  const {t} = useTranslation();
   // Form state
   const [orderId, setOrderId] = useState('');
   const [selectedOrderId, setSelectedOrderId] = useState('');
@@ -342,7 +344,7 @@ export default function RaiseDisputeOverlay({
           <TouchableOpacity onPress={onClose} style={{padding: 4}}>
             <BackArrowIcon />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Raise Dispute</Text>
+          <Text style={styles.headerTitle}>{t('dispute.header_title')}</Text>
         </View>
 
         {/* Vehicle Info */}
@@ -373,7 +375,7 @@ export default function RaiseDisputeOverlay({
                   hasAttemptedSubmit && !orderId.trim() && styles.inputError,
                   {marginTop:10}
                 ]}>
-                {!!orderId && <Text style={styles.floatLabel}>Order ID</Text>}
+                {!!orderId && <Text style={styles.floatLabel}>{t('dispute.order_id_label')}</Text>}
                 <TextInput
                   value={orderId}
                   onChangeText={(text) => {
@@ -381,7 +383,7 @@ export default function RaiseDisputeOverlay({
                     setShowOrderDropdown(text.length > 0);
                   }}
                   onFocus={() => orderId.length > 0 && setShowOrderDropdown(true)}
-                  placeholder="Order ID"
+                  placeholder={t('dispute.order_id_label')}
                   placeholderTextColor="#828282"
                   style={styles.inputText}
                 />
@@ -411,7 +413,7 @@ export default function RaiseDisputeOverlay({
                 </View>
               )}
               {hasAttemptedSubmit && !orderId.trim() && (
-                <Text style={styles.errorMsg}>Please enter order ID</Text>
+                <Text style={styles.errorMsg}>{t('dispute.order_id_required')}</Text>
               )}
             </View>
 
@@ -428,10 +430,10 @@ export default function RaiseDisputeOverlay({
                   !!selectedPart && {borderColor: '#e5383b'},
                   hasAttemptedSubmit && !selectedPart && styles.inputError,
                 ]}>
-                {!!selectedPart && <Text style={styles.floatLabel}>Part Name</Text>}
+                {!!selectedPart && <Text style={styles.floatLabel}>{t('request_part.part_name')}</Text>}
                 <Text
                   style={[styles.dropdownText, !selectedPart && styles.placeholderText]}>
-                  {selectedPart || 'Select Part'}
+                  {selectedPart || t('dispute.select_part')}
                 </Text>
                 <ChevronDownIcon rotated={showPartDropdown} />
               </TouchableOpacity>
@@ -457,7 +459,7 @@ export default function RaiseDisputeOverlay({
                 <View style={styles.dropdownList}>
                   <View style={styles.dropdownItem}>
                     <Text style={[styles.dropdownItemText, {color: '#828282'}]}>
-                      Please select an order first
+                      {t('dispute.select_order_first')}
                     </Text>
                   </View>
                 </View>
@@ -466,13 +468,13 @@ export default function RaiseDisputeOverlay({
                 <View style={styles.dropdownList}>
                   <View style={styles.dropdownItem}>
                     <Text style={[styles.dropdownItemText, {color: '#828282'}]}>
-                      No parts available for this order
+                      {t('dispute.no_parts_available')}
                     </Text>
                   </View>
                 </View>
               )}
               {hasAttemptedSubmit && !selectedPart && (
-                <Text style={styles.errorMsg}>Please select a part</Text>
+                <Text style={styles.errorMsg}>{t('dispute.part_required')}</Text>
               )}
             </View>
 
@@ -489,10 +491,10 @@ export default function RaiseDisputeOverlay({
                   !!selectedReason && {borderColor: '#e5383b'},
                   hasAttemptedSubmit && !selectedReason && styles.inputError,
                 ]}>
-                {!!selectedReason && <Text style={styles.floatLabel}>Reason</Text>}
+                {!!selectedReason && <Text style={styles.floatLabel}>{t('dispute.reason_label')}</Text>}
                 <Text
                   style={[styles.dropdownText, !selectedReason && styles.placeholderText]}>
-                  {selectedReason || 'Select Reason'}
+                  {selectedReason || t('dispute.select_reason')}
                 </Text>
                 <ChevronDownIcon rotated={showReasonDropdown} />
               </TouchableOpacity>
@@ -514,7 +516,7 @@ export default function RaiseDisputeOverlay({
                 </View>
               )}
               {hasAttemptedSubmit && !selectedReason && (
-                <Text style={styles.errorMsg}>Please select a reason</Text>
+                <Text style={styles.errorMsg}>{t('dispute.reason_required')}</Text>
               )}
             </View>
 
@@ -525,11 +527,11 @@ export default function RaiseDisputeOverlay({
                   styles.remarkField,
                   !!remark && {borderColor: '#e5383b'},
                 ]}>
-                {!!remark && <Text style={styles.floatLabel}>Remark</Text>}
+                {!!remark && <Text style={styles.floatLabel}>{t('dispute.remark_label')}</Text>}
                 <TextInput
                   value={remark}
                   onChangeText={setRemark}
-                  placeholder="Remark (Optional)"
+                  placeholder={t('dispute.remark_optional')}
                   placeholderTextColor="#828282"
                   multiline
                   numberOfLines={3}
@@ -547,10 +549,10 @@ export default function RaiseDisputeOverlay({
               {isRecording ? <StopIcon /> : <MicIcon />}
               <Text style={styles.recordBtnText}>
                 {isRecording
-                  ? 'Stop Recording...'
+                  ? t('dispute.stop_recording')
                   : recordedAudioPath
-                  ? 'Re-record Audio'
-                  : 'Press To Record Audio'}
+                  ? t('dispute.re_record')
+                  : t('dispute.press_record')}
               </Text>
             </TouchableOpacity>
 
@@ -563,7 +565,7 @@ export default function RaiseDisputeOverlay({
                     fill="#16a34a"
                   />
                 </Svg>
-                <Text style={styles.audioChipText}>Audio recorded</Text>
+                <Text style={styles.audioChipText}>{t('dispute.audio_recorded')}</Text>
                 <TouchableOpacity
                   onPress={() => setRecordedAudioPath(null)}
                   hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
@@ -632,14 +634,14 @@ export default function RaiseDisputeOverlay({
               </Svg>
             </Animated.View>
             <Animated.Text style={[styles.successText, {opacity: textFade}]}>
-              REQUEST SENT
+              {t('dispute.request_sent')}
             </Animated.Text>
           </Animated.View>
         )}
       </View>
       <ImagePickerActionSheet
         visible={pendingPickIndex !== null}
-        title="Add Dispute Photo"
+        title={t('dispute.add_photo')}
         onCamera={() => handleImageSource('camera')}
         onGallery={() => handleImageSource('gallery')}
         onClose={() => setPendingPickIndex(null)}

@@ -20,6 +20,7 @@ import {useAuth} from '../context/AuthContext';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {getProfile, updateProfile, UpdateProfileData} from '../services/api';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import ContactETNAOverlay from '../components/overlays/ContactETNAOverlay';
 import {useTranslation} from 'react-i18next';
 
 const BackIcon = () => (
@@ -121,6 +122,7 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
@@ -207,10 +209,7 @@ export default function ProfileScreen() {
     }) : null);
   };
 
-  const handleSupport = () => {
-    console.log('Support clicked');
-    // TODO: Open support overlay or screen
-  };
+  const handleSupport = () => setSupportOpen(true);
 
   const getInitials = (name: string) => {
     return name
@@ -392,6 +391,11 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <ContactETNAOverlay
+        isOpen={supportOpen}
+        onClose={() => setSupportOpen(false)}
+      />
 
       <AppAlert
         isOpen={!!appAlert}

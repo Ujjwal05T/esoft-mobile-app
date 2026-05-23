@@ -33,6 +33,7 @@ import {
 } from '../../services/api';
 import AddStaffOverlay, {StaffFormData} from './AddStaffOverlay';
 import AppAlert, {AlertState} from './AppAlert';
+import {useTranslation} from 'react-i18next';
 
 const SCREEN_H = Dimensions.get('screen').height;
 const MAX_IMAGES = 3;
@@ -71,6 +72,7 @@ export default function NewJobCardOverlay({
   vehicleId,
   vehicleVisitId,
 }: NewJobCardOverlayProps) {
+  const {t} = useTranslation();
   // Form state
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
@@ -300,12 +302,12 @@ export default function NewJobCardOverlay({
                 />
               </Svg>
             </TouchableOpacity>
-            <Text style={styles.title}>New Job Card</Text>
+            <Text style={styles.title}>{t('job_card.title')}</Text>
           </View>
 
           {/* Job Category Dropdown */}
           <View style={styles.fieldWrap}>
-            {selectedCategory !== '' && <Text style={styles.floatLabel}>Job Category</Text>}
+            {selectedCategory !== '' && <Text style={styles.floatLabel}>{t('job_card.job_category')}</Text>}
             <TouchableOpacity
               style={[styles.dropdown, (showCategoryPicker || selectedCategory !== '') && styles.dropdownActive]}
               onPress={() => {
@@ -314,7 +316,7 @@ export default function NewJobCardOverlay({
               }}
               activeOpacity={0.8}>
               <Text style={[styles.dropdownText, !selectedCategory && styles.dropdownPlaceholder]}>
-                {selectedCategory || 'Job Category'}
+                {selectedCategory || t('job_card.job_category')}
               </Text>
               <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
                 <Path
@@ -359,7 +361,7 @@ export default function NewJobCardOverlay({
 
           {/* Assign Staff Dropdown */}
           <View style={styles.fieldWrap}>
-            {selectedStaffIds.length > 0 && <Text style={styles.floatLabel}>Assign Staff</Text>}
+            {selectedStaffIds.length > 0 && <Text style={styles.floatLabel}>{t('job_card.assign_staff')}</Text>}
             <TouchableOpacity
               style={[
                 styles.dropdown,
@@ -372,7 +374,7 @@ export default function NewJobCardOverlay({
               activeOpacity={0.8}>
               <Text style={[styles.dropdownText, selectedStaffIds.length === 0 && styles.dropdownPlaceholder]}>
                 {selectedStaffIds.length === 0
-                  ? 'Assign Staff'
+                  ? t('job_card.assign_staff')
                   : (() => {
                       const first = staffMembers.find(s => s.id === selectedStaffIds[0])?.name ?? '';
                       const extra = selectedStaffIds.length - 1;
@@ -400,7 +402,7 @@ export default function NewJobCardOverlay({
                   {loadingStaff ? (
                     <ActivityIndicator color="#e5383b" style={styles.staffLoader} />
                   ) : staffMembers.length === 0 ? (
-                    <Text style={styles.emptyText}>No staff available</Text>
+                    <Text style={styles.emptyText}>{t('job_card.no_staff')}</Text>
                   ) : (
                     staffMembers.map(s => {
                       const isSelected = selectedStaffIds.includes(s.id);
@@ -450,7 +452,7 @@ export default function NewJobCardOverlay({
                       strokeLinejoin="round"
                     />
                   </Svg>
-                  <Text style={styles.addStaffBtnText}>Add New Staff</Text>
+                  <Text style={styles.addStaffBtnText}>{t('job_card.add_new_staff')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -459,14 +461,14 @@ export default function NewJobCardOverlay({
           {/* Remark + Record button */}
           <View style={styles.fieldWrap}>
             {(remark !== '' || recordedAudioPath !== null) && (
-              <Text style={styles.floatLabel}>Remark</Text>
+              <Text style={styles.floatLabel}>{t('job_card.remark_label')}</Text>
             )}
             {!isRecording && (
               <View style={styles.remarkRow}>
                 <TextInput
                   value={remark}
                   onChangeText={setRemark}
-                  placeholder="Remark (Optional)"
+                  placeholder={t('job_card.remark_optional')}
                   placeholderTextColor="#828282"
                   style={[
                     styles.dropdown,
@@ -501,7 +503,7 @@ export default function NewJobCardOverlay({
                       strokeLinejoin="round"
                     />
                   </Svg>
-                  <Text style={styles.recordBtnText}>Record</Text>
+                  <Text style={styles.recordBtnText}>{t('job_card.record')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -509,7 +511,7 @@ export default function NewJobCardOverlay({
             {isRecording && (
               <View style={styles.recordingRow}>
                 <Animated.View style={[styles.recordingDot, {opacity: pulseAnim}]} />
-                <Text style={styles.recordingText}>Recording...</Text>
+                <Text style={styles.recordingText}>{t('job_card.recording')}</Text>
                 <TouchableOpacity onPress={handleRecord} style={styles.stopBtn} activeOpacity={0.8}>
                   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
                     <Rect x="6" y="6" width="12" height="12" rx="2" fill="white" />
@@ -541,7 +543,7 @@ export default function NewJobCardOverlay({
                       strokeLinejoin="round"
                     />
                   </Svg>
-                  <Text style={styles.audioCardText}>Audio</Text>
+                  <Text style={styles.audioCardText}>{t('job_card.audio')}</Text>
                   <TouchableOpacity
                     onPress={() => setRecordedAudioPath(null)}
                     style={styles.mediaDeleteBtn}
@@ -614,7 +616,7 @@ export default function NewJobCardOverlay({
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.submitText}>ADD JOB</Text>
+              <Text style={styles.submitText}>{t('job_card.add_job')}</Text>
             )}
           </TouchableOpacity>
         </ScrollView>
@@ -670,7 +672,7 @@ export default function NewJobCardOverlay({
 
       <ImagePickerActionSheet
         visible={showImagePicker}
-        title="Add Photo"
+        title={t('job_card.add_photo')}
         onCamera={() => handleImageSource('camera')}
         onGallery={() => handleImageSource('gallery')}
         onClose={() => setShowImagePicker(false)}
@@ -695,7 +697,7 @@ export default function NewJobCardOverlay({
             </Svg>
           </Animated.View>
           <Animated.Text style={[styles.successText, {opacity: textFade}]}>
-            JOB CARD ADDED
+            {t('job_card.added')}
           </Animated.Text>
         </Animated.View>
       )}

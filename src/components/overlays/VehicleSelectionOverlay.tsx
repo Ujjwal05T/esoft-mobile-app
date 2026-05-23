@@ -12,6 +12,7 @@ import {
   Dimensions,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
+import {useTranslation} from 'react-i18next';
 import VehicleCard from '../dashboard/VehicleCard';
 import {
   searchActiveVehicleVisits,
@@ -64,8 +65,10 @@ export default function VehicleSelectionOverlay({
   isOpen,
   onClose,
   onVehicleSelected,
-  title = 'Select Vehicle',
+  title,
 }: VehicleSelectionOverlayProps) {
+  const {t} = useTranslation();
+  const displayTitle = title ?? t('vehicle_selection.title');
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<VehicleVisitResponse[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -182,7 +185,7 @@ export default function VehicleSelectionOverlay({
           </TouchableOpacity>
 
           {/* Header */}
-          <Text style={styles.headerTitle}>{title}</Text>
+          <Text style={styles.headerTitle}>{displayTitle}</Text>
 
           <ScrollView
             contentContainerStyle={styles.scrollContent}
@@ -217,7 +220,7 @@ export default function VehicleSelectionOverlay({
 
             {/* Hint */}
             {query.length === 0 && (
-              <Text style={styles.hint}>Type at least 2 characters to search active vehicles</Text>
+              <Text style={styles.hint}>{t('vehicle_selection.hint')}</Text>
             )}
 
             {/* Dropdown Suggestions */}
@@ -243,7 +246,7 @@ export default function VehicleSelectionOverlay({
                           {name ? <Text style={styles.suggestionName}>{name}</Text> : null}
                         </View>
                         <View style={styles.suggestionBadge}>
-                          <Text style={styles.suggestionBadgeText}>Active</Text>
+                          <Text style={styles.suggestionBadgeText}>{t('vehicle_selection.active')}</Text>
                         </View>
                       </TouchableOpacity>
                     );
@@ -255,8 +258,8 @@ export default function VehicleSelectionOverlay({
             {/* No results */}
             {query.length >= 2 && !isSearching && suggestions.length === 0 && !selectedVisit && (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>No active vehicles found</Text>
-                <Text style={styles.emptySubtitle}>No vehicles matching "{query}" are currently in the workshop</Text>
+                <Text style={styles.emptyTitle}>{t('vehicle_selection.no_vehicles')}</Text>
+                <Text style={styles.emptySubtitle}>{t('vehicle_selection.no_vehicles_matching', {query})}</Text>
               </View>
             )}
 
@@ -277,7 +280,7 @@ export default function VehicleSelectionOverlay({
                   additionalServices={0}
                 />
                 <View style={styles.tapHint}>
-                  <Text style={styles.tapHintText}>Tap to select</Text>
+                  <Text style={styles.tapHintText}>{t('vehicle_selection.tap_to_select')}</Text>
                 </View>
               </TouchableOpacity>
             )}

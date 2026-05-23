@@ -9,7 +9,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import Svg, {Path} from 'react-native-svg';
+import Svg, {Path, Circle} from 'react-native-svg';
 import {useTranslation} from 'react-i18next';
 import {useNavigation} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -21,6 +21,20 @@ import {
   WorkshopStaffResponse,
 } from '../services/api';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import ContactETNAOverlay from '../components/overlays/ContactETNAOverlay';
+
+const LanguageIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="10" stroke="#e5383b" strokeWidth="1.5" />
+    <Path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="#e5383b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const ChevronRightIcon = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Path d="M9 18l6-6-6-6" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
 
 const BackIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -102,6 +116,7 @@ export default function StaffProfileScreen() {
   const [personalOpen, setPersonalOpen] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
@@ -173,9 +188,7 @@ export default function StaffProfileScreen() {
       .join('')
       .toUpperCase();
 
-  const handleSupport = () => {
-    console.log('Support clicked');
-  };
+  const handleSupport = () => setSupportOpen(true);
 
   if (loading) {
     return (
@@ -302,6 +315,18 @@ export default function StaffProfileScreen() {
             </View>
           </AccordionSection>
 
+          {/* Language */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('LanguageSelection' as never)}
+            style={styles.languageRow}
+            activeOpacity={0.8}>
+            <View style={styles.languageLeft}>
+              <LanguageIcon />
+              <Text style={styles.languageLabel}>{t('profile.language')}</Text>
+            </View>
+            <ChevronRightIcon />
+          </TouchableOpacity>
+
           {/* Support Button */}
           <TouchableOpacity
             onPress={handleSupport}
@@ -311,6 +336,11 @@ export default function StaffProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <ContactETNAOverlay
+        isOpen={supportOpen}
+        onClose={() => setSupportOpen(false)}
+      />
 
       <AppAlert
         isOpen={!!appAlert}
@@ -385,6 +415,27 @@ const styles = StyleSheet.create({
   profileRole: {fontSize: 14, color: '#666', marginTop: 2},
   accordionsContainer: {gap: 16},
   accordionContent: {gap: 6, paddingTop: 16},
+  languageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 52,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  languageLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  languageLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#1a1a1a',
+  },
   supportBtn: {
     height: 48,
     borderWidth: 1,

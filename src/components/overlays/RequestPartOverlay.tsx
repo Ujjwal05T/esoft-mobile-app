@@ -19,6 +19,7 @@ import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 import AppAlert, {AlertState} from './AppAlert';
+import {useTranslation} from 'react-i18next';
 
 const SCREEN_H = Dimensions.get('window').height;
 
@@ -194,6 +195,7 @@ export default function RequestPartOverlay({
   onClose,
   onSubmit,
 }: RequestPartOverlayProps) {
+  const {t} = useTranslation();
   /* AppAlert */
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
@@ -445,7 +447,7 @@ export default function RequestPartOverlay({
     const isThisRecording = isRecording && recordingPartId === part.id;
     const isThisPlaying = playingPartId === part.id;
     const imageCount = part.images.filter(Boolean).length;
-    const title = part.partName.trim() || `Part Request ${index + 1}`;
+    const title = part.partName.trim() || `${t('request_part.part_fallback')} ${index + 1}`;
 
     return (
       <View key={part.id} style={styles.accordionWrap}>
@@ -460,7 +462,7 @@ export default function RequestPartOverlay({
             </Text>
             {!!part.quantity && (
               <View style={styles.qtyBadge}>
-                <Text style={styles.qtyBadgeText}>Qty: {part.quantity}</Text>
+                <Text style={styles.qtyBadgeText}>{t('request_part.qty_badge')}{part.quantity}</Text>
               </View>
             )}
           </View>
@@ -491,18 +493,18 @@ export default function RequestPartOverlay({
                     styles.inputError,
                 ]}>
                 {!!part.partName && (
-                  <Text style={styles.floatLabel}>Part Name</Text>
+                  <Text style={styles.floatLabel}>{t('request_part.part_name')}</Text>
                 )}
                 <TextInput
                   value={part.partName}
                   onChangeText={v => updatePart(part.id, {partName: v})}
-                  placeholder="Part Name"
+                  placeholder={t('request_part.part_name')}
                   placeholderTextColor="#828282"
                   style={styles.inputText}
                 />
               </View>
               {part.hasAttemptedSubmit && !part.partName.trim() && (
-                <Text style={styles.errorMsg}>Please add part name</Text>
+                <Text style={styles.errorMsg}>{t('request_part.part_required')}</Text>
               )}
             </View>
 
@@ -514,12 +516,12 @@ export default function RequestPartOverlay({
                   !!part.partNumber && styles.inputFilled,
                 ]}>
                 {!!part.partNumber && (
-                  <Text style={styles.floatLabel}>Part Number</Text>
+                  <Text style={styles.floatLabel}>{t('request_part.part_number')}</Text>
                 )}
                 <TextInput
                   value={part.partNumber}
                   onChangeText={v => updatePart(part.id, {partNumber: v})}
-                  placeholder="Part Number (Optional)"
+                  placeholder={t('request_part.part_number_optional')}
                   placeholderTextColor="#828282"
                   style={styles.inputText}
                   autoCapitalize="characters"
@@ -549,7 +551,7 @@ export default function RequestPartOverlay({
                     ,
                 ]}>
                 {!!part.preferredBrand && (
-                  <Text style={styles.floatLabel}>Preferred Brand</Text>
+                  <Text style={styles.floatLabel}>{t('request_part.preferred_brand')}</Text>
                 )}
                 <Text
                   style={[
@@ -558,7 +560,7 @@ export default function RequestPartOverlay({
                     !part.preferredBrand && {color: '#828282'},
                 {padding:9}
                   ]}>
-                  {part.preferredBrand || 'Preferred Brand'}
+                  {part.preferredBrand || t('request_part.preferred_brand')}
                 </Text>
                 <ChevronIcon
                   color="#e5383b"
@@ -584,7 +586,7 @@ export default function RequestPartOverlay({
                 </View>
               )}
               {part.hasAttemptedSubmit && !part.preferredBrand && (
-                <Text style={styles.errorMsg}>Please select preferred brand</Text>
+                <Text style={styles.errorMsg}>{t('request_part.brand_required')}</Text>
               )}
             </View>
 
@@ -597,12 +599,12 @@ export default function RequestPartOverlay({
                     !!part.afterMarketBrandName && styles.inputFilled,
                   ]}>
                   {!!part.afterMarketBrandName && (
-                    <Text style={styles.floatLabel}>Preferred Brand Name</Text>
+                    <Text style={styles.floatLabel}>{t('request_part.preferred_brand')}</Text>
                   )}
                   <TextInput
                     value={part.afterMarketBrandName}
                     onChangeText={v => updatePart(part.id, {afterMarketBrandName: v})}
-                    placeholder="Preferred Brand Name (if any)"
+                    placeholder={t('request_part.brand_name_optional')}
                     placeholderTextColor="#828282"
                     style={styles.inputText}
                   />
@@ -621,19 +623,19 @@ export default function RequestPartOverlay({
                     styles.inputError,
                 ]}>
                 {!!part.quantity && (
-                  <Text style={styles.floatLabel}>Quantity</Text>
+                  <Text style={styles.floatLabel}>{t('request_part.quantity')}</Text>
                 )}
                 <TextInput
                   value={part.quantity}
                   onChangeText={v => updatePart(part.id, {quantity: v})}
-                  placeholder="Quantity"
+                  placeholder={t('request_part.quantity')}
                   placeholderTextColor="#828282"
                   keyboardType="numeric"
                   style={styles.inputText}
                 />
               </View>
               {part.hasAttemptedSubmit && !part.quantity.trim() && (
-                <Text style={styles.errorMsg}>Please add quantity</Text>
+                <Text style={styles.errorMsg}>{t('request_part.qty_required')}</Text>
               )}
             </View>
 
@@ -649,12 +651,12 @@ export default function RequestPartOverlay({
                     !!part.remark && styles.inputFilled,
                   ]}>
                   {!!part.remark && (
-                    <Text style={styles.floatLabel}>Remark</Text>
+                    <Text style={styles.floatLabel}>{t('request_part.remark')}</Text>
                   )}
                   <TextInput
                     value={part.remark}
                     onChangeText={v => updatePart(part.id, {remark: v})}
-                    placeholder="Audio or Remark (Optional)"
+                    placeholder={t('request_part.remark_audio_optional')}
                     placeholderTextColor="#828282"
                     style={[styles.inputText, {flex: 1}]}
                   />
@@ -663,7 +665,7 @@ export default function RequestPartOverlay({
                     disabled={isRecording && recordingPartId !== part.id}
                     style={styles.recordBtn}>
                     <MicIcon />
-                    <Text style={styles.recordBtnText}>Record</Text>
+                    <Text style={styles.recordBtnText}>{t('request_part.record')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -673,7 +675,7 @@ export default function RequestPartOverlay({
                 <View style={styles.recordingRow}>
                   <View style={styles.recordingDot} />
                   <Text style={styles.recordingLabel}>
-                    Recording... {formatTime(recordingTime)}
+                    {t('request_part.recording')} {formatTime(recordingTime)}
                   </Text>
                   <TouchableOpacity
                     onPress={stopRecording}
@@ -691,12 +693,12 @@ export default function RequestPartOverlay({
                     !!part.remark && styles.inputFilled,
                   ]}>
                   {!!part.remark && (
-                    <Text style={styles.floatLabel}>Remark</Text>
+                    <Text style={styles.floatLabel}>{t('request_part.remark')}</Text>
                   )}
                   <TextInput
                     value={part.remark}
                     onChangeText={v => updatePart(part.id, {remark: v})}
-                    placeholder="Remark (Optional)"
+                    placeholder={t('request_part.remark_optional')}
                     placeholderTextColor="#828282"
                     style={styles.inputText}
                   />
@@ -781,7 +783,7 @@ export default function RequestPartOverlay({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.searchPad}>
             <Text style={styles.searchTitle}>
-              {'Request by Part\nNumber / Scanning\nPart'}
+              {t('request_part.search_title')}
             </Text>
 
             {/* Part number input */}
@@ -829,7 +831,7 @@ export default function RequestPartOverlay({
               activeOpacity={0.85}>
               <View style={styles.manualCardContent}>
                 <Text style={styles.manualCardTitle}>
-                  {'Request\nPart\nManually'}
+                  {t('request_part.manual_title')}
                 </Text>
                 <DiagonalArrowIcon />
               </View>
@@ -850,10 +852,10 @@ export default function RequestPartOverlay({
                 style={styles.backBtn}>
                 <BackArrowIcon />
               </TouchableOpacity>
-              <Text style={styles.formTitle}>Request Parts</Text>
+              <Text style={styles.formTitle}>{t('request_part.form_title')}</Text>
               <View style={styles.countBadge}>
                 <Text style={styles.countBadgeText}>
-                  {parts.length} {parts.length === 1 ? 'Part' : 'Parts'}
+                  {parts.length} {parts.length === 1 ? t('request_part.part_label') : t('request_part.parts_label')}
                 </Text>
               </View>
             </View>
@@ -877,7 +879,7 @@ export default function RequestPartOverlay({
                       strokeLinejoin="round"
                     />
                   </Svg>
-                  <Text style={styles.addAnotherText}>ADD ANOTHER PART</Text>
+                  <Text style={styles.addAnotherText}>{t('request_part.add_another')}</Text>
                 </TouchableOpacity>
 
                 {/* Send Request */}
@@ -886,8 +888,8 @@ export default function RequestPartOverlay({
                   disabled={!isFormValid}
                   style={[styles.sendBtn, !isFormValid && {backgroundColor: '#d3d3d3'}]}>
                   <Text style={styles.sendBtnText}>
-                    SEND REQUEST ({parts.length}{' '}
-                    {parts.length === 1 ? 'PART' : 'PARTS'})
+                    {t('request_part.send_request')} ({parts.length}{' '}
+                    {parts.length === 1 ? t('request_part.part_label') : t('request_part.parts_label')})
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -915,7 +917,7 @@ export default function RequestPartOverlay({
               </Svg>
             </Animated.View>
             <Animated.Text style={[styles.successText, {opacity: textFade}]}>
-              REQUEST SENT
+              {t('request_part.request_sent')}
             </Animated.Text>
           </Animated.View>
         )}
@@ -938,7 +940,7 @@ export default function RequestPartOverlay({
       />
       <ImagePickerActionSheet
         visible={pendingPickPartId !== null}
-        title="Add Part Photo"
+        title={t('request_part.add_photo')}
         onCamera={() => handleImageSource('camera')}
         onGallery={() => handleImageSource('gallery')}
         onClose={() => setPendingPickPartId(null)}
