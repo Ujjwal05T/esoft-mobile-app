@@ -37,7 +37,7 @@ export async function addTrack(url: string, title: string, artist?: string) {
   await TrackPlayer.add({
     url: url,
     title: title,
-    artist: artist || 'ETNA',
+    artist: artist || 'Parts Now',
     artwork: undefined,
   });
 }

@@ -127,14 +127,10 @@ export async function verifyOtpByEmail(email: string, otp: string) {
   }
 }
 
-// Send OTP to phone via WhatsApp (authkey.io)
-// Backend endpoint: POST /auth/send-otp-whatsapp
-// Backend should call: POST https://authkey.io/restapi/requestjson.php
-// with Authorization: Basic <apiKey> and body:
-//   { country_code, mobile, type: "text", wid: "30552", "1": <otp> }
+// Send OTP to phone via WhatsApp (Interakt)
 export async function sendOtpByWhatsApp(phoneNumber: string) {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/send-otp-whatsapp`, {
+    const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({phoneNumber}),

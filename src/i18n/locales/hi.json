@@ -491,7 +491,7 @@
 
   "faqs.title": "अक्सर पूछे जाने वाले प्रश्न",
   "faqs.header": "अक्सर पूछे जाने वाले प्रश्न",
-  "faqs.subtitle": "ETNA के उपयोग, अपनी वर्कशॉप प्रबंधन, पूछताछ संभालने और अन्य सामान्य प्रश्नों के उत्तर खोजें। सहायता दस्तावेज़ीकरण जल्द आ रहा है।",
+  "faqs.subtitle": "Parts Now के उपयोग, अपनी वर्कशॉप प्रबंधन, पूछताछ संभालने और अन्य सामान्य प्रश्नों के उत्तर खोजें। सहायता दस्तावेज़ीकरण जल्द आ रहा है।",
 
   "policies.title": "नीतियां",
   "policies.legal": "कानूनी",
@@ -667,5 +667,12 @@
   "vehicle_selection.active": "सक्रिय",
   "vehicle_selection.no_vehicles": "कोई सक्रिय वाहन नहीं मिला",
   "vehicle_selection.no_vehicles_matching": "\"{{query}}\" से मेल खाने वाला कोई वाहन वर्तमान में वर्कशॉप में नहीं है",
-  "vehicle_selection.tap_to_select": "चुनने के लिए टैप करें"
+  "vehicle_selection.tap_to_select": "चुनने के लिए टैप करें",
+
+  "vehicle_type_selection.title": "वाहन चुनें",
+  "vehicle_type_selection.subtitle": "आगे बढ़ने का तरीका चुनें",
+  "vehicle_type_selection.existing_title": "मौजूदा वाहन",
+  "vehicle_type_selection.existing_desc": "अपने पंजीकृत वाहनों में से चुनें",
+  "vehicle_type_selection.new_title": "नया वाहन",
+  "vehicle_type_selection.new_desc": "नया वाहन जोड़ें और आगे बढ़ें"
 }

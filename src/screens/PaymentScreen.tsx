@@ -143,7 +143,7 @@ export default function PaymentScreen() {
           currency,
           key: keyId,
           amount,
-          name: 'ETNA Parts',
+          name: 'Parts Now',
           order_id: orderId,
           prefill: {
             name: quote.workshopName || '',

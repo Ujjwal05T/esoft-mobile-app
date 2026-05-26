@@ -491,7 +491,7 @@
 
   "faqs.title": "FAQs",
   "faqs.header": "Frequently Asked Questions",
-  "faqs.subtitle": "Find answers to common questions about using ETNA, managing your workshop, handling inquiries, and more. Help documentation coming soon.",
+  "faqs.subtitle": "Find answers to common questions about using Parts Now, managing your workshop, handling inquiries, and more. Help documentation coming soon.",
 
   "policies.title": "Policies",
   "policies.legal": "Legal",
@@ -667,5 +667,12 @@
   "vehicle_selection.active": "Active",
   "vehicle_selection.no_vehicles": "No active vehicles found",
   "vehicle_selection.no_vehicles_matching": "No vehicles matching \"{{query}}\" are currently in the workshop",
-  "vehicle_selection.tap_to_select": "Tap to select"
+  "vehicle_selection.tap_to_select": "Tap to select",
+
+  "vehicle_type_selection.title": "Select Vehicle",
+  "vehicle_type_selection.subtitle": "Choose how you'd like to proceed",
+  "vehicle_type_selection.existing_title": "Existing Vehicle",
+  "vehicle_type_selection.existing_desc": "Select from your registered vehicles",
+  "vehicle_type_selection.new_title": "New Vehicle",
+  "vehicle_type_selection.new_desc": "Add a new vehicle and proceed"
 }

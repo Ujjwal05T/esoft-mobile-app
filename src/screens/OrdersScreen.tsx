@@ -12,12 +12,13 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import Header from '../components/dashboard/Header';
 import OrderCard, {Order, OrderStatus} from '../components/dashboard/OrderCard';
 import FloatingActionButton from '../components/dashboard/FloatingActionButton';
 import VehicleSelectionOverlay, {
   type VehicleInfo,
 } from '../components/overlays/VehicleSelectionOverlay';
+import VehicleTypeSelectionOverlay from '../components/overlays/VehicleTypeSelectionOverlay';
+import AddVehicleOverlay from '../components/overlays/AddVehicleOverlay';
 import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import {
@@ -60,10 +61,13 @@ export default function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Overlay states
+  const [showVehicleTypeSelection, setShowVehicleTypeSelection] = useState(false);
   const [showVehicleSelection, setShowVehicleSelection] = useState(false);
+  const [addVehicleForOrderParts, setAddVehicleForOrderParts] = useState(false);
   const [showRequestPart, setShowRequestPart] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleResponse | null>(null);
   const [activeVisitCategories, setActiveVisitCategories] = useState<string[]>([]);
+  const [activeVisitId, setActiveVisitId] = useState<number | undefined>(undefined);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   const fetchOrders = useCallback(async (isRefresh = false) => {
@@ -136,13 +140,23 @@ export default function OrdersScreen() {
 
   // ── FAB Handlers ─────────────────────────────────────────────────────────────
 
-  const handleRequestPart = () => setShowVehicleSelection(true);
+  const handleRequestPart = () => setShowVehicleTypeSelection(true);
 
   const handleVehicleSelected = async (vehicle: VehicleResponse, _info: VehicleInfo) => {
     setSelectedVehicle(vehicle);
     const visitRes = await getActiveVehicleVisit(vehicle.id);
-    setActiveVisitCategories(visitRes.data?.activeJobCategories ?? []);
+    setActiveVisitCategories(visitRes.data?.activeJobCategories?.length ? visitRes.data.activeJobCategories : ['Default']);
+    setActiveVisitId(visitRes.data?.id);
     setShowVehicleSelection(false);
+    setShowRequestPart(true);
+  };
+
+  const handleNewVehicleCreatedForOrderParts = async (vehicleId: number) => {
+    setSelectedVehicle({id: vehicleId} as VehicleResponse);
+    const visitRes = await getActiveVehicleVisit(vehicleId);
+    setActiveVisitCategories(visitRes.data?.activeJobCategories?.length ? visitRes.data.activeJobCategories : ['Default']);
+    setActiveVisitId(visitRes.data?.id);
+    setAddVehicleForOrderParts(false);
     setShowRequestPart(true);
   };
 
@@ -191,7 +205,7 @@ export default function OrdersScreen() {
         items,
         audioFiles,
         imageFiles,
-        undefined,
+        activeVisitId,
         null,
       );
 
@@ -279,6 +293,27 @@ export default function OrdersScreen() {
         navigationOptions={[
           {label: t('vehicle.request_part'), onPress: handleRequestPart},
         ]}
+      />
+
+      {/* ── Vehicle Type Selection Overlay ──────────────────────────── */}
+      <VehicleTypeSelectionOverlay
+        isOpen={showVehicleTypeSelection}
+        onClose={() => setShowVehicleTypeSelection(false)}
+        onSelectExisting={() => {
+          setShowVehicleTypeSelection(false);
+          setShowVehicleSelection(true);
+        }}
+        onSelectNew={() => {
+          setShowVehicleTypeSelection(false);
+          setAddVehicleForOrderParts(true);
+        }}
+      />
+
+      {/* ── Add Vehicle Overlay (for order parts) ───────────────────── */}
+      <AddVehicleOverlay
+        isOpen={addVehicleForOrderParts}
+        onClose={() => setAddVehicleForOrderParts(false)}
+        onVehicleCreated={handleNewVehicleCreatedForOrderParts}
       />
 
       {/* ── Vehicle Selection Overlay ────────────────────────────────── */}

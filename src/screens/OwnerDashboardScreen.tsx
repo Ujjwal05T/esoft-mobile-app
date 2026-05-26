@@ -40,6 +40,7 @@ import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import NewJobCardOverlay from '../components/overlays/NewJobCardOverlay';
 import FiltersOverlay from '../components/overlays/FiltersOverlay';
 import VehicleSelectionOverlay, {type VehicleInfo} from '../components/overlays/VehicleSelectionOverlay';
+import VehicleTypeSelectionOverlay from '../components/overlays/VehicleTypeSelectionOverlay';
 import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
@@ -54,10 +55,13 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
   const [alert, setAlert] = useState<AlertState | null>(null);
   const [newJobOpen, setNewJobOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [showVehicleTypeSelection, setShowVehicleTypeSelection] = useState(false);
   const [showVehicleSelection, setShowVehicleSelection] = useState(false);
+  const [addVehicleForOrderParts, setAddVehicleForOrderParts] = useState(false);
   const [showRequestPart, setShowRequestPart] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleResponse | null>(null);
   const [activeVisitCategories, setActiveVisitCategories] = useState<string[]>([]);
+  const [activeVisitId, setActiveVisitId] = useState<number | undefined>(undefined);
 
   // Dashboard statistics state
   const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
@@ -104,7 +108,17 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
     setSelectedVehicle(vehicle);
     const visitRes = await getActiveVehicleVisit(vehicle.id);
     setActiveVisitCategories(visitRes.data?.activeJobCategories?.length ? visitRes.data.activeJobCategories : ['Default']);
+    setActiveVisitId(visitRes.data?.id);
     setShowVehicleSelection(false);
+    setShowRequestPart(true);
+  };
+
+  const handleNewVehicleCreatedForOrderParts = async (vehicleId: number) => {
+    setSelectedVehicle({id: vehicleId} as VehicleResponse);
+    const visitRes = await getActiveVehicleVisit(vehicleId);
+    setActiveVisitCategories(visitRes.data?.activeJobCategories?.length ? visitRes.data.activeJobCategories : ['Default']);
+    setActiveVisitId(visitRes.data?.id);
+    setAddVehicleForOrderParts(false);
     setShowRequestPart(true);
   };
 
@@ -141,7 +155,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
         items,
         audioFiles,
         imageFiles,
-        undefined,
+        activeVisitId,
         null,
       );
       if (result.success) {
@@ -216,7 +230,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
         }>
 
           {/* ── Get Instant Quotes Card ── Update: Used as Order Now as label but working is same */}
-        <RaisePartsCard text1="Order parts," text2="Get Instant Quotes" onPress={() => setShowVehicleSelection(true)} />
+        <RaisePartsCard text1="Order parts," text2="Get Instant Quotes" onPress={() => setShowVehicleTypeSelection(true)} />
 
         {/* ── Status Cards – 2-column grid ── */}
         <View style={styles.statusGrid}>
@@ -322,6 +336,12 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
         onClose={() => setAddVehicleOpen(false)}
       />
 
+      <AddVehicleOverlay
+        isOpen={addVehicleForOrderParts}
+        onClose={() => setAddVehicleForOrderParts(false)}
+        onVehicleCreated={handleNewVehicleCreatedForOrderParts}
+      />
+
       <AddStaffOverlay
         isOpen={addStaffOpen}
         onClose={() => setAddStaffOpen(false)}
@@ -344,6 +364,19 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
         onVehicleSelected={vehicleId => {
           setFiltersOpen(false);
           navigation?.navigate('VehicleDetail', {vehicleId});
+        }}
+      />
+
+      <VehicleTypeSelectionOverlay
+        isOpen={showVehicleTypeSelection}
+        onClose={() => setShowVehicleTypeSelection(false)}
+        onSelectExisting={() => {
+          setShowVehicleTypeSelection(false);
+          setShowVehicleSelection(true);
+        }}
+        onSelectNew={() => {
+          setShowVehicleTypeSelection(false);
+          setAddVehicleForOrderParts(true);
         }}
       />
 

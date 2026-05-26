@@ -63,6 +63,7 @@ interface AddVehicleOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitRequest?: (data: VehicleRequestFormData) => void;
+  onVehicleCreated?: (vehicleId: number) => void;
 }
 
 
@@ -461,6 +462,7 @@ export default function AddVehicleOverlay({
   isOpen,
   onClose,
   onSubmitRequest,
+  onVehicleCreated,
 }: AddVehicleOverlayProps) {
   const {t} = useTranslation();
   type ViewType = 'search' | 'manual' | 'form' | 'gatein' | 'success';
@@ -855,6 +857,7 @@ export default function AddVehicleOverlay({
         setApiError(result.error || t('vehicle.unexpected_error'));
         return;
       }
+      onVehicleCreated?.(createdVehicleId!);
       setCurrentView('success');
     } catch {
       setApiError(t('vehicle.unexpected_error'));

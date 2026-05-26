@@ -392,7 +392,7 @@ export default function DisputeCommentsOverlay({
                                   styles.commentSender,
                                   etna && styles.commentSenderEtna,
                                 ]}>
-                                {etna ? 'By ETNA' : c.senderName}
+                                {etna ? 'By Parts Now' : c.senderName}
                               </Text>
                               <Text style={styles.commentTime}>
                                 {formatTimeIST(c.createdAt)}
