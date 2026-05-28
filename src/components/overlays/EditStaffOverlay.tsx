@@ -12,7 +12,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
-import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import {launchImageLibrary} from 'react-native-image-picker';
+import {launchCameraWithPermission} from '../../utils/cameraPermission';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 import {useTranslation} from 'react-i18next';
 
@@ -141,7 +142,7 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
       }
     };
     if (source === 'camera') {
-      launchCamera({mediaType: 'photo', quality: 0.8, maxWidth: 1000, maxHeight: 1000, saveToPhotos: false}, onResult);
+      launchCameraWithPermission({mediaType: 'photo', quality: 0.8, maxWidth: 1000, maxHeight: 1000, saveToPhotos: false}, onResult);
     } else {
       launchImageLibrary({mediaType: 'photo', quality: 0.8, maxWidth: 1000, maxHeight: 1000, selectionLimit: 1}, onResult);
     }

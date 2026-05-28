@@ -26,6 +26,8 @@ import FiltersOverlay, {FilterData} from '../components/overlays/FiltersOverlay'
 import VehicleSelectionOverlay, {
   type VehicleInfo,
 } from '../components/overlays/VehicleSelectionOverlay';
+import VehicleTypeSelectionOverlay from '../components/overlays/VehicleTypeSelectionOverlay';
+import AddVehicleOverlay from '../components/overlays/AddVehicleOverlay';
 import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
 import RaiseDisputeOverlay, {DisputeFormData} from '../components/overlays/RaiseDisputeOverlay';
 import DisputeCommentsOverlay from '../components/overlays/DisputeCommentsOverlay';
@@ -40,6 +42,7 @@ import {
   getDisputesByWorkshopOwner,
   getOrdersByVehicleId,
   getOrderById,
+  createInquiry,
   createInquiryWithMedia,
   createDisputeWithFiles,
   updateDisputeStatus,
@@ -263,6 +266,8 @@ export default function InquiryScreen() {
   });
 
   // Overlay states
+  const [showVehicleTypeSelection, setShowVehicleTypeSelection] = useState(false);
+  const [addVehicleForOrderParts, setAddVehicleForOrderParts] = useState(false);
   const [showVehicleSelection, setShowVehicleSelection] = useState(false);
   const [targetOverlay, setTargetOverlay] = useState<'requestPart' | 'raiseDispute' | null>(null);
   const [showRequestPart, setShowRequestPart] = useState(false);
@@ -270,6 +275,7 @@ export default function InquiryScreen() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleResponse | null>(null);
   const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo | null>(null);
   const [activeVisitCategories, setActiveVisitCategories] = useState<string[]>([]);
+  const [activeVisitId, setActiveVisitId] = useState<number | undefined>(undefined);
   const [vehicleOrders, setVehicleOrders] = useState<any[]>([]);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
   const [editInquiry, setEditInquiry] = useState<{id: number; items: InquiryItemResponse[]} | null>(null);
@@ -471,6 +477,55 @@ export default function InquiryScreen() {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
+  const handleReRequest = async (numericId: number) => {
+    setAppAlert({
+      type: 'confirm',
+      title: t('inquiry.re_request_title'),
+      message: t('inquiry.re_request_confirm'),
+      onConfirm: () => {
+        (async () => {
+          try {
+            const detail = await getInquiryById(numericId);
+            if (!detail.success || !detail.data) {
+              setAppAlert({type: 'error', message: t('inquiry.re_request_failed_msg')});
+              return;
+            }
+            const inq = detail.data;
+            const result = await createInquiry({
+              vehicleId: inq.vehicleId,
+              vehicleVisitId: inq.vehicleVisitId ?? undefined,
+              workshopOwnerId: inq.workshopOwnerId,
+              requestedByStaffId: null,
+              jobCategories: inq.jobCategories,
+              items: inq.items.map(item => ({
+                partName: item.partName,
+                preferredBrand: item.preferredBrand,
+                quantity: item.quantity,
+                remark: item.remark,
+                audioUrl: item.audioUrl ?? undefined,
+                audioDuration: item.audioDuration ?? undefined,
+                image1Url: item.image1Url ?? undefined,
+                image2Url: item.image2Url ?? undefined,
+                image3Url: item.image3Url ?? undefined,
+              })),
+            });
+            if (result.success) {
+              setAppAlert({
+                type: 'success',
+                message: t('inquiry.re_request_success'),
+                onDone: () => fetchInquiries(),
+              });
+            } else {
+              setAppAlert({type: 'error', message: result.error || t('inquiry.re_request_failed_msg')});
+            }
+          } catch {
+            setAppAlert({type: 'error', message: t('inquiry.re_request_failed_msg')});
+          }
+        })();
+      },
+    });
+  };
+
   const handleApplyFilters = (filters: FilterData) => {
     setActiveFilters(filters);
     setFilteredInquiries(applyInquiryFilters(inquiries, filters));
@@ -501,7 +556,16 @@ export default function InquiryScreen() {
 
   const handleRequestPart = () => {
     setTargetOverlay('requestPart');
-    setShowVehicleSelection(true);
+    setShowVehicleTypeSelection(true);
+  };
+
+  const handleNewVehicleCreatedForOrderParts = async (vehicleId: number) => {
+    setSelectedVehicle({id: vehicleId} as VehicleResponse);
+    const visitRes = await getActiveVehicleVisit(vehicleId);
+    setActiveVisitCategories(visitRes.data?.activeJobCategories?.length ? visitRes.data.activeJobCategories : ['Default']);
+    setActiveVisitId(visitRes.data?.id);
+    setAddVehicleForOrderParts(false);
+    setShowRequestPart(true);
   };
 
   const handleRaiseDispute = () => {
@@ -515,7 +579,8 @@ export default function InquiryScreen() {
 
     // Fetch active visit categories for the selected vehicle
     const visitRes = await getActiveVehicleVisit(vehicle.id);
-    setActiveVisitCategories(visitRes.data?.activeJobCategories ?? []);
+    setActiveVisitCategories(visitRes.data?.activeJobCategories?.length ? visitRes.data.activeJobCategories : ['Default']);
+    setActiveVisitId(visitRes.data?.id);
 
     // Fetch orders if raising dispute
     if (targetOverlay === 'raiseDispute') {
@@ -602,8 +667,8 @@ export default function InquiryScreen() {
         items,
         audioFiles,
         imageFiles,
-        undefined, // vehicleVisitId
-        null, // requestedByStaffId
+        activeVisitId,
+        null,
       );
 
       if (result.success) {
@@ -825,7 +890,7 @@ export default function InquiryScreen() {
                       fetchInquiries();
                     }
                   }}
-                  onReRequest={() => console.log('Re-request inquiry:', inquiry.id)}
+                  onReRequest={() => { if (inquiry.numericId) handleReRequest(inquiry.numericId); }}
                   showNumberPlate={true}
                   isOwner={true}
                 />
@@ -988,6 +1053,27 @@ export default function InquiryScreen() {
         ]}
       />
 
+      {/* ── Vehicle Type Selection Overlay ───────────────────────────── */}
+      <VehicleTypeSelectionOverlay
+        isOpen={showVehicleTypeSelection}
+        onClose={() => setShowVehicleTypeSelection(false)}
+        onSelectExisting={() => {
+          setShowVehicleTypeSelection(false);
+          setShowVehicleSelection(true);
+        }}
+        onSelectNew={() => {
+          setShowVehicleTypeSelection(false);
+          setAddVehicleForOrderParts(true);
+        }}
+      />
+
+      {/* ── Add Vehicle Overlay (for order parts) ────────────────────── */}
+      <AddVehicleOverlay
+        isOpen={addVehicleForOrderParts}
+        onClose={() => setAddVehicleForOrderParts(false)}
+        onVehicleCreated={handleNewVehicleCreatedForOrderParts}
+      />
+
       {/* ── Vehicle Selection Overlay ─────────────────────────────────── */}
       <VehicleSelectionOverlay
         isOpen={showVehicleSelection}
@@ -1001,7 +1087,7 @@ export default function InquiryScreen() {
       />
 
       {/* ── Request Part Overlay ──────────────────────────────────────── */}
-      {vehicleInfo && (
+      {selectedVehicle && (
         <RequestPartOverlay
           isOpen={showRequestPart}
           onClose={() => setShowRequestPart(false)}

@@ -15,7 +15,8 @@ import {
 import Svg, {Path, Rect} from 'react-native-svg';
 import {useTranslation} from 'react-i18next';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
-import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import {launchImageLibrary} from 'react-native-image-picker';
+import {launchCameraWithPermission} from '../../utils/cameraPermission';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 import AppAlert, {AlertState} from './AppAlert';
 import {
@@ -336,7 +337,7 @@ export default function EditInquiryOverlay({
       }
     };
     if (source === 'camera') {
-      launchCamera({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+      launchCameraWithPermission({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
     } else {
       launchImageLibrary({mediaType: 'photo', quality: 0.8}, onResult);
     }

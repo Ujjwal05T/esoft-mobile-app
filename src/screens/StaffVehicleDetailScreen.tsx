@@ -36,8 +36,8 @@ import {
   getDisputesByVehicleVisitId,
   getOrderById,
   createDisputeWithFiles,
-  updateDisputeStatus,
   getStoredUser,
+  createInquiry,
   createInquiryWithMedia,
   getStaffProfile,
   getInquiryById,
@@ -229,6 +229,58 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
     if (result.success && result.data) {
       setEditInquiry({id: numericId, items: result.data.items});
     }
+  };
+
+  const handleReRequest = async (numericId: number) => {
+    setAppAlert({
+      type: 'confirm',
+      title: t('inquiry.re_request_title'),
+      message: t('inquiry.re_request_confirm'),
+      onConfirm: () => {
+        (async () => {
+          try {
+            const detail = await getInquiryById(numericId);
+            if (!detail.success || !detail.data) {
+              setAppAlert({type: 'error', message: t('inquiry.re_request_failed_msg')});
+              return;
+            }
+            const inq = detail.data;
+            const user = await getStoredUser();
+            const staffProfileRes = await getStaffProfile();
+            const workshopOwnerId = staffProfileRes.data?.workshopOwnerId ?? user?.id ?? 0;
+            const result = await createInquiry({
+              vehicleId: inq.vehicleId,
+              vehicleVisitId: inq.vehicleVisitId ?? undefined,
+              workshopOwnerId,
+              requestedByStaffId: user?.id ?? null,
+              jobCategories: inq.jobCategories,
+              items: inq.items.map(item => ({
+                partName: item.partName,
+                preferredBrand: item.preferredBrand,
+                quantity: item.quantity,
+                remark: item.remark,
+                audioUrl: item.audioUrl ?? undefined,
+                audioDuration: item.audioDuration ?? undefined,
+                image1Url: item.image1Url ?? undefined,
+                image2Url: item.image2Url ?? undefined,
+                image3Url: item.image3Url ?? undefined,
+              })),
+            });
+            if (result.success) {
+              setAppAlert({
+                type: 'success',
+                message: t('inquiry.re_request_success'),
+                onDone: () => { if (activeVisit) fetchInquiries(activeVisit.id); },
+              });
+            } else {
+              setAppAlert({type: 'error', message: result.error || t('inquiry.re_request_failed_msg')});
+            }
+          } catch {
+            setAppAlert({type: 'error', message: t('inquiry.re_request_failed_msg')});
+          }
+        })();
+      },
+    });
   };
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('jobcard');
@@ -813,7 +865,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
                       }
                     }}
                     onApprove={() => console.log('Approve inquiry:', inquiry.id)}
-                    onReRequest={() => console.log('Re-request inquiry:', inquiry.id)}
+                    onReRequest={() => { if (inquiry.numericId) handleReRequest(inquiry.numericId); }}
                     showNumberPlate={false}
                     action={
                       inquiry.status === 'closed' || inquiry.status === 'approved'

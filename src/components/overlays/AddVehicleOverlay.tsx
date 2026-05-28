@@ -17,7 +17,8 @@ import {
   Easing,
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
-import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import {launchImageLibrary} from 'react-native-image-picker';
+import {launchCameraWithPermission} from '../../utils/cameraPermission';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -906,7 +907,7 @@ export default function AddVehicleOverlay({
       }
     };
     if (source === 'camera') {
-      launchCamera({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+      launchCameraWithPermission({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
     } else {
       launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 10}, onResult);
     }
@@ -929,7 +930,7 @@ export default function AddVehicleOverlay({
       }
     };
     if (source === 'camera') {
-      launchCamera({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+      launchCameraWithPermission({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
     } else {
       launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 1}, onResult);
     }

@@ -15,7 +15,8 @@ import {
   Dimensions,
 } from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
-import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import {launchImageLibrary} from 'react-native-image-picker';
+import {launchCameraWithPermission} from '../../utils/cameraPermission';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import {formatDateIST} from '../../utils/dateUtils';
@@ -293,7 +294,7 @@ export default function RaiseDisputeOverlay({
       }
     };
     if (source === 'camera') {
-      launchCamera({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+      launchCameraWithPermission({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
     } else {
       launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 1}, onResult);
     }

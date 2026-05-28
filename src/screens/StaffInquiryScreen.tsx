@@ -23,6 +23,8 @@ import FiltersOverlay, {FilterData} from '../components/overlays/FiltersOverlay'
 import VehicleSelectionOverlay, {
   type VehicleInfo,
 } from '../components/overlays/VehicleSelectionOverlay';
+import VehicleTypeSelectionOverlay from '../components/overlays/VehicleTypeSelectionOverlay';
+import AddVehicleOverlay from '../components/overlays/AddVehicleOverlay';
 import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
 import RaiseDisputeOverlay from '../components/overlays/RaiseDisputeOverlay';
 import type {DisputeFormData} from '../components/overlays/RaiseDisputeOverlay';
@@ -36,9 +38,9 @@ import {
   getDisputesByRaisedById,
   getOrdersByVehicleId,
   getOrderById,
+  createInquiry,
   createInquiryWithMedia,
   createDisputeWithFiles,
-  updateDisputeStatus,
   getStaffProfile,
   getJobCardsByVehicle,
   getInquiryById,
@@ -220,6 +222,8 @@ export default function StaffInquiryScreen() {
   const [permissions, setPermissions] = useState<StaffPermissions | null>(null);
 
   // Overlay states
+  const [showVehicleTypeSelection, setShowVehicleTypeSelection] = useState(false);
+  const [addVehicleForOrderParts, setAddVehicleForOrderParts] = useState(false);
   const [showVehicleSelection, setShowVehicleSelection] = useState(false);
   const [targetOverlay, setTargetOverlay] = useState<'requestPart' | 'raiseDispute' | null>(null);
   const [showRequestPart, setShowRequestPart] = useState(false);
@@ -365,11 +369,75 @@ export default function StaffInquiryScreen() {
 
   const filterCount = countActiveFilters(activeFilters);
 
+  const handleReRequest = async (numericId: number) => {
+    setAppAlert({
+      type: 'confirm',
+      title: t('inquiry.re_request_title'),
+      message: t('inquiry.re_request_confirm'),
+      onConfirm: () => {
+        (async () => {
+          try {
+            const detail = await getInquiryById(numericId);
+            if (!detail.success || !detail.data) {
+              setAppAlert({type: 'error', message: t('inquiry.re_request_failed_msg')});
+              return;
+            }
+            const inq = detail.data;
+            const user = await getStoredUser();
+            const staffProfileRes = await getStaffProfile();
+            const workshopOwnerId = staffProfileRes.data?.workshopOwnerId ?? user?.id ?? 0;
+            const result = await createInquiry({
+              vehicleId: inq.vehicleId,
+              vehicleVisitId: inq.vehicleVisitId ?? undefined,
+              workshopOwnerId,
+              requestedByStaffId: user?.id ?? null,
+              jobCategories: inq.jobCategories,
+              items: inq.items.map(item => ({
+                partName: item.partName,
+                preferredBrand: item.preferredBrand,
+                quantity: item.quantity,
+                remark: item.remark,
+                audioUrl: item.audioUrl ?? undefined,
+                audioDuration: item.audioDuration ?? undefined,
+                image1Url: item.image1Url ?? undefined,
+                image2Url: item.image2Url ?? undefined,
+                image3Url: item.image3Url ?? undefined,
+              })),
+            });
+            if (result.success) {
+              setAppAlert({
+                type: 'success',
+                message: t('inquiry.re_request_success'),
+                onDone: () => fetchInquiries(),
+              });
+            } else {
+              setAppAlert({type: 'error', message: result.error || t('inquiry.re_request_failed_msg')});
+            }
+          } catch {
+            setAppAlert({type: 'error', message: t('inquiry.re_request_failed_msg')});
+          }
+        })();
+      },
+    });
+  };
+
   // ── FAB Handlers ────────────────────────────────────────────────────────────
 
   const handleRequestPart = () => {
     setTargetOverlay('requestPart');
-    setShowVehicleSelection(true);
+    // Skip "New Vehicle" option if staff doesn't have addVehicle permission
+    if (permissions !== null && !permissions.addVehicle) {
+      setShowVehicleSelection(true);
+    } else {
+      setShowVehicleTypeSelection(true);
+    }
+  };
+
+  const handleNewVehicleCreatedForOrderParts = async (vehicleId: number) => {
+    setSelectedVehicle({id: vehicleId} as VehicleResponse);
+    setActiveVisitCategories(['Default']);
+    setAddVehicleForOrderParts(false);
+    setShowRequestPart(true);
   };
 
   const handleRaiseDispute = () => {
@@ -712,7 +780,7 @@ export default function StaffInquiryScreen() {
                       navigation.navigate('InquiryDetail', {inquiryId: inquiry.numericId});
                     }
                   }}
-                  onReRequest={() => console.log('Re-request inquiry:', inquiry.id)}
+                  onReRequest={() => { if (inquiry.numericId) handleReRequest(inquiry.numericId); }}
                   showNumberPlate={true}
                   isOwner={false}
                 />
@@ -822,6 +890,27 @@ export default function StaffInquiryScreen() {
         ]}
       />
 
+      {/* ── Vehicle Type Selection Overlay ───────────────────────────── */}
+      <VehicleTypeSelectionOverlay
+        isOpen={showVehicleTypeSelection}
+        onClose={() => setShowVehicleTypeSelection(false)}
+        onSelectExisting={() => {
+          setShowVehicleTypeSelection(false);
+          setShowVehicleSelection(true);
+        }}
+        onSelectNew={() => {
+          setShowVehicleTypeSelection(false);
+          setAddVehicleForOrderParts(true);
+        }}
+      />
+
+      {/* ── Add Vehicle Overlay (for order parts) ────────────────────── */}
+      <AddVehicleOverlay
+        isOpen={addVehicleForOrderParts}
+        onClose={() => setAddVehicleForOrderParts(false)}
+        onVehicleCreated={handleNewVehicleCreatedForOrderParts}
+      />
+
       {/* ── Vehicle Selection Overlay ─────────────────────────────────── */}
       <VehicleSelectionOverlay
         isOpen={showVehicleSelection}
@@ -835,7 +924,7 @@ export default function StaffInquiryScreen() {
       />
 
       {/* ── Request Part Overlay ──────────────────────────────────────── */}
-      {vehicleInfo && (
+      {selectedVehicle && (
         <RequestPartOverlay
           isOpen={showRequestPart}
           onClose={() => setShowRequestPart(false)}

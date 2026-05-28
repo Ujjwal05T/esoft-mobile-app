@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import {useTranslation} from 'react-i18next';
-import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import {launchImageLibrary} from 'react-native-image-picker';
+import {launchCameraWithPermission} from '../../utils/cameraPermission';
 import AppAlert from './AppAlert';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 
@@ -215,7 +216,7 @@ export default function AddStaffOverlay({
       }
     };
     if (source === 'camera') {
-      launchCamera({mediaType: 'photo', quality: 0.8, maxWidth: 1000, maxHeight: 1000, saveToPhotos: false}, onResult);
+      launchCameraWithPermission({mediaType: 'photo', quality: 0.8, maxWidth: 1000, maxHeight: 1000, saveToPhotos: false}, onResult);
     } else {
       launchImageLibrary({mediaType: 'photo', quality: 0.8, maxWidth: 1000, maxHeight: 1000, selectionLimit: 1}, onResult);
     }
