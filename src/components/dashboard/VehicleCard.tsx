@@ -6,7 +6,7 @@ import {formatPlateNumber} from '../../utils/formatPlate';
 import {useTranslation} from 'react-i18next';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const TOYOTA_CRYSTA = require('../../assets/images/toyota-crysta.png') as number;
+const DEFAULT_CAR_IMAGE = require('../../assets/images/default-car.png') as number;
 
 interface VehicleCardProps {
   plateNumber: string;
@@ -67,7 +67,7 @@ export default function VehicleCard({
   onView,
 }: VehicleCardProps) {
   const {t} = useTranslation();
-  const vehicleImage = imageUrl ? {uri: imageUrl} : TOYOTA_CRYSTA;
+  const vehicleImage = imageUrl ? {uri: imageUrl} : DEFAULT_CAR_IMAGE;
   const vehicleName = [year, make, model].filter(Boolean).join(' ');
   const formattedPlate = formatPlateNumber(plateNumber);
 

@@ -233,11 +233,11 @@ const bpStyles = StyleSheet.create({
   tileTextSelected: {color: '#e5383b'},
 });
 
-const TOYOTA_CRYSTA_FALLBACK = require('../../assets/images/brezza.png') as number;
+const DEFAULT_CAR_FALLBACK = require('../../assets/images/default-car.png') as number;
 
 function ModelTileImage({uri}: {uri: string | null}) {
   const [errored, setErrored] = useState(false);
-  const source = (!uri || errored) ? TOYOTA_CRYSTA_FALLBACK : {uri};
+  const source = (!uri || errored) ? DEFAULT_CAR_FALLBACK : {uri};
   return (
     <Image
       source={source}
