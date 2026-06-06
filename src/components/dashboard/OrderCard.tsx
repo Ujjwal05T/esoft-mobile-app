@@ -38,6 +38,8 @@ export interface Order {
   placedDate: string;
   deliveryDate: string;
   totalAmount: number;
+  couponCode?: string | null;
+  discountAmount?: number;
   status: OrderStatus;
   orderedParts: OrderedPart[];
 }
@@ -106,9 +108,19 @@ export default function OrderCard({
             <Text style={styles.deliveryLabel}>{deliveryLabel}</Text>
             <Text style={styles.deliveryDate}>{order.deliveryDate}</Text>
           </View>
-          <Text style={styles.totalAmount}>
-            ₹{order.totalAmount.toLocaleString('en-IN')}
-          </Text>
+          <View style={styles.amountBlock}>
+            {order.couponCode && (order.discountAmount ?? 0) > 0 && (
+              <Text style={styles.totalAmountStrike}>
+                ₹{order.totalAmount.toLocaleString('en-IN')}
+              </Text>
+            )}
+            <Text style={styles.totalAmount}>
+              ₹{(order.totalAmount - (order.discountAmount ?? 0)).toLocaleString('en-IN')}
+            </Text>
+            {order.couponCode && (order.discountAmount ?? 0) > 0 && (
+              <Text style={styles.couponBadge}>{order.couponCode}</Text>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
 
@@ -199,7 +211,10 @@ const styles = StyleSheet.create({
   deliveryRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
   deliveryLabel: {fontSize: 12, color: '#757575'},
   deliveryDate: {fontSize: 14, fontWeight: '600', color: '#000000'},
+  amountBlock: {alignItems: 'flex-end'},
+  totalAmountStrike: {fontSize: 12, color: '#9e9e9e', textDecorationLine: 'line-through'},
   totalAmount: {fontSize: 18, fontWeight: '700', color: '#e5383b'},
+  couponBadge: {fontSize: 10, fontWeight: '600', color: '#16a34a', backgroundColor: '#f0fdf4', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1, overflow: 'hidden', marginTop: 2},
   expandedContent: {paddingHorizontal: 16, paddingBottom: 16},
   partsLabel: {fontSize: 12, color: '#757575', marginBottom: 12},
   partsList: {gap: 12},

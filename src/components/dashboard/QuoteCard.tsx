@@ -126,12 +126,17 @@ export default function QuoteCard({
                         {item.brand && (
                           <Text style={styles.itemMeta}>{t('card.brand')}{item.brand}</Text>
                         )}
-                        {item.mrp && (
-                          <Text style={styles.itemMeta}>{t('card.mrp')}{formatPrice(item.mrp)}</Text>
-                        )}
                       </View>
                       <View style={styles.priceCol}>
+                        {item.mrp != null && item.mrp > item.price && (
+                          <Text style={styles.itemMrp}>{formatPrice(item.mrp)}</Text>
+                        )}
                         <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
+                        {item.mrp != null && item.mrp > item.price && (
+                          <Text style={styles.itemDiscount}>
+                            ({Math.round((item.mrp - item.price) / item.mrp * 100)}% off)
+                          </Text>
+                        )}
                         <Text style={styles.itemQty}>{t('card.qty')}{item.quantity}</Text>
                       </View>
                     </View>
@@ -256,7 +261,9 @@ const styles = StyleSheet.create({
   itemName: {fontSize: 14, fontWeight: '500', color: '#e5383b', marginBottom: 2},
   itemMeta: {fontSize: 12, color: '#525252', marginBottom: 2},
   priceCol: {alignItems: 'flex-end'},
+  itemMrp: {fontSize: 11, color: '#9ca3af', textDecorationLine: 'line-through', textAlign: 'right'},
   itemPrice: {fontSize: 14, fontWeight: '700', color: '#000000'},
+  itemDiscount: {fontSize: 11, fontWeight: '600', color: '#16a34a', textAlign: 'right'},
   itemQty: {fontSize: 12, fontWeight: '500', color: '#828282'},
   moreText: {fontSize: 14, fontWeight: '600', color: '#e5383b', textAlign: 'center', marginTop: 12},
   viewBtn: {marginTop: 16, borderWidth: 1, borderColor: '#e5383b', height: 44, borderRadius: 8, alignItems: 'center', justifyContent: 'center'},

@@ -117,7 +117,7 @@ export default function VehicleCard({
           <Image
             source={vehicleImage}
             style={styles.vehicleImage}
-            resizeMode="cover"
+            resizeMode="contain"
           />
           <View style={styles.plateBadgeGray}>
             <Text style={styles.plateTextDark}>{formattedPlate}</Text>
@@ -202,7 +202,7 @@ export default function VehicleCard({
         <Image
           source={vehicleImage}
           style={styles.vehicleImage}
-          resizeMode="cover"
+          resizeMode="contain"
         />
         <View style={styles.plateBadgeWhiteAbs}>
           <Text style={styles.plateTextRed}>{formattedPlate}</Text>
@@ -232,15 +232,16 @@ const styles = StyleSheet.create({
   imageSection: {
     height: 140,
     position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingHorizontal: 12,
+    marginLeft: 12,
+    paddingTop: 12,
+    paddingBottom: 10,
   },
   vehicleImage: {
-    position: 'absolute',
-    top: 20,
-    left: 10,
-    right: 10,
-    bottom: 10,
-    height: 100,
     width: '60%',
+    height: '100%',
   },
   plateBadgeWhiteAbs: {
     position: 'absolute',

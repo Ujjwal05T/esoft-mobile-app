@@ -3,7 +3,7 @@ import * as Keychain from 'react-native-keychain';
 // API Base URL
 // const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
 // export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-const API_BASE_URL = 'https://updated-dated-cents-water.trycloudflare.com/api';
+const API_BASE_URL = 'https://nicole-recovered-organic-definitions.trycloudflare.com/api';
 export const SERVER_ORIGIN = 'https://assistant-tickets-alpha-buck.trycloudflare.com';
 
 // ==========================================
@@ -1781,6 +1781,8 @@ export interface CreatePaymentOrderResponse {
   currency: string;
   keyId: string;
   quoteNumber: string;
+  couponCode?: string;
+  discountAmount?: number;
 }
 
 export interface VerifyPaymentResponse {
@@ -1790,12 +1792,54 @@ export interface VerifyPaymentResponse {
   status: string;
 }
 
+export interface Coupon {
+  id: number;
+  code: string;
+  description: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minOrderValue: number | null;
+  maxDiscountAmount: number | null;
+  validFrom: string;
+  validUntil: string | null;
+  usageLimit: number | null;
+  usageCount: number;
+  perWorkshopUsageLimit: number | null;
+  isActive: boolean;
+  firstOrderOnly: boolean;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface CouponValidationResponse {
+  isValid: boolean;
+  errorMessage?: string;
+  code?: string;
+  discountType?: string;
+  discountAmount: number;
+  originalAmount: number;
+  finalAmount: number;
+}
+
+// Get all active/valid coupons (for display in overlay)
+export async function getAvailableCoupons() {
+  return apiRequest<Coupon[]>('/coupon', { method: 'GET' });
+}
+
+// Validate a coupon code before payment
+export async function validateCoupon(code: string, workshopOwnerId: number, orderAmount: number) {
+  return apiRequest<CouponValidationResponse>('/coupon/validate', {
+    method: 'POST',
+    body: JSON.stringify({ code, workshopOwnerId, orderAmount }),
+  });
+}
+
 // Create a Razorpay payment order for a quote
 // Pass selectedItemIds for partial payment (only charge for those items)
-export async function createPaymentOrder(quoteId: number, selectedItemIds?: number[]) {
+export async function createPaymentOrder(quoteId: number, selectedItemIds?: number[], couponCode?: string) {
   return apiRequest<CreatePaymentOrderResponse>('/payment/create-order', {
     method: 'POST',
-    body: JSON.stringify({ quoteId, selectedItemIds: selectedItemIds ?? null }),
+    body: JSON.stringify({ quoteId, selectedItemIds: selectedItemIds ?? null, couponCode: couponCode ?? null }),
   });
 }
 
@@ -1806,6 +1850,8 @@ export async function verifyPayment(data: {
   razorpayPaymentId: string;
   razorpaySignature: string;
   selectedItemIds?: number[];
+  couponCode?: string;
+  discountAmount?: number;
 }) {
   return apiRequest<VerifyPaymentResponse>('/payment/verify', {
     method: 'POST',
@@ -1834,6 +1880,8 @@ export interface WorkshopOrderListItem {
   source: string;
   status: string;
   totalAmount: number;
+  couponCode: string | null;
+  discountAmount: number;
   createdAt: string;
   vehicleName: string | null;
   plateNumber: string | null;
@@ -1870,6 +1918,7 @@ export interface OrderItemApiResponse {
   brand: string;
   description: string;
   quantity: number;
+  mrp: number;
   unitPrice: number;
   totalPrice: number;
   createdAt: string;
@@ -1880,6 +1929,8 @@ export interface OrderDetailApiResponse {
   orderNumber: string;
   status: string;
   totalAmount: number;
+  couponCode?: string | null;
+  discountAmount?: number;
   estimatedDeliveryDate: string | null;
   vehicleName: string | null;
   plateNumber: string | null;

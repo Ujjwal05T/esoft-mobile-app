@@ -15,11 +15,14 @@ import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/RootNavigator';
 import StatusBadge from '../components/ui/StatusBadge';
+import {useAuth} from '../context/AuthContext';
+import CouponOverlay from '../components/overlays/CouponOverlay';
 import {
   getQuoteById,
   createPaymentOrder,
   verifyPayment,
   type QuoteApiResponse,
+  type CouponValidationResponse,
 } from '../services/api';
 
 // SVG payment icons from assets
@@ -54,12 +57,17 @@ export default function PaymentScreen() {
   const navigation = useNavigation<PaymentNavProp>();
   const route = useRoute<PaymentRouteProp>();
   const {quoteId, selectedItemIds} = route.params;
+  const {user} = useAuth();
 
   const [quote, setQuote] = useState<QuoteApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
+
+  // Coupon state
+  const [couponOverlayOpen, setCouponOverlayOpen] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponValidationResponse | null>(null);
 
   useEffect(() => {
     async function fetchQuote() {
@@ -97,6 +105,8 @@ export default function PaymentScreen() {
     : 0;
 
   const grandTotal = partsSubtotal + additionalCharges;
+  const discountAmount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+  const payableTotal = grandTotal - discountAmount;
 
   const getExpiresLabel = () => {
     if (!quote?.expiresAt) return null;
@@ -125,6 +135,7 @@ export default function PaymentScreen() {
         const orderResult = await createPaymentOrder(
           quote.id,
           selectedItemIds.length > 0 ? selectedItemIds : undefined,
+          appliedCoupon?.code,
         );
         console.log('[Payment] Order result:', JSON.stringify(orderResult));
 
@@ -163,6 +174,8 @@ export default function PaymentScreen() {
           razorpayPaymentId: data.razorpay_payment_id,
           razorpaySignature: data.razorpay_signature,
           selectedItemIds: selectedItemIds.length > 0 ? selectedItemIds : undefined,
+          couponCode: appliedCoupon?.code,
+          discountAmount: appliedCoupon?.discountAmount,
         });
         console.log('[Payment] Verify result:', JSON.stringify(verifyResult));
 
@@ -194,7 +207,7 @@ export default function PaymentScreen() {
         setSelectedMethod(null);
       }
     },
-    [quote, paymentLoading, navigation],
+    [quote, paymentLoading, navigation, appliedCoupon],
   );
 
   // ── Loading ─────────────────────────────────────────────
@@ -309,6 +322,33 @@ export default function PaymentScreen() {
               </Text>
             </View>
           </View>
+
+          {/* Coupon discount row */}
+          {appliedCoupon ? (
+            <View style={styles.couponAppliedRow}>
+              <View style={styles.couponAppliedLeft}>
+                <Text style={styles.couponAppliedCode}>{appliedCoupon.code}</Text>
+                <Text style={styles.couponAppliedSaving}>
+                  {t('payment.coupon_saving', {amount: formatPrice(appliedCoupon.discountAmount)})}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setAppliedCoupon(null)} hitSlop={{top:8,bottom:8,left:8,right:8}}>
+                <Text style={styles.couponRemove}>{t('payment.coupon_remove')}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setCouponOverlayOpen(true)}>
+              <Text style={styles.couponLink}>{t('payment.have_promo_code')}</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Payable total (only shown when discount applied) */}
+          {appliedCoupon && (
+            <View style={styles.payableTotalRow}>
+              <Text style={styles.payableTotalLabel}>{t('payment.payable_total')}</Text>
+              <Text style={styles.payableTotalValue}>{formatPrice(payableTotal)}</Text>
+            </View>
+          )}
         </View>
 
         {/* ════════════════════════════════════════
@@ -402,6 +442,15 @@ export default function PaymentScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* ── Coupon Overlay ─────────────────────── */}
+      <CouponOverlay
+        isOpen={couponOverlayOpen}
+        onClose={() => setCouponOverlayOpen(false)}
+        orderAmount={grandTotal}
+        workshopOwnerId={user?.id ?? 0}
+        onCouponApplied={coupon => setAppliedCoupon(coupon)}
+      />
 
       <AppAlert
         isOpen={!!appAlert}
@@ -573,4 +622,39 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#666',
   },
+
+  // Coupon — inline summary card elements
+  couponLink: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#e5383b',
+    textDecorationLine: 'underline',
+    textAlign: 'right',
+  },
+  couponAppliedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  couponAppliedLeft: {gap: 2},
+  couponAppliedCode: {fontSize: 13, fontWeight: '700', color: '#16a34a'},
+  couponAppliedSaving: {fontSize: 12, fontWeight: '500', color: '#15803d'},
+  couponRemove: {fontSize: 12, fontWeight: '600', color: '#e5383b'},
+  payableTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e5e5',
+  },
+  payableTotalLabel: {fontSize: 13, fontWeight: '700', color: '#000'},
+  payableTotalValue: {fontSize: 18, fontWeight: '800', color: '#e5383b'},
+
 });

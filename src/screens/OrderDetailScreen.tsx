@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { generatePDF } from 'react-native-html-to-pdf';
+import RNFS from 'react-native-fs';
+import {generateInvoiceHtml} from '../utils/invoiceTemplate';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
@@ -151,7 +154,7 @@ const OrderSummaryCard = ({order, status}: {order: OrderDetailApiResponse; statu
   const {t} = useTranslation();
   const isDelivered = status === 'delivered';
   const dateLabel = isDelivered ? t('orders.delivered_at') : t('orders.delivery_by');
-  const dateValue = formatDateIST(order.estimatedDeliveryDate);
+  const dateValue = formatDateIST(order.estimatedDeliveryDate, 'Will be updated');
 
   // Build vehicle name from brand + model if vehicleName is null
   const apiVehicleName =
@@ -171,8 +174,10 @@ const OrderSummaryCard = ({order, status}: {order: OrderDetailApiResponse; statu
     (order.packingCharges ?? 0) +
     (order.forwardingCharges ?? 0) +
     (order.shippingCharges ?? 0);
-  const grandTotal = order.totalAmount;
-  const partsSubtotal = grandTotal - additionalCharges;
+  const grossTotal = order.totalAmount;
+  const discountAmount = order.discountAmount ?? 0;
+  const amountPayable = grossTotal - discountAmount;
+  const partsSubtotal = grossTotal - additionalCharges;
 
   return (
     <View style={styles.summaryCard}>
@@ -221,13 +226,25 @@ const OrderSummaryCard = ({order, status}: {order: OrderDetailApiResponse; statu
             </Text>
           </View>
         )}
-        <View style={[styles.amountColumnRight, {width: 80}]}>
+        <View style={[styles.amountColumnRight, {flex: 1}]}>
           <Text style={styles.amountLabel}>{t('orders.grand_total')}</Text>
           <Text style={styles.amountValue}>
-            Rs. {grandTotal.toLocaleString('en-IN')}
+            Rs. {amountPayable.toLocaleString('en-IN')}
           </Text>
         </View>
       </View>
+
+      {/* Coupon row */}
+      {!!order.couponCode && discountAmount > 0 && (
+        <View style={styles.couponRow}>
+          <View style={styles.couponBadge}>
+            <Text style={styles.couponBadgeText}>{order.couponCode}</Text>
+          </View>
+          <Text style={styles.couponDiscount}>
+            −Rs. {discountAmount.toLocaleString('en-IN')} {t('orders.coupon_discount')}
+          </Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -348,6 +365,7 @@ export default function OrderDetailScreen() {
   const [showRaiseDisputeOverlay, setShowRaiseDisputeOverlay] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -380,8 +398,49 @@ export default function OrderDetailScreen() {
 
   const status: OrderStatus = order ? mapStatus(order.status) : 'in-process';
 
-  const handleDownloadInvoice = () => {
-    setAppAlert({type: 'info', title: t('orders.download_invoice'), message: t('orders.invoice_coming_soon')});
+  const handleDownloadInvoice = async () => {
+    if (!order || invoiceLoading) return;
+    console.log('[Invoice] Starting generation for order:', order.orderNumber);
+    setInvoiceLoading(true);
+    try {
+      console.log('[Invoice] Generating HTML...');
+      const html = generateInvoiceHtml(order);
+      console.log('[Invoice] HTML generated, length:', html.length);
+
+      const pdfOptions = {
+        html,
+        fileName: `Invoice_${order.orderNumber}`,
+        base64: true,
+      };
+      console.log('[Invoice] Converting to PDF...');
+      if (!generatePDF) {
+        throw new Error('generatePDF native module not linked — rebuild the app');
+      }
+      const pdf = await generatePDF(pdfOptions);
+      console.log('[Invoice] PDF result pages:', pdf.numberOfPages, 'base64 length:', pdf.base64?.length);
+
+      if (!pdf.base64) throw new Error('PDF generation returned no base64 data');
+
+      const fileName = `Invoice_${order.orderNumber}.pdf`;
+
+      // 1. Save directly to Downloads (works on Android 10 with requestLegacyExternalStorage,
+      //    and on Android 11+ falls back to app external storage silently)
+      const dlPath = `${RNFS.DownloadDirectoryPath}/${fileName}`;
+      await RNFS.writeFile(dlPath, pdf.base64, 'base64');
+
+      setAppAlert({
+        type: 'success',
+        title: t('orders.invoice_saved_title'),
+        message: t('orders.invoice_saved_downloads'),
+      });
+    } catch (err: any) {
+      console.log('[Invoice] Error:', err?.message, err);
+      if (!err?.message?.includes('cancel')) {
+        setAppAlert({type: 'error', title: t('common.failed'), message: t('orders.invoice_error')});
+      }
+    } finally {
+      setInvoiceLoading(false);
+    }
   };
 
   const handleTrack = () => {
@@ -393,7 +452,7 @@ export default function OrderDetailScreen() {
     setShowDisputeOverlay(true);
   };
 
-  const handleRaiseDispute = (item: OrderItemApiResponse) => {
+  const handleRaiseDispute = (_item: OrderItemApiResponse) => {
     setShowDisputeOverlay(false);
     // Small delay so the first overlay closes before the second opens
     setTimeout(() => setShowRaiseDisputeOverlay(true), 300);
@@ -516,19 +575,28 @@ export default function OrderDetailScreen() {
         <View style={styles.buttonContainer}>
           {status === 'delivered' ? (
             <TouchableOpacity
-              style={styles.primaryButton}
+              style={[styles.primaryButton, invoiceLoading && styles.primaryButtonDisabled]}
               onPress={handleDownloadInvoice}
-              activeOpacity={0.8}>
-              <DownloadIcon />
-              <Text style={styles.primaryButtonText}>{t('orders.download_invoice')}</Text>
+              activeOpacity={0.8}
+              disabled={invoiceLoading}>
+              {invoiceLoading
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <DownloadIcon />}
+              <Text style={styles.primaryButtonText}>
+                {invoiceLoading ? t('orders.invoice_generating') : t('orders.download_invoice')}
+              </Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.actionButtons}>
               <TouchableOpacity
-                style={[styles.primaryButton, styles.flexButton]}
+                style={[styles.primaryButton, styles.flexButton, invoiceLoading && styles.primaryButtonDisabled]}
                 onPress={handleDownloadInvoice}
-                activeOpacity={0.8}>
-                <Text style={styles.primaryButtonText}>{t('orders.download_invoice')}</Text>
+                activeOpacity={0.8}
+                disabled={invoiceLoading}>
+                {invoiceLoading && <ActivityIndicator size="small" color="#fff" style={{marginRight: 6}} />}
+                <Text style={styles.primaryButtonText}>
+                  {invoiceLoading ? t('orders.invoice_generating') : t('orders.download_invoice')}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.trackButton}
@@ -746,6 +814,31 @@ const styles = StyleSheet.create({
     color: '#e5383b',
   },
 
+  // Coupon
+  couponRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  couponBadge: {
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    borderRadius: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  couponBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#16a34a',
+  },
+  couponDiscount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#16a34a',
+  },
+
   // Delivery section
   deliverySection: {
     backgroundColor: '#ffffff',
@@ -917,6 +1010,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.6,
   },
   flexButton: {
     flex: 1,

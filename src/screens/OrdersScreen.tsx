@@ -98,7 +98,7 @@ export default function OrdersScreen() {
           const estimatedDelivery =
             detail.success && detail.data?.estimatedDeliveryDate
               ? formatDateIST(detail.data.estimatedDeliveryDate)
-              : '–';
+              : 'Will be updated';
 
           return {
             id: String(o.id),
@@ -108,6 +108,8 @@ export default function OrdersScreen() {
             placedDate: formatDateIST(o.createdAt),
             deliveryDate: estimatedDelivery,
             totalAmount: o.totalAmount,
+            couponCode: o.couponCode,
+            discountAmount: o.discountAmount ?? 0,
             status: mapStatus(o.status),
             orderedParts: items.map(item => ({
               id: String(item.id),
