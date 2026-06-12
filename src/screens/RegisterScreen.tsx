@@ -79,7 +79,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const isInputValid = registerMode === 'email' ? isEmailValid : isPhoneValid;
   const isOtpComplete = otp.every(d => d !== '');
   const isContactNumberValid = /^[6-9]\d{9}$/.test(workshopDetails.contactNumber);
-  const isAadharValid = /^\d{12}$/.test(workshopDetails.aadharNumber);
+  const isAadharValid = workshopDetails.aadharNumber.trim() === '' || /^\d{12}$/.test(workshopDetails.aadharNumber);
   const isPinCodeValid = /^\d{6}$/.test(workshopDetails.pinCode);
   const isGstValid = workshopDetails.gstNumber.trim() === '' || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/i.test(workshopDetails.gstNumber.trim());
 
@@ -146,7 +146,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
       ownerName: workshopDetails.fullName,
       phoneNumber: registerMode === 'phone' ? phone : workshopDetails.contactNumber,
       email: registerMode === 'email' ? email : (workshopDetails.contactNumber || undefined),
-      aadhaarNumber: workshopDetails.aadharNumber,
+      aadhaarNumber: workshopDetails.aadharNumber || undefined,
       workshopName: workshopDetails.workshopName,
       address: workshopDetails.address,
       landmark: workshopDetails.landmark || undefined,
@@ -361,12 +361,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 error={workshopDetails.contactNumber.length > 0 && !isContactNumberValid ? 'Enter a valid 10-digit mobile number starting with 6-9' : undefined}
               />
               <FloatingInput
-                label="Aadhar Number (Required)"
+                label="Aadhar Number (Optional)"
                 value={workshopDetails.aadharNumber}
                 onChange={v => setField('aadharNumber')(v.replace(/[^0-9]/g, ''))}
                 keyboardType="numeric"
                 maxLength={12}
-                required
                 error={workshopDetails.aadharNumber.length > 0 && !isAadharValid ? 'Aadhaar number must be exactly 12 digits' : undefined}
               />
               <FloatingInput

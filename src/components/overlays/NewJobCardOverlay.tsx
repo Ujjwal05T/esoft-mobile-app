@@ -64,6 +64,7 @@ const jobCategories = [
   {id: '9', name: 'Electrical', icon: '💡'},
   {id: '10', name: 'Suspension', icon: '🔩'},
   {id: '11', name: 'Engine Oil', icon: '🛢️'},
+  {id: '12', name: 'Wipers', icon: '🪟'},
 ];
 
 export default function NewJobCardOverlay({

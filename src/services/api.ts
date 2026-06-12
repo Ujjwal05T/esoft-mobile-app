@@ -1,10 +1,10 @@
 import * as Keychain from 'react-native-keychain';
 
 // API Base URL
-// const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
-// export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-const API_BASE_URL = 'https://nicole-recovered-organic-definitions.trycloudflare.com/api';
-export const SERVER_ORIGIN = 'https://assistant-tickets-alpha-buck.trycloudflare.com';
+const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
+export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
+// const API_BASE_URL = 'https://missed-pulling-challenging-joseph.trycloudflare.com/api';
+// export const SERVER_ORIGIN = 'https://assistant-tickets-alpha-buck.trycloudflare.com';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -233,7 +233,7 @@ export interface WorkshopRegistrationData {
   ownerName: string;
   phoneNumber: string;
   email?: string;
-  aadhaarNumber: string;
+  aadhaarNumber?: string;
   workshopName: string;
   address: string;
   landmark?: string;
