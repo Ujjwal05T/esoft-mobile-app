@@ -175,24 +175,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
           {/* Step 1: Enter Credentials */}
           {currentStep === 'enter-credentials' && (
             <View style={styles.stepContent}>
-              {/* Mode Toggle */}
-              <View style={styles.modeToggle}>
-                <TouchableOpacity
-                  style={[styles.modeTab, loginMode === 'email' && styles.modeTabActive]}
-                  onPress={() => handleModeSwitch('email')}>
-                  <Text style={[styles.modeTabText, loginMode === 'email' && styles.modeTabTextActive]}>
-                    {t('auth.email')}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modeTab, loginMode === 'phone' && styles.modeTabActive]}
-                  onPress={() => handleModeSwitch('phone')}>
-                  <Text style={[styles.modeTabText, loginMode === 'phone' && styles.modeTabTextActive]}>
-                    {t('auth.phone')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
               {loginMode === 'email' ? (
                 <>
                   <FloatingInput

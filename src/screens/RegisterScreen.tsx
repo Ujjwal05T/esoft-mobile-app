@@ -249,24 +249,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
           {/* Step 1: Enter Credentials */}
           {currentStep === 'enter-credentials' && (
             <View style={styles.stepContent}>
-              {/* Mode Toggle */}
-              <View style={styles.modeToggle}>
-                <TouchableOpacity
-                  style={[styles.modeTab, registerMode === 'email' && styles.modeTabActive]}
-                  onPress={() => handleModeSwitch('email')}>
-                  <Text style={[styles.modeTabText, registerMode === 'email' && styles.modeTabTextActive]}>
-                    {t('auth.email')}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modeTab, registerMode === 'phone' && styles.modeTabActive]}
-                  onPress={() => handleModeSwitch('phone')}>
-                  <Text style={[styles.modeTabText, registerMode === 'phone' && styles.modeTabTextActive]}>
-                    {t('auth.phone')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
               {registerMode === 'email' ? (
                 <FloatingInput
                   label={t('auth.email_placeholder')}

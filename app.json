@@ -1,4 +1,18 @@
 {
   "name": "esoft",
-  "displayName": "Parts Now"
+  "displayName": "Parts Now",
+  "extra": {
+    "eas": {
+      "projectId": "6773333b-181a-46ed-8ff7-286d3b0237c9"
+    }
+  },
+  "owner": "indasanalyticss-team",
+  "runtimeVersion": {
+  "policy": "fingerprint"
+  },
+  "updates": {
+    "url": "https://u.expo.dev/6773333b-181a-46ed-8ff7-286d3b0237c9"
+  },
+  "android": {},
+  "ios": {}
 }
