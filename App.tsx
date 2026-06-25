@@ -7,6 +7,7 @@
 
 import React, {useState, useEffect} from 'react';
 import {StatusBar, useColorScheme, View, StyleSheet, Platform} from 'react-native';
+import {Asset} from 'expo-asset';
 import notifee, {AndroidImportance} from '@notifee/react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -46,6 +47,19 @@ function App(): React.JSX.Element {
   const [updateInfo, setUpdateInfo] = useState<VersionCheckResponse | null>(null);
 
   const handleSplashFinish = async () => {
+    try {
+      await Asset.loadAsync([
+        require('./src/assets/logos/parts_now.png'),
+        require('./src/assets/images/car-silhouette.png'),
+        require('./src/assets/images/car-suv.png'),
+        require('./src/assets/images/default-car.png'),
+        require('./src/assets/images/event-car.png'),
+        require('./src/assets/images/oil-filter.png'),
+        require('./src/assets/images/rc-card.png'),
+        require('./src/assets/images/request-part.png'),
+        require('./src/assets/images/twin-brothers.png'),
+      ]);
+    } catch (_) {}
     setShowSplash(false);
     await runVersionCheck();
   };

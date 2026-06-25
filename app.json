@@ -12,5 +12,8 @@
     "url": "https://u.expo.dev/6773333b-181a-46ed-8ff7-286d3b0237c9"
   },
   "android": {},
-  "ios": {}
+  "ios": {},
+  "plugins": [
+    "expo-asset"
+  ]
 }
