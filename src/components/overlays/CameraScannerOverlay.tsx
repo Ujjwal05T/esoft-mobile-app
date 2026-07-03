@@ -20,17 +20,18 @@ const {width: SCREEN_W, height: SCREEN_H} = Dimensions.get('window');
 const FRAME_MARGIN_H = 24;
 const FRAME_W = SCREEN_W - FRAME_MARGIN_H * 2;
 
-// RC card is taller (ID card ratio ≈ 1.58:1), plate is short and wide
+// RC card is taller (ID card ratio ≈ 1.58:1), plate is short and wide, chassis is medium
 const FRAME_H: Record<ScanMode, number> = {
   plate: Math.round(FRAME_W / 3.5),
   rc: Math.round(FRAME_W / 1.6),
+  chassis: Math.round(FRAME_W / 2.2),
 };
 
 const FRAME_TOP = (SCREEN_H - 260) / 2; // roughly centre-ish, above capture btn
 const CORNER_LEN = 24;
 const CORNER_W = 3;
 
-export type ScanMode = 'plate' | 'rc';
+export type ScanMode = 'plate' | 'rc' | 'chassis';
 
 interface Props {
   visible: boolean;
@@ -215,7 +216,7 @@ export default function CameraScannerOverlay({
             </Svg>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-            {mode === 'plate' ? t('camera.scan_plate') : t('camera.scan_rc')}
+            {mode === 'plate' ? t('camera.scan_plate') : mode === 'chassis' ? t('camera.scan_chassis') : t('camera.scan_rc')}
           </Text>
           {/* Spacer to centre the title */}
           <View style={styles.closeBtn} />
@@ -224,7 +225,7 @@ export default function CameraScannerOverlay({
 
       {/* Hint below frame */}
       <Text style={[styles.hint, {top: FRAME_TOP + frameH + 20}]}>
-        {mode === 'plate' ? t('camera.align_plate') : t('camera.align_rc')}
+        {mode === 'plate' ? t('camera.align_plate') : mode === 'chassis' ? t('camera.align_chassis') : t('camera.align_rc')}
       </Text>
 
       {/* Capture + Upload buttons */}
@@ -293,7 +294,7 @@ export default function CameraScannerOverlay({
           <View style={[styles.processingIndicator, {top: FRAME_TOP + frameH + 30}]}>
             <ActivityIndicator size="large" color="#ffffff" />
             <Text style={styles.processingText}>
-              {mode === 'plate' ? t('camera.reading_plate') : t('camera.reading_rc')}
+              {mode === 'plate' ? t('camera.reading_plate') : mode === 'chassis' ? t('camera.reading_chassis') : t('camera.reading_rc')}
             </Text>
           </View>
         </View>

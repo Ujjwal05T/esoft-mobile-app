@@ -517,6 +517,10 @@ export default function AddVehicleOverlay({
   const [rcFrontImage, setRcFrontImage] = useState<{uri: string; name: string; type: string} | null>(null);
   const [rcBackImage, setRcBackImage] = useState<{uri: string; name: string; type: string} | null>(null);
 
+  // Chassis Image (collected in manual step)
+  const [chassisImage, setChassisImage] = useState<{uri: string; name: string; type: string} | null>(null);
+  const [showChassisImagePicker, setShowChassisImagePicker] = useState(false);
+
   // Gate In
   const [driverName, setDriverName] = useState('');
   const [driverContact, setDriverContact] = useState('');
@@ -577,6 +581,8 @@ export default function AddVehicleOverlay({
     setProblemShared('');
     setRcFrontImage(null);
     setRcBackImage(null);
+    setChassisImage(null);
+    setShowChassisImagePicker(false);
     setVehicleImages([]);
     setIsRecording(false);
     setRecordedAudioPath(null);
@@ -795,8 +801,8 @@ export default function AddVehicleOverlay({
         imageUrl: selectedModelImageUrl || undefined,
       };
 
-      const result = (rcFrontImage || rcBackImage)
-        ? await createVehicleWithMedia(vehiclePayload, rcFrontImage ?? undefined, rcBackImage ?? undefined)
+      const result = (rcFrontImage || rcBackImage || chassisImage)
+        ? await createVehicleWithMedia(vehiclePayload, rcFrontImage ?? undefined, rcBackImage ?? undefined, undefined, chassisImage ?? undefined)
         : await createVehicle(vehiclePayload);
 
       if (!result.success) {
@@ -936,6 +942,21 @@ export default function AddVehicleOverlay({
     }
   };
 
+  const handleChassisImageSource = (source: 'camera' | 'gallery') => {
+    setShowChassisImagePicker(false);
+    const onResult = (response: any) => {
+      if (!response.didCancel && !response.errorCode && response.assets?.[0]?.uri) {
+        const a = response.assets[0];
+        setChassisImage({uri: a.uri!, name: a.fileName || `chassis_${Date.now()}.jpg`, type: a.type || 'image/jpeg'});
+      }
+    };
+    if (source === 'camera') {
+      launchCameraWithPermission({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+    } else {
+      launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 1}, onResult);
+    }
+  };
+
   const handleRecord = async () => {
     if (isRecording) {
       const path = await audioRecorderPlayer.current.stopRecorder();
@@ -1007,11 +1028,9 @@ export default function AddVehicleOverlay({
             ? t('vehicle.scan_success_rc')
             : t('vehicle.scan_success_plate'),
           onDone: () => {
-            // Switch to appropriate view based on what was scanned
             if (currentScanMode === 'rc') {
-              setCurrentView('manual'); // Show manual view to review/edit details
+              setCurrentView('manual');
             } else {
-              // For plate scan, stay in search view so user can proceed
               setCurrentView('search');
             }
           },
@@ -1216,10 +1235,44 @@ export default function AddVehicleOverlay({
                 optional={isFallbackStarted}
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{marginBottom: 0}}
+                rightElement={
+                  <TouchableOpacity
+                    onPress={() => setShowChassisImagePicker(true)}
+                    style={styles.chassisScanBtn}
+                    activeOpacity={0.7}>
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                        stroke="#e5383b"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <Path
+                        d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"
+                        stroke="#e5383b"
+                        strokeWidth="2"
+                      />
+                    </Svg>
+                  </TouchableOpacity>
+                }
               />
               {hasAttemptedManual && !chassisNumber.trim() && !(selectedBrand && selectedModel && selectedYear && selectedVariant && vehicleNumber.trim()) && (
                 <Text style={styles.errorText}>Enter chassis number, or fill in vehicle number + brand/model/year/variant</Text>
               )}
+
+              {/* Chassis Image */}
+              {chassisImage ? (
+                <View style={styles.chassisImagePreview}>
+                  <Image source={{uri: chassisImage.uri}} style={styles.chassisImageFull} resizeMode="cover" />
+                  <TouchableOpacity
+                    style={styles.rcRemoveBtn}
+                    onPress={() => setChassisImage(null)}
+                    hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
+                    <Text style={styles.rcRemoveX}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
 
               {/* RC Card Images */}
               <Text style={styles.rcSectionLabel}>{t('vehicle.rc_images')}</Text>
@@ -1705,6 +1758,13 @@ export default function AddVehicleOverlay({
         onGallery={() => handleVehicleImageSource('gallery')}
         onClose={() => setShowVehicleImagePicker(false)}
       />
+      <ImagePickerActionSheet
+        visible={showChassisImagePicker}
+        title={t('vehicle.chassis_image')}
+        onCamera={() => handleChassisImageSource('camera')}
+        onGallery={() => handleChassisImageSource('gallery')}
+        onClose={() => setShowChassisImagePicker(false)}
+      />
 
       {/* RC Image source picker */}
       <Modal
@@ -2115,6 +2175,25 @@ const styles = StyleSheet.create({
   },
   audioChipText: {fontSize: 12, color: '#16a34a', fontWeight: '500'},
   audioChipRemove: {fontSize: 12, color: '#16a34a', fontWeight: '700'},
+  chassisScanBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+  },
+  chassisImagePreview: {
+    position: 'relative',
+    height: 100,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  chassisImageFull: {
+    width: '100%',
+    height: '100%',
+  },
   rcSectionLabel: {fontSize: 13, fontWeight: '600', color: '#828282', marginBottom: 8},
   rcRow: {flexDirection: 'row', gap: 12, marginBottom: 8},
   rcImageBox: {

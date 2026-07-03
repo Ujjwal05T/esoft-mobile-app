@@ -13,14 +13,19 @@ import {
   Image,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {launchImageLibrary} from 'react-native-image-picker';
+import {launchCameraWithPermission} from '../utils/cameraPermission';
 import {
   sendRegistrationOtp,
   verifyRegistrationOtp,
   sendRegistrationOtpByEmail,
   verifyRegistrationOtpByEmail,
   submitWorkshopRegistration,
+  uploadWorkshopDocuments,
+  type RNFile,
 } from '../services/api';
 import FloatingInput from '../components/ui/FloatingInput';
+import ImagePickerActionSheet from '../components/ui/ImagePickerActionSheet';
 import {useTranslation} from 'react-i18next';
 import {DropdownField} from '../components/overlays/AddVehicleOverlay';
 import CheckIcon from '../assets/icons/check.svg';
@@ -68,6 +73,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     tradeLicenseNumber: '',
   });
   const [monthlyCapacity, setMonthlyCapacity] = useState<string>('');
+  const [ownerPhoto, setOwnerPhoto] = useState<RNFile | null>(null);
+  const [workshopPhoto, setWorkshopPhoto] = useState<RNFile | null>(null);
+  const [activePhotoPicker, setActivePhotoPicker] = useState<'owner' | 'workshop' | null>(null);
 
   const CAPACITY_OPTIONS = ['1-20', '20-50', '50-70', '70+'];
 
@@ -142,7 +150,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     if (!isWorkshopFormValid) return;
     setError('');
     setLoading(true);
-    const result = await submitWorkshopRegistration({
+    const payload = {
       ownerName: workshopDetails.fullName,
       phoneNumber: registerMode === 'phone' ? phone : workshopDetails.contactNumber,
       email: registerMode === 'email' ? email : (workshopDetails.contactNumber || undefined),
@@ -155,12 +163,17 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
       gstNumber: workshopDetails.gstNumber || undefined,
       tradeLicenseNumber: workshopDetails.tradeLicenseNumber || undefined,
       monthlyWorkshopCapacity: monthlyCapacity || undefined,
-    });
-    setLoading(false);
+    };
+    const result = await submitWorkshopRegistration(payload);
     if (!result.success) {
+      setLoading(false);
       setError(result.error || 'Failed to submit registration. Please try again.');
       return;
     }
+    if ((ownerPhoto || workshopPhoto) && result.data?.workshopId) {
+      await uploadWorkshopDocuments(result.data.workshopId, ownerPhoto ?? undefined, workshopPhoto ?? undefined);
+    }
+    setLoading(false);
     setCurrentStep('request-sent');
   };
 
@@ -175,6 +188,25 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
       otpRefs.current[0]?.focus();
     } else {
       setError(result.error || 'Failed to resend OTP.');
+    }
+  };
+
+  const handlePhotoSource = (source: 'camera' | 'gallery') => {
+    const target = activePhotoPicker;
+    setActivePhotoPicker(null);
+    if (!target) return;
+    const onResult = (response: any) => {
+      if (!response.didCancel && !response.errorCode && response.assets?.[0]?.uri) {
+        const a = response.assets[0];
+        const file: RNFile = {uri: a.uri!, name: a.fileName || `${target}_photo_${Date.now()}.jpg`, type: a.type || 'image/jpeg'};
+        if (target === 'owner') setOwnerPhoto(file);
+        else setWorkshopPhoto(file);
+      }
+    };
+    if (source === 'camera') {
+      launchCameraWithPermission({mediaType: 'photo', quality: 0.8, saveToPhotos: false}, onResult);
+    } else {
+      launchImageLibrary({mediaType: 'photo', quality: 0.8, selectionLimit: 1}, onResult);
     }
   };
 
@@ -426,6 +458,56 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 required
               />
 
+              {/* Photos */}
+              <Text style={styles.photoSectionLabel}>Photos (Optional)</Text>
+              <View style={styles.photoRow}>
+                {/* Owner Photo */}
+                <TouchableOpacity
+                  style={styles.ownerPhotoBox}
+                  onPress={() => setActivePhotoPicker('owner')}
+                  activeOpacity={0.8}>
+                  {ownerPhoto ? (
+                    <>
+                      <Image source={{uri: ownerPhoto.uri}} style={styles.ownerPhotoImage} />
+                      <TouchableOpacity
+                        style={styles.photoRemoveBtn}
+                        onPress={() => setOwnerPhoto(null)}
+                        hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
+                        <Text style={styles.photoRemoveX}>✕</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.photoAddIcon}>+</Text>
+                      <Text style={styles.photoLabel}>Owner Photo</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                {/* Workshop Photo */}
+                <TouchableOpacity
+                  style={styles.workshopPhotoBox}
+                  onPress={() => setActivePhotoPicker('workshop')}
+                  activeOpacity={0.8}>
+                  {workshopPhoto ? (
+                    <>
+                      <Image source={{uri: workshopPhoto.uri}} style={styles.workshopPhotoImage} />
+                      <TouchableOpacity
+                        style={styles.photoRemoveBtn}
+                        onPress={() => setWorkshopPhoto(null)}
+                        hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
+                        <Text style={styles.photoRemoveX}>✕</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.photoAddIcon}>+</Text>
+                      <Text style={styles.photoLabel}>Workshop Photo</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
             </View>
           )}
 
@@ -511,6 +593,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
         )}
 
       </KeyboardAvoidingView>
+
+      <ImagePickerActionSheet
+        visible={activePhotoPicker !== null}
+        title={activePhotoPicker === 'owner' ? 'Owner Photo' : 'Workshop Photo'}
+        onCamera={() => handlePhotoSource('camera')}
+        onGallery={() => handlePhotoSource('gallery')}
+        onClose={() => setActivePhotoPicker(null)}
+      />
     </SafeAreaView>
   );
 };
@@ -733,6 +823,48 @@ const styles = StyleSheet.create({
     color: '#e5383b',
     fontWeight: '600',
   },
+  photoSectionLabel: {fontSize: 13, fontWeight: '600', color: '#828282', marginTop: 12, marginBottom: 8},
+  photoRow: {flexDirection: 'row', gap: 12, marginBottom: 8},
+  ownerPhotoBox: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 1.5,
+    borderColor: '#d3d3d3',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  ownerPhotoImage: {width: '100%', height: '100%', borderRadius: 50},
+  workshopPhotoBox: {
+    flex: 1,
+    height: 100,
+    borderWidth: 1.5,
+    borderColor: '#d3d3d3',
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  workshopPhotoImage: {width: '100%', height: '100%'},
+  photoAddIcon: {fontSize: 24, color: '#e5383b', lineHeight: 28},
+  photoLabel: {fontSize: 11, color: '#828282', marginTop: 2, textAlign: 'center', paddingHorizontal: 4},
+  photoRemoveBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoRemoveX: {color: '#fff', fontSize: 11, fontWeight: '700'},
 });
 
 export default RegisterScreen;

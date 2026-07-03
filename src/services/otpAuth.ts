@@ -2,8 +2,8 @@
 
 import { getAuthToken, setAuthToken, setStoredUser, removeAuthToken } from './api';
 
-const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
-// const API_BASE_URL = 'https://influenced-robbie-wage-completion.trycloudflare.com/api';
+// const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
+const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';
 
 export interface LoginResponse {
   success: boolean;

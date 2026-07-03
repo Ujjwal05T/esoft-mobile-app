@@ -1,10 +1,10 @@
 import * as Keychain from 'react-native-keychain';
 
 // API Base URL
-const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
-export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-// const API_BASE_URL = 'https://influenced-robbie-wage-completion.trycloudflare.com/api';
-// export const SERVER_ORIGIN = 'https://assistant-tickets-alpha-buck.trycloudflare.com';
+// const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
+// export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
+const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';
+export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -106,7 +106,7 @@ async function apiRequest<T>(
       }
       return {
         success: false,
-        error: data.message || data.errors?.[0] || 'An error occurred',
+        error: data.message || data.errorMessage || data.errors?.[0] || 'An error occurred',
       };
     }
 
@@ -252,6 +252,28 @@ export async function submitWorkshopRegistration(data: WorkshopRegistrationData)
       body: JSON.stringify(data),
     }
   );
+}
+
+export async function uploadWorkshopDocuments(
+  workshopId: number,
+  ownerPhoto?: RNFile,
+  workshopPhoto?: RNFile,
+) {
+  const formData = new FormData();
+  if (ownerPhoto)    formData.append('ownerPhoto',    ownerPhoto    as unknown as Blob);
+  if (workshopPhoto) formData.append('workshopPhoto', workshopPhoto as unknown as Blob);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/workshops/${workshopId}/documents`, {
+      method: 'POST',
+      body: formData,
+    });
+    const result = await response.json();
+    if (!response.ok) return {success: false, error: result.message || 'Failed to upload photos'};
+    return {success: true, data: result};
+  } catch {
+    return {success: false, error: 'Network error uploading photos'};
+  }
 }
 
 // ==========================================
@@ -567,6 +589,14 @@ export async function scanRcCard(base64Image: string) {
   });
 }
 
+// Scan a car image to extract the chassis/VIN number
+export async function scanChassisNumber(base64Image: string) {
+  return apiRequest<VehicleOcrData>('/ocr/scan-chassis', {
+    method: 'POST',
+    body: JSON.stringify({ base64Image, mode: 'chassis' }),
+  });
+}
+
 // Generic scan (pass mode as parameter)
 export async function scanVehicleImage(base64Image: string, mode: 'plate' | 'rc') {
   return apiRequest<VehicleOcrData>('/ocr/scan', {
@@ -615,6 +645,7 @@ export interface VehicleResponse {
   insuranceProvider: string | null;
   rcCardFrontUrl: string | null;
   rcCardBackUrl: string | null;
+  chassisImageUrl: string | null;
   imageUrl: string | null;
   odometerReading: string | null;
   observations: string | null;
@@ -679,6 +710,7 @@ export async function createVehicleWithMedia(
   rcFrontImage?: RNFile,
   rcBackImage?: RNFile,
   audioFile?: RNFile,
+  chassisImage?: RNFile,
 ) {
   const formData = new FormData();
   Object.entries(data).forEach(([key, value]) => {
@@ -686,9 +718,10 @@ export async function createVehicleWithMedia(
       formData.append(key, String(value));
     }
   });
-  if (rcFrontImage) formData.append('rcFrontImage', rcFrontImage as unknown as Blob);
-  if (rcBackImage)  formData.append('rcBackImage',  rcBackImage  as unknown as Blob);
-  if (audioFile)    formData.append('audioFile',    audioFile    as unknown as Blob);
+  if (rcFrontImage)  formData.append('rcFrontImage',  rcFrontImage  as unknown as Blob);
+  if (rcBackImage)   formData.append('rcBackImage',   rcBackImage   as unknown as Blob);
+  if (audioFile)     formData.append('audioFile',     audioFile     as unknown as Blob);
+  if (chassisImage)  formData.append('chassisImage',  chassisImage  as unknown as Blob);
 
   try {
     const token = await getAuthToken();
@@ -1831,6 +1864,27 @@ export async function validateCoupon(code: string, workshopOwnerId: number, orde
   return apiRequest<CouponValidationResponse>('/coupon/validate', {
     method: 'POST',
     body: JSON.stringify({ code, workshopOwnerId, orderAmount }),
+  });
+}
+
+export interface CodOrderResponse {
+  message: string;
+  orderId: number;
+  orderNumber: string;
+  quoteId: number;
+  status: string;
+}
+
+// Place a Cash on Delivery order — no Razorpay involved
+export async function placeCodOrder(data: {
+  quoteId: number;
+  selectedItemIds?: number[];
+  couponCode?: string;
+  discountAmount?: number;
+}) {
+  return apiRequest<CodOrderResponse>('/payment/cod-order', {
+    method: 'POST',
+    body: JSON.stringify(data),
   });
 }
 
