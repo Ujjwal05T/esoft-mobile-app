@@ -1758,6 +1758,7 @@ export interface QuoteApiResponse {
   shippingCharges: number;
   totalAmount: number;
   status: string;
+  isCodEligible: boolean;
   items: QuoteItemApiResponse[];
   createdAt: string;
   updatedAt: string | null;
@@ -1881,6 +1882,7 @@ export async function placeCodOrder(data: {
   selectedItemIds?: number[];
   couponCode?: string;
   discountAmount?: number;
+  idempotencyKey: string;
 }) {
   return apiRequest<CodOrderResponse>('/payment/cod-order', {
     method: 'POST',

@@ -313,9 +313,9 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
         />
 
         {/* ── Running Parts ── */}
-        <RunningPartsCard />
+        <RunningPartsCard onCreateRequest={() => navigation?.navigate('RunningParts')} />
 
-        
+
 
         {/* ── #1 Tagline Block ── */}
         <View style={styles.taglineBlock}>

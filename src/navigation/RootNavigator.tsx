@@ -22,6 +22,7 @@ import StaffProfileScreen from '../screens/StaffProfileScreen';
 import InquiryDetailScreen from '../screens/InquiryDetailScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
 import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
+import RunningPartsScreen from '../screens/RunningPartsScreen';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -31,6 +32,7 @@ export type RootStackParamList = {
   Notifications: undefined;
   VehicleDetail: {vehicleId: number};
   StaffVehicleDetail: {vehicleId: number};
+  RunningParts: undefined;
   InquiryDetail: {inquiryId: number};
   QuoteDetail: {quoteId: number};
   OrderDetail: {orderId: number};
@@ -109,6 +111,11 @@ const RootNavigator: React.FC = () => {
             <Stack.Screen
               name="StaffVehicleDetail"
               component={StaffVehicleDetailScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="RunningParts"
+              component={RunningPartsScreen}
               options={{animation: 'slide_from_right', headerShown: false}}
             />
             <Stack.Screen

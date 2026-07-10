@@ -30,6 +30,8 @@ export type {Dispute, DisputeStatus, DisputeAction, DisputeMedia} from './dashbo
 export {default as EventCard} from './dashboard/EventCard';
 export {default as RaisePartsCard} from './dashboard/RaisePartsCard';
 export {default as RunningPartsCard} from './dashboard/RunningPartsCard';
+export {default as PartProductCard} from './dashboard/PartProductCard';
+export type {PartProduct} from './dashboard/PartProductCard';
 export {default as FloatingActionButton} from './dashboard/FloatingActionButton';
 
 // Layout

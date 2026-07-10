@@ -15,3 +15,4 @@ export {default as NotificationsScreen} from './NotificationsScreen';
 export {default as ReportsScreen} from './ReportsScreen';
 export {default as FAQsScreen} from './FAQsScreen';
 export {default as StaffProfileScreen} from './StaffProfileScreen';
+export {default as RunningPartsScreen} from './RunningPartsScreen';

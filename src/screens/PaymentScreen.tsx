@@ -17,10 +17,12 @@ import {RootStackParamList} from '../navigation/RootNavigator';
 import StatusBadge from '../components/ui/StatusBadge';
 import {useAuth} from '../context/AuthContext';
 import CouponOverlay from '../components/overlays/CouponOverlay';
+import CodConfirmOverlay from '../components/overlays/CodConfirmOverlay';
 import {
   getQuoteById,
   createPaymentOrder,
   verifyPayment,
+  placeCodOrder,
   type QuoteApiResponse,
   type CouponValidationResponse,
 } from '../services/api';
@@ -63,6 +65,8 @@ export default function PaymentScreen() {
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [codLoading, setCodLoading] = useState(false);
+  const [codSheetOpen, setCodSheetOpen] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   // Coupon state
@@ -209,6 +213,33 @@ export default function PaymentScreen() {
     },
     [quote, paymentLoading, navigation, appliedCoupon],
   );
+
+  const handleCod = useCallback(async (idempotencyKey: string) => {
+    if (!quote || codLoading || paymentLoading) return;
+    try {
+      setCodLoading(true);
+      const result = await placeCodOrder({
+        quoteId: quote.id,
+        selectedItemIds: selectedItemIds.length > 0 ? selectedItemIds : undefined,
+        couponCode: appliedCoupon?.code,
+        discountAmount: appliedCoupon?.discountAmount,
+        idempotencyKey,
+      });
+      if (result.success) {
+        setAppAlert({
+          type: 'success',
+          message: t('payment.cod_success'),
+          onDone: () => navigation.navigate('QuoteDetail', {quoteId: quote.id}),
+        });
+      } else {
+        setAppAlert({type: 'error', message: t('payment.cod_failed')});
+      }
+    } catch {
+      setAppAlert({type: 'error', message: t('payment.cod_failed')});
+    } finally {
+      setCodLoading(false);
+    }
+  }, [quote, codLoading, paymentLoading, selectedItemIds, appliedCoupon, navigation, t]);
 
   // ── Loading ─────────────────────────────────────────────
   if (loading) {
@@ -429,6 +460,45 @@ export default function PaymentScreen() {
                 </View>
               </View>
             </TouchableOpacity>
+
+            {/* ── Cash on Delivery ── */}
+            {quote.isCodEligible && (
+              <TouchableOpacity
+                onPress={() => setCodSheetOpen(true)}
+                disabled={paymentLoading || codLoading}
+                activeOpacity={0.8}
+                style={[
+                  styles.methodItem,
+                  codLoading && styles.methodItemSelected,
+                  (paymentLoading || codLoading) && styles.methodItemDisabled,
+                ]}>
+                <View style={styles.methodIconBox}>
+                  <Svg width={36} height={36} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Z"
+                      stroke="#737373"
+                      strokeWidth={1.6}
+                    />
+                    <Path
+                      d="M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"
+                      stroke="#737373"
+                      strokeWidth={1.6}
+                    />
+                    <Path
+                      d="M6 12h.01M18 12h.01"
+                      stroke="#737373"
+                      strokeWidth={1.6}
+                      strokeLinecap="round"
+                    />
+                  </Svg>
+                </View>
+                {codLoading ? (
+                  <ActivityIndicator size="small" color="#e5383b" style={{flex: 1}} />
+                ) : (
+                  <Text style={styles.methodLabel}>{t('payment.cod')}</Text>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -442,6 +512,18 @@ export default function PaymentScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* ── COD Confirm Sheet ──────────────────── */}
+      <CodConfirmOverlay
+        isOpen={codSheetOpen}
+        onClose={() => setCodSheetOpen(false)}
+        onConfirm={(key) => {
+          setCodSheetOpen(false);
+          handleCod(key);
+        }}
+        payableAmount={payableTotal}
+        loading={codLoading}
+      />
 
       {/* ── Coupon Overlay ─────────────────────── */}
       <CouponOverlay

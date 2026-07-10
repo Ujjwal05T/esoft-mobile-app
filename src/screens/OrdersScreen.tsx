@@ -143,6 +143,7 @@ export default function OrdersScreen() {
   // ── FAB Handlers ─────────────────────────────────────────────────────────────
 
   const handleRequestPart = () => setShowVehicleTypeSelection(true);
+  const handleOrderRunningParts = () => navigation.navigate('RunningParts');
 
   const handleVehicleSelected = async (vehicle: VehicleResponse, _info: VehicleInfo) => {
     setSelectedVehicle(vehicle);
@@ -294,6 +295,7 @@ export default function OrdersScreen() {
       <FloatingActionButton
         navigationOptions={[
           {label: t('vehicle.request_part'), onPress: handleRequestPart},
+          {label: t('orders.order_running_parts'), onPress: handleOrderRunningParts},
         ]}
       />
 
