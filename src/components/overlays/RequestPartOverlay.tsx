@@ -628,7 +628,9 @@ export default function RequestPartOverlay({
                 )}
                 <TextInput
                   value={part.quantity}
-                  onChangeText={v => updatePart(part.id, {quantity: v})}
+                  onChangeText={v =>
+                    updatePart(part.id, {quantity: v.replace(/[^0-9]/g, '')})
+                  }
                   placeholder={t('request_part.quantity')}
                   placeholderTextColor="#828282"
                   keyboardType="numeric"
@@ -990,16 +992,23 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   partNumRow: {
+    height: 52,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#d3d3d3',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 8,
     marginBottom: 20,
   },
-  partNumInput: {flex: 1, fontSize: 16, fontWeight: '700', color: '#000'},
+  partNumInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+    textAlignVertical: 'center',
+    padding: 0,
+  },
   partNumArrow: {
     width: 36,
     height: 36,
@@ -1087,11 +1096,12 @@ const styles = StyleSheet.create({
   fieldWrap: {position: 'relative'},
   row: {flexDirection: 'row', alignItems: 'center'},
   inputBorder: {
+    height: 48,
     borderWidth: 1,
     borderColor: '#d3d3d3',
     borderRadius: 8,
     paddingHorizontal: 16,
-    paddingVertical: 4,
+    justifyContent: 'center',
     position: 'relative',
   },
   inputFilled: {borderColor: '#e5383b'},
@@ -1106,7 +1116,7 @@ const styles = StyleSheet.create({
     color: '#828282',
     zIndex: 1,
   },
-  inputText: {fontSize: 15, color: '#000'},
+  inputText: {fontSize: 15, color: '#000', textAlignVertical: 'center', padding: 0},
   errorMsg: {fontSize: 12, color: '#e5383b', marginTop: 4},
 
   /* Dropdown */
@@ -1131,7 +1141,7 @@ const styles = StyleSheet.create({
   dropdownItemText: {fontSize: 14, color: '#e5383b'},
 
   /* Remark */
-  remarkPad: {paddingVertical: 6, gap: 8},
+  remarkPad: {height: 50, paddingVertical: 6, gap: 8},
   recordBtn: {
     flexDirection: 'row',
     alignItems: 'center',

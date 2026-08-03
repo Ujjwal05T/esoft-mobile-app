@@ -16,6 +16,12 @@
     "bundleIdentifier": "com.esoft.partsnow"
   },
   "plugins": [
-    "expo-asset"
+    "expo-asset",
+    [
+      "expo-location",
+      {
+        "locationWhenInUsePermission": "Parts Now uses your location to help find nearby stores and services."
+      }
+    ]
   ]
 }

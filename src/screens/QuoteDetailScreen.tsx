@@ -77,7 +77,7 @@ export default function QuoteDetailScreen() {
         setQuote(result.data);
         const availableIds = new Set(
           result.data.items
-            .filter(i => i.availability === 'in_stock')
+            .filter(i => i.availability === 'in_stock' || i.availability === 'on_order')
             .map(i => i.id),
         );
         setSelectedItems(availableIds);
@@ -203,9 +203,13 @@ export default function QuoteDetailScreen() {
   const isDeclined = quote?.status === 'rejected';
 
   const availableItems =
-    quote?.items.filter(i => i.availability === 'in_stock') || [];
+    quote?.items.filter(
+      i => i.availability === 'in_stock' || i.availability === 'on_order',
+    ) || [];
   const unavailableItems =
-    quote?.items.filter(i => i.availability !== 'in_stock') || [];
+    quote?.items.filter(
+      i => i.availability !== 'in_stock' && i.availability !== 'on_order',
+    ) || [];
 
   const partsSubtotal =
     quote?.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) ||

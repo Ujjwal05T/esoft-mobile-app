@@ -21,10 +21,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
 }) => {
   const [isShowing, setIsShowing] = useState(isVisible);
   
-  // Animated values
+  // Animated values — logo starts fully visible so it continues seamlessly
+  // from the native LaunchScreen (which already shows the same logo statically).
   const containerOpacity = useRef(new Animated.Value(1)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.9)).current;
+  const logoOpacity = useRef(new Animated.Value(1)).current;
+  const logoScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (!isVisible) {
@@ -33,27 +34,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
     }
 
     setIsShowing(true);
-    
+
     // Reset animations
     containerOpacity.setValue(1);
-    logoOpacity.setValue(0);
-    logoScale.setValue(0.9);
-
-    // Show logo with fade and scale animation after a brief delay
-    const logoTimer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(logoOpacity, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoScale, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }, 200);
+    logoOpacity.setValue(1);
+    logoScale.setValue(1);
 
     // Start fading out the container before duration ends
     const fadeTimer = setTimeout(() => {
@@ -68,7 +53,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
     }, duration - 600);
 
     return () => {
-      clearTimeout(logoTimer);
       clearTimeout(fadeTimer);
     };
   }, [duration, isVisible, onFinish, containerOpacity, logoOpacity, logoScale]);

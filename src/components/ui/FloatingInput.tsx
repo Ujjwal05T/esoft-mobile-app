@@ -7,6 +7,7 @@ import {
   StyleSheet,
   KeyboardTypeOptions,
   ViewStyle,
+  Platform,
 } from 'react-native';
 
 interface FloatingInputProps {
@@ -130,7 +131,7 @@ const styles = StyleSheet.create({
   input: {
     height: 56,
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: Platform.OS === 'ios' ? 1 : 10,
     fontSize: 16,
     color: '#1a1a1a',
   },

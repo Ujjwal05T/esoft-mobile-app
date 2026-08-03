@@ -1,10 +1,10 @@
 import * as Keychain from 'react-native-keychain';
 
 // API Base URL
-const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
-export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-// const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';
-// export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
+// const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
+// export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
+const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';
+export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -233,15 +233,12 @@ export interface WorkshopRegistrationData {
   ownerName: string;
   phoneNumber: string;
   email?: string;
-  aadhaarNumber?: string;
   workshopName: string;
   address: string;
   landmark?: string;
   pinCode: string;
   city: string;
   gstNumber?: string;
-  tradeLicenseNumber?: string;
-  monthlyWorkshopCapacity?: string;
 }
 
 export async function submitWorkshopRegistration(data: WorkshopRegistrationData) {
