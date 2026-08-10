@@ -721,7 +721,7 @@ export default function AddVehicleOverlay({
   const handleManualNext = async () => {
     setHasAttemptedManual(true);
     const hasChassisNumber = chassisNumber.trim().length > 0;
-    const hasModelInfo = !!(selectedBrand && selectedModel && selectedYear && selectedVariant && vehicleNumber.trim());
+    const hasModelInfo = !!(selectedBrand && selectedModel && vehicleNumber.trim());
     if (!hasChassisNumber && !hasModelInfo) return;
 
     const plate = vehicleNumber.trim();
@@ -752,7 +752,7 @@ export default function AddVehicleOverlay({
 
     setVehicleData({
       plateNumber: plate,
-      year: parseInt(selectedYear),
+      year: selectedYear ? parseInt(selectedYear) : 0,
       make: selectedBrand,
       model: selectedModel,
       specs: selectedVariant || 'Standard',
@@ -1070,7 +1070,7 @@ export default function AddVehicleOverlay({
           <ScrollView showsVerticalScrollIndicator={false}>
             <Text style={styles.bigTitle}>{t('vehicle.add_plate')}</Text>
 
-            <View style={styles.searchRow}>
+            {/* <View style={styles.searchRow}>
               <View style={styles.plateInput}>
                 <TextInput
                   value={formatPlateNumber(plateNumber)}
@@ -1094,7 +1094,7 @@ export default function AddVehicleOverlay({
                   </Svg>
                 </TouchableOpacity>
               </View>
-              {/* <TouchableOpacity style={styles.scanBtn} onPress={() => setScanMode('plate')}>
+              <TouchableOpacity style={styles.scanBtn} onPress={() => setScanMode('plate')}>
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                   <Path
                     d="M3 7V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H7M17 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V7M21 17V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H17M7 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V17"
@@ -1108,8 +1108,8 @@ export default function AddVehicleOverlay({
                   <Rect x="7" y="13" width="4" height="4" rx="1" fill="white" />
                 </Svg>
                 <Text style={styles.scanBtnText}>Scan Number</Text>
-              </TouchableOpacity> */}
-            </View>
+              </TouchableOpacity>
+            </View> */}
 
             <TouchableOpacity
               style={[styles.redCard, { overflow: 'hidden'}]}
@@ -1191,38 +1191,13 @@ export default function AddVehicleOverlay({
                   setOpenManualDropdown(null);
                 }}
               />
-              <DropdownField
-                label={loadingYears ? t('vehicle.loading_years') : t('vehicle.year')}
-                value={selectedYear}
-                options={yearOptions}
-                onSelect={v => {
-                  setSelectedYear(v);
-                  setSelectedVariant('');
-                  setOpenManualDropdown(null);
-                }}
-                disabled={!selectedModel || loadingYears}
-                isOpen={openManualDropdown === 'year'}
-                onToggle={() => toggleManualDropdown('year')}
-                optional={!isFallbackStarted && !loadingYears}
-              />
-              <DropdownField
-                label={loadingVariants ? t('vehicle.loading_variants') : t('vehicle.variant')}
-                value={selectedVariant}
-                options={variantOptions}
-                onSelect={v => {
-                  setSelectedVariant(v);
-                  setOpenManualDropdown(null);
-                }}
-                disabled={!selectedYear || loadingVariants}
-                isOpen={openManualDropdown === 'variant'}
-                onToggle={() => toggleManualDropdown('variant')}
-                optional={!isFallbackStarted && !loadingVariants}
-              />
               <FloatingInput
                 label={t('vehicle.vehicle_number')}
                 value={formatPlateNumber(vehicleNumber)}
                 onChange={v => setVehicleNumber(v.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                 maxLength={14}
+                autoCapitalize="characters"
+                autoCorrect={false}
                 optional={!isFallbackStarted}
                 error={vehicleNumber.trim().length > 0 && !/^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}$/.test(vehicleNumber.trim()) ? 'Enter a valid vehicle number (e.g. MH 12 AB 1234)' : undefined}
                 containerStyle={{borderRadius: 8}}
@@ -1232,6 +1207,8 @@ export default function AddVehicleOverlay({
                 label={t('vehicle.chassis_number')}
                 value={chassisNumber}
                 onChange={v => setChassisNumber(v.toUpperCase())}
+                autoCapitalize="characters"
+                autoCorrect={false}
                 optional={isFallbackStarted}
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{marginBottom: 0}}
@@ -1257,8 +1234,8 @@ export default function AddVehicleOverlay({
                   </TouchableOpacity>
                 }
               />
-              {hasAttemptedManual && !chassisNumber.trim() && !(selectedBrand && selectedModel && selectedYear && selectedVariant && vehicleNumber.trim()) && (
-                <Text style={styles.errorText}>Enter chassis number, or fill in vehicle number + brand/model/year/variant</Text>
+              {hasAttemptedManual && !chassisNumber.trim() && !(selectedBrand && selectedModel && vehicleNumber.trim()) && (
+                <Text style={styles.errorText}>Enter chassis number, or fill in vehicle number + brand/model</Text>
               )}
 
               {/* Chassis Image */}
@@ -1333,7 +1310,7 @@ export default function AddVehicleOverlay({
                 style={[
                   styles.primaryBtn,
                   {marginTop: 8},
-                  !(chassisNumber.trim() || (vehicleNumber.trim() && selectedBrand && selectedModel && selectedYear && selectedVariant)) && styles.disabledBtn,
+                  !(chassisNumber.trim() || (vehicleNumber.trim() && selectedBrand && selectedModel)) && styles.disabledBtn,
                 ]}>
                 <Text style={styles.primaryBtnText}>{t('common.next').toUpperCase()}</Text>
               </TouchableOpacity>
@@ -1411,6 +1388,8 @@ export default function AddVehicleOverlay({
                   setGstNumber(v.toUpperCase());
                   setIsGstVerified(false);
                 }}
+                autoCapitalize="characters"
+                autoCorrect={false}
                 optional
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{margin: 0, paddingBottom: 0, marginBottom: 8}}

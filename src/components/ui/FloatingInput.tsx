@@ -26,6 +26,8 @@ interface FloatingInputProps {
   rightElement?: React.ReactNode;
   error?: string;
   optional?: boolean;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoCorrect?: boolean;
 }
 
 const FloatingInput: React.FC<FloatingInputProps> = ({
@@ -44,6 +46,8 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
   rightElement,
   error,
   optional,
+  autoCapitalize = 'sentences',
+  autoCorrect = true,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const labelAnim = useRef(new Animated.Value(value.length > 0 ? 1 : 0)).current;
@@ -86,6 +90,8 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
           onBlur={() => setIsFocused(false)}
           keyboardType={keyboardType}
           maxLength={maxLength}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
           autoFocus={autoFocus}
           secureTextEntry={secureTextEntry}
           editable={editable}

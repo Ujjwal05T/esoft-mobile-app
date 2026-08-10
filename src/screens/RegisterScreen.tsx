@@ -41,7 +41,7 @@ interface RegisterScreenProps {
 
 const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const {t} = useTranslation();
-  const [registerMode, setRegisterMode] = useState<RegisterMode>('email');
+  const [registerMode, setRegisterMode] = useState<RegisterMode>('phone');
   const [currentStep, setCurrentStep] = useState<RegistrationStep>('enter-credentials');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -274,17 +274,17 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
               {/* Mode Toggle */}
               <View style={styles.modeToggle}>
                 <TouchableOpacity
-                  style={[styles.modeTab, registerMode === 'email' && styles.modeTabActive]}
-                  onPress={() => handleModeSwitch('email')}>
-                  <Text style={[styles.modeTabText, registerMode === 'email' && styles.modeTabTextActive]}>
-                    Email
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
                   style={[styles.modeTab, registerMode === 'phone' && styles.modeTabActive]}
                   onPress={() => handleModeSwitch('phone')}>
                   <Text style={[styles.modeTabText, registerMode === 'phone' && styles.modeTabTextActive]}>
                     Phone
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeTab, registerMode === 'email' && styles.modeTabActive]}
+                  onPress={() => handleModeSwitch('email')}>
+                  <Text style={[styles.modeTabText, registerMode === 'email' && styles.modeTabTextActive]}>
+                    Email
                   </Text>
                 </TouchableOpacity>
               </View>

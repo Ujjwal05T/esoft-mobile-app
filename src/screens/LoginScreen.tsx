@@ -30,7 +30,7 @@ interface LoginScreenProps {
 const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
   const {t} = useTranslation();
   const {signIn} = useAuth();
-  const [loginMode, setLoginMode] = useState<LoginMode>('email');
+  const [loginMode, setLoginMode] = useState<LoginMode>('phone');
   const [currentStep, setCurrentStep] = useState<LoginStep>('enter-credentials');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -178,17 +178,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
               {/* Mode Toggle */}
               <View style={styles.modeToggle}>
                 <TouchableOpacity
-                  style={[styles.modeTab, loginMode === 'email' && styles.modeTabActive]}
-                  onPress={() => handleModeSwitch('email')}>
-                  <Text style={[styles.modeTabText, loginMode === 'email' && styles.modeTabTextActive]}>
-                    Email
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
                   style={[styles.modeTab, loginMode === 'phone' && styles.modeTabActive]}
                   onPress={() => handleModeSwitch('phone')}>
                   <Text style={[styles.modeTabText, loginMode === 'phone' && styles.modeTabTextActive]}>
                     Phone
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeTab, loginMode === 'email' && styles.modeTabActive]}
+                  onPress={() => handleModeSwitch('email')}>
+                  <Text style={[styles.modeTabText, loginMode === 'email' && styles.modeTabTextActive]}>
+                    Email
                   </Text>
                 </TouchableOpacity>
               </View>
