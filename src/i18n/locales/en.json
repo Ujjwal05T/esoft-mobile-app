@@ -472,6 +472,7 @@
   "quote.re_request_failed": "Failed to re-request. Please try again.",
   "quote.expired_message": "The quote is expired. Kindly re-request for current availability and prices",
   "quote.available": "Available",
+  "quote.on_order": "On Order",
   "quote.unavailable": "Unavailable",
   "quote.exp_delivery": "Exp. Delivery",
   "quote.exp_arrival": "Exp. Arrival by",
@@ -512,6 +513,9 @@
   "payment.cod_note": "Please keep the exact cash amount ready. Our delivery person will collect it when your parts arrive.",
   "payment.cod_confirm_btn": "Place COD Order",
   "payment.coupon_available_label": "Available Coupons",
+  "payment.share_link": "Share Payment Link",
+  "payment.share_link_failed": "Failed to create payment link. Please try again.",
+  "payment.share_link_message": "Hi! Please complete the payment of {{amount}} for your parts order (Quote {{quoteNumber}}) using this secure link: {{link}}",
   "quote.submitted": "Submitted:",
   "quote.expired_label": "expired: ",
 

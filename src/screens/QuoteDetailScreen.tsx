@@ -415,8 +415,10 @@ export default function QuoteDetailScreen() {
                     ) : (
                       <View />
                     )}
-                    <View style={styles.availableBadge}>
-                      <Text style={styles.availableText}>{t('quote.available')}</Text>
+                    <View style={item.availability === 'on_order' ? styles.onOrderBadge : styles.availableBadge}>
+                      <Text style={item.availability === 'on_order' ? styles.onOrderText : styles.availableText}>
+                        {item.availability === 'on_order' ? t('quote.on_order') : t('quote.available')}
+                      </Text>
                     </View>
                   </View>
 
@@ -758,6 +760,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   availableText: {fontSize: 12, fontWeight: '500', color: '#fff', letterSpacing: -0.41},
+  onOrderBadge: {
+    backgroundColor: '#2563eb',
+    borderRadius: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  onOrderText: {fontSize: 12, fontWeight: '500', color: '#fff', letterSpacing: -0.41},
   unavailableBadge: {
     backgroundColor: '#e5383b',
     borderRadius: 7,

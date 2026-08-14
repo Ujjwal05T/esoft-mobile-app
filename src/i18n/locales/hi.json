@@ -470,6 +470,7 @@
   "quote.re_request_failed": "पुनः अनुरोध करने में विफल। कृपया पुनः प्रयास करें।",
   "quote.expired_message": "कोटेशन समाप्त हो गई है। वर्तमान उपलब्धता और कीमतों के लिए पुनः अनुरोध करें",
   "quote.available": "उपलब्ध",
+  "quote.on_order": "ऑर्डर पर",
   "quote.unavailable": "अनुपलब्ध",
   "quote.exp_delivery": "अनुमानित डिलीवरी",
   "quote.exp_arrival": "अनुमानित आगमन",
@@ -510,6 +511,9 @@
   "payment.cod_note": "कृपया सटीक नकद राशि तैयार रखें। हमारे डिलीवरी कर्मी पार्ट्स पहुंचने पर इसे एकत्र करेंगे।",
   "payment.cod_confirm_btn": "COD ऑर्डर दें",
   "payment.coupon_available_label": "उपलब्ध कूपन",
+  "payment.share_link": "भुगतान लिंक साझा करें",
+  "payment.share_link_failed": "भुगतान लिंक बनाने में विफल। कृपया पुनः प्रयास करें।",
+  "payment.share_link_message": "नमस्ते! कृपया अपने पार्ट्स ऑर्डर (कोटेशन {{quoteNumber}}) के लिए {{amount}} का भुगतान इस सुरक्षित लिंक से करें: {{link}}",
   "quote.submitted": "जमा किया:",
   "quote.expired_label": "समाप्त: ",
 

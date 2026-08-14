@@ -1,10 +1,10 @@
 import * as Keychain from 'react-native-keychain';
 
 // API Base URL
-// const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
-// export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
-const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';
-export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
+const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
+export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
+// const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';
+// export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -1916,6 +1916,37 @@ export async function verifyPayment(data: {
 export async function getRazorpayKey() {
   return apiRequest<{ keyId: string }>('/payment/key', {
     method: 'GET',
+  });
+}
+
+export interface CreatePaymentLinkResponse {
+  paymentLinkId: string;
+  shortUrl: string;
+  amount: number;
+  currency: string;
+  expireBy: string;
+  quoteNumber: string;
+  couponCode?: string;
+  discountAmount?: number;
+}
+
+// Create a shareable Razorpay Payment Link for a quote (or selected items).
+// Unlike createPaymentOrder, the order is placed automatically once the link
+// is paid (via a server-side webhook) — there is no verify call to make here.
+export async function createPaymentLink(data: {
+  quoteId: number;
+  selectedItemIds?: number[];
+  couponCode?: string;
+  expiryHours?: number;
+}) {
+  return apiRequest<CreatePaymentLinkResponse>('/payment/create-payment-link', {
+    method: 'POST',
+    body: JSON.stringify({
+      quoteId: data.quoteId,
+      selectedItemIds: data.selectedItemIds ?? null,
+      couponCode: data.couponCode ?? null,
+      expiryHours: data.expiryHours ?? 0,
+    }),
   });
 }
 
