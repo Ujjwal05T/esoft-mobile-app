@@ -25,6 +25,7 @@ import {
 } from './src/services/notificationService';
 import DeviceInfo from 'react-native-device-info';
 import AppUpdateModal from './src/components/overlays/AppUpdateModal';
+import ToastHost from './src/components/ui/Toast';
 import {checkAppVersion, VersionCheckResponse} from './src/services/api';
 
 // Reads version from android/build.gradle (versionName) or ios/Info.plist (CFBundleShortVersionString)
@@ -171,6 +172,7 @@ function App(): React.JSX.Element {
         />
         <View style={styles.container}>
           <RootNavigator />
+          <ToastHost />
           <SplashScreen
             isVisible={showSplash}
             duration={2500}

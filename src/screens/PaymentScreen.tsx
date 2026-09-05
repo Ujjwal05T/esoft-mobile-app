@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,11 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
+  Animated,
+  Easing,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -16,16 +21,20 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/RootNavigator';
 import StatusBadge from '../components/ui/StatusBadge';
 import {useAuth} from '../context/AuthContext';
-import CouponOverlay from '../components/overlays/CouponOverlay';
+import CouponOverlay, {isAvailable, discountLabel} from '../components/overlays/CouponOverlay';
 import CodConfirmOverlay from '../components/overlays/CodConfirmOverlay';
+import {showToast} from '../components/ui/Toast';
 import {
   getQuoteById,
   createPaymentOrder,
   verifyPayment,
   placeCodOrder,
   createPaymentLink,
+  getAvailableCoupons,
+  validateCoupon,
   type QuoteApiResponse,
   type CouponValidationResponse,
+  type Coupon,
 } from '../services/api';
 import RNShare, {Social as ShareSocial} from 'react-native-share';
 
@@ -65,6 +74,151 @@ const WhatsAppIcon = () => (
   </Svg>
 );
 
+const formatPrice = (amount: number) => `Rs. ${amount.toLocaleString('en-IN')}`;
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+// Smoothly grows/shrinks the summary card when the applied-coupon row and
+// payable-total row appear or disappear, instead of an instant layout jump.
+const animateLayout = () => {
+  LayoutAnimation.configureNext(LayoutAnimation.create(280, 'easeInEaseOut', 'opacity'));
+};
+
+// Green "coupon applied" banner in the summary card — fades/slides in and
+// flashes a brighter green so a newly-applied coupon doesn't just pop into
+// existence unannounced.
+function AppliedCouponBanner({
+  coupon,
+  onRemove,
+}: {
+  coupon: CouponValidationResponse;
+  onRemove: () => void;
+}) {
+  const {t} = useTranslation();
+  const enter = useRef(new Animated.Value(0)).current;
+  const flash = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    enter.setValue(0);
+    flash.setValue(1);
+    Animated.parallel([
+      Animated.timing(enter, {
+        toValue: 1,
+        duration: 320,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(flash, {
+        toValue: 0,
+        duration: 900,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [coupon.code, enter, flash]);
+
+  const backgroundColor = flash.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#f0fdf4', '#bbf7d0'],
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.couponAppliedRow,
+        {
+          backgroundColor,
+          opacity: enter,
+          transform: [
+            {translateY: enter.interpolate({inputRange: [0, 1], outputRange: [-8, 0]})},
+            {scale: enter.interpolate({inputRange: [0, 1], outputRange: [0.96, 1]})},
+          ],
+        },
+      ]}>
+      <View style={styles.couponAppliedLeft}>
+        <Text style={styles.couponAppliedCode}>{coupon.code}</Text>
+        <Text style={styles.couponAppliedSaving}>
+          {t('payment.coupon_saving', {amount: formatPrice(coupon.discountAmount)})}
+        </Text>
+      </View>
+      <TouchableOpacity onPress={onRemove} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+        <Text style={styles.couponRemove}>{t('payment.coupon_remove')}</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+// Horizontal-strip coupon chip — pops with a small bounce the moment it
+// becomes the applied coupon, so the manual-apply/auto-apply result is
+// visible right where the user's eyes already are.
+function CouponChip({
+  coupon,
+  isApplied,
+  isApplying,
+  disabled,
+  onApply,
+}: {
+  coupon: Coupon;
+  isApplied: boolean;
+  isApplying: boolean;
+  disabled: boolean;
+  onApply: () => void;
+}) {
+  const {t} = useTranslation();
+  const scale = useRef(new Animated.Value(1)).current;
+  const wasApplied = useRef(isApplied);
+
+  useEffect(() => {
+    if (isApplied && !wasApplied.current) {
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.08,
+          duration: 140,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.spring(scale, {toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8}),
+      ]).start();
+    }
+    wasApplied.current = isApplied;
+  }, [isApplied, scale]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.couponChip,
+        isApplied && styles.couponChipApplied,
+        {transform: [{scale}]},
+      ]}>
+      <View style={styles.couponChipBody}>
+        <Text
+          style={[styles.couponChipDiscount, isApplied && styles.couponChipDiscountApplied]}
+          numberOfLines={1}>
+          {discountLabel(coupon)}
+        </Text>
+        <Text style={styles.couponChipCode} numberOfLines={1}>
+          {coupon.code}
+        </Text>
+      </View>
+      <TouchableOpacity
+        onPress={onApply}
+        disabled={disabled}
+        activeOpacity={0.8}
+        style={[styles.couponChipBtn, isApplied && styles.couponChipBtnApplied]}>
+        {isApplying ? (
+          <ActivityIndicator size="small" color="#e5383b" />
+        ) : (
+          <Text style={[styles.couponChipBtnText, isApplied && styles.couponChipBtnTextApplied]}>
+            {isApplied ? t('payment.coupon_applied_short') : t('payment.coupon_apply')}
+          </Text>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 export default function PaymentScreen() {
   const {t} = useTranslation();
   const navigation = useNavigation<PaymentNavProp>();
@@ -84,14 +238,75 @@ export default function PaymentScreen() {
   // Coupon state
   const [couponOverlayOpen, setCouponOverlayOpen] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<CouponValidationResponse | null>(null);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [applyingCode, setApplyingCode] = useState<string | null>(null);
+
+  // Finds the best coupon the order already qualifies for (highest discount
+  // first) and silently applies the first one the server accepts.
+  const attemptAutoApplyCoupon = useCallback(
+    async (q: QuoteApiResponse, availableCoupons: Coupon[]) => {
+      try {
+        const additional = (q.packingCharges || 0) + (q.forwardingCharges || 0) + (q.shippingCharges || 0);
+        const subtotal = selectedItemIds.length > 0
+          ? q.items.filter(i => selectedItemIds.includes(i.id)).reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
+          : q.totalAmount - additional;
+        const total = subtotal + additional;
+        if (total <= 0) return;
+
+        const candidates = availableCoupons
+          .filter(c => c.minOrderValue == null || total >= c.minOrderValue)
+          .map(c => ({
+            coupon: c,
+            estimatedDiscount: c.discountType === 'percentage'
+              ? Math.min((c.discountValue / 100) * total, c.maxDiscountAmount ?? Number.MAX_SAFE_INTEGER)
+              : c.discountValue,
+          }))
+          .sort((a, b) => b.estimatedDiscount - a.estimatedDiscount);
+
+        for (const {coupon} of candidates) {
+          const validation = await validateCoupon(coupon.code, user?.workshopOwnerId ?? user?.id ?? 0, total);
+          if (validation.success && validation.data?.isValid) {
+            animateLayout();
+            setAppliedCoupon(validation.data);
+            showToast({
+              type: 'success',
+              title: t('payment.coupon_auto_applied_title'),
+              message: t('payment.coupon_auto_applied_message', {
+                code: coupon.code,
+                amount: formatPrice(validation.data.discountAmount),
+              }),
+              actionLabel: t('payment.coupon_remove'),
+              onActionPress: () => {
+                animateLayout();
+                setAppliedCoupon(null);
+              },
+            });
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('[Payment] Auto-apply coupon failed:', e);
+      }
+    },
+    [selectedItemIds, user, t],
+  );
 
   useEffect(() => {
     async function fetchQuote() {
       try {
         setLoading(true);
-        const result = await getQuoteById(quoteId);
-        if (result.success && result.data) {
-          setQuote(result.data);
+        const [quoteResult, couponsResult] = await Promise.all([
+          getQuoteById(quoteId),
+          getAvailableCoupons(),
+        ]);
+        if (quoteResult.success && quoteResult.data) {
+          setQuote(quoteResult.data);
+          const availableCoupons =
+            couponsResult.success && couponsResult.data
+              ? couponsResult.data.filter(isAvailable)
+              : [];
+          setCoupons(availableCoupons);
+          attemptAutoApplyCoupon(quoteResult.data, availableCoupons);
         }
       } catch (e) {
         console.error('Failed to fetch quote:', e);
@@ -100,10 +315,7 @@ export default function PaymentScreen() {
       }
     }
     fetchQuote();
-  }, [quoteId]);
-
-  const formatPrice = (amount: number) =>
-    `Rs. ${amount.toLocaleString('en-IN')}`;
+  }, [quoteId, attemptAutoApplyCoupon]);
 
   const additionalCharges = quote
     ? (quote.packingCharges || 0) +
@@ -132,6 +344,44 @@ export default function PaymentScreen() {
     if (diffHours <= 24) return `${diffHours} hours`;
     return `${Math.ceil(diffMs / (1000 * 60 * 60 * 24))} days`;
   };
+
+  const handleApplyCouponChip = useCallback(
+    async (coupon: Coupon) => {
+      if (applyingCode || !quote) return;
+      setApplyingCode(coupon.code);
+      try {
+        const result = await validateCoupon(coupon.code, user?.workshopOwnerId ?? user?.id ?? 0, grandTotal);
+        if (result.success && result.data?.isValid) {
+          animateLayout();
+          setAppliedCoupon(result.data);
+          showToast({
+            type: 'success',
+            title: t('payment.coupon_auto_applied_title'),
+            message: t('payment.coupon_auto_applied_message', {
+              code: coupon.code,
+              amount: formatPrice(result.data.discountAmount),
+            }),
+            actionLabel: t('payment.coupon_remove'),
+            onActionPress: () => {
+              animateLayout();
+              setAppliedCoupon(null);
+            },
+          });
+        } else {
+          showToast({
+            type: 'error',
+            message: result.data?.errorMessage ?? t('payment.coupon_invalid'),
+          });
+        }
+      } catch (e) {
+        console.error('[Payment] Manual coupon apply failed:', e);
+        showToast({type: 'error', message: t('payment.coupon_invalid')});
+      } finally {
+        setApplyingCode(null);
+      }
+    },
+    [applyingCode, quote, user, grandTotal, t],
+  );
 
   const handlePay = useCallback(
     async (method: string) => {
@@ -413,17 +663,13 @@ export default function PaymentScreen() {
 
           {/* Coupon discount row */}
           {appliedCoupon ? (
-            <View style={styles.couponAppliedRow}>
-              <View style={styles.couponAppliedLeft}>
-                <Text style={styles.couponAppliedCode}>{appliedCoupon.code}</Text>
-                <Text style={styles.couponAppliedSaving}>
-                  {t('payment.coupon_saving', {amount: formatPrice(appliedCoupon.discountAmount)})}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => setAppliedCoupon(null)} hitSlop={{top:8,bottom:8,left:8,right:8}}>
-                <Text style={styles.couponRemove}>{t('payment.coupon_remove')}</Text>
-              </TouchableOpacity>
-            </View>
+            <AppliedCouponBanner
+              coupon={appliedCoupon}
+              onRemove={() => {
+                animateLayout();
+                setAppliedCoupon(null);
+              }}
+            />
           ) : (
             <TouchableOpacity onPress={() => setCouponOverlayOpen(true)}>
               <Text style={styles.couponLink}>{t('payment.have_promo_code')}</Text>
@@ -444,6 +690,30 @@ export default function PaymentScreen() {
             ════════════════════════════════════════ */}
         <View style={styles.methodCard}>
           <Text style={styles.methodTitle}>{t('orders.select_payment')}</Text>
+
+          {/* ── Coupon quick-apply strip ── */}
+          {coupons.length > 0 && (
+            <View style={styles.couponStripWrap}>
+              <Text style={styles.couponStripLabel}>
+                {t('payment.coupon_available_label')}
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.couponStripContent}>
+                {coupons.map(coupon => (
+                  <CouponChip
+                    key={coupon.id}
+                    coupon={coupon}
+                    isApplied={appliedCoupon?.code === coupon.code}
+                    isApplying={applyingCode === coupon.code}
+                    disabled={appliedCoupon?.code === coupon.code || applyingCode !== null}
+                    onApply={() => handleApplyCouponChip(coupon)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           <View style={styles.methodList}>
             {/* ── Credit / Debit Card ── */}
@@ -607,8 +877,11 @@ export default function PaymentScreen() {
         isOpen={couponOverlayOpen}
         onClose={() => setCouponOverlayOpen(false)}
         orderAmount={grandTotal}
-        workshopOwnerId={user?.id ?? 0}
-        onCouponApplied={coupon => setAppliedCoupon(coupon)}
+        workshopOwnerId={user?.workshopOwnerId ?? user?.id ?? 0}
+        onCouponApplied={coupon => {
+          animateLayout();
+          setAppliedCoupon(coupon);
+        }}
       />
 
       <AppAlert
@@ -717,6 +990,72 @@ const styles = StyleSheet.create({
     letterSpacing: -0.01,
   },
   methodList: {gap: 8},
+
+  // Coupon quick-apply strip
+  couponStripWrap: {gap: 10, marginTop: -8},
+  couponStripLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#99a2b6',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  couponStripContent: {gap: 10, paddingRight: 4, paddingBottom: 2},
+  couponChip: {
+    width: 188,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  couponChipApplied: {borderColor: '#bbf7d0', backgroundColor: '#f0fdf4'},
+  couponChipBody: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingLeft: 12,
+    paddingRight: 10,
+    gap: 1,
+  },
+  couponChipDiscount: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#e5383b',
+    letterSpacing: 0.2,
+  },
+  couponChipDiscountApplied: {color: '#16a34a'},
+  couponChipCode: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#99a2b6',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  couponChipBtn: {
+    alignSelf: 'center',
+    marginRight: 8,
+    minWidth: 56,
+    height: 28,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5383b',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  couponChipBtnApplied: {borderColor: '#16a34a', backgroundColor: '#dcfce7'},
+  couponChipBtnText: {fontSize: 11, fontWeight: '700', color: '#e5383b'},
+  couponChipBtnTextApplied: {color: '#16a34a'},
+
   methodItem: {
     backgroundColor: '#f3f3f3',
     borderRadius: 16,

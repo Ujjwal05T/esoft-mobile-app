@@ -598,7 +598,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
 
       const result = await createDisputeWithFiles(
         numericOrderId,
-        user.id,
+        user.workshopOwnerId ?? user.id,
         formData.partName,
         formData.reason,
         formData.remark,
@@ -607,6 +607,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         imageFiles[0],
         imageFiles[1],
         imageFiles[2],
+        user.role === 'staff' ? user.id : undefined,
       );
 
       if (result.success) {
@@ -631,7 +632,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
       onConfirm: async () => {
         const u = await getStoredUser();
         if (!u) return;
-        const res = await acceptDispute(dispute.numericId!, u.id);
+        const res = await acceptDispute(dispute.numericId!, u.workshopOwnerId ?? u.id);
         if (res.success) fetchDisputes();
         else setAppAlert({type: 'error', message: 'Failed to accept dispute. Please try again.'});
       },
@@ -687,13 +688,13 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
       // Call API to create inquiry with media
       const result = await createInquiryWithMedia(
         vehicleId,
-        user.id,
+        user.workshopOwnerId ?? user.id,
         activeVisit?.activeJobCategories?.length ? activeVisit.activeJobCategories : ['Default'],
         items,
         audioFiles,
         imageFiles,
         activeVisit?.id,
-        null // requestedByStaffId - owner creating inquiry
+        user.role === 'staff' ? user.id : null,
       );
 
       if (result.success) {

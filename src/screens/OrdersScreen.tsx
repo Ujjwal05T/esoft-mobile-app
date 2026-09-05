@@ -80,7 +80,7 @@ export default function OrdersScreen() {
         return;
       }
 
-      const res = await getOrdersByWorkshopId(user.id);
+      const res = await getOrdersByWorkshopId(user.workshopOwnerId ?? user.id);
       if (!res.success || !res.data) {
         setError(res.error ?? 'Failed to load orders.');
         setIsLoading(false);
@@ -203,13 +203,13 @@ export default function OrdersScreen() {
 
       const result = await createInquiryWithMedia(
         selectedVehicle.id,
-        user.id,
+        user.workshopOwnerId ?? user.id,
         activeVisitCategories,
         items,
         audioFiles,
         imageFiles,
         activeVisitId,
-        null,
+        user.role === 'staff' ? user.id : null,
       );
 
       if (result.success) {

@@ -1209,7 +1209,6 @@ export default function AddVehicleOverlay({
                 onChange={v => setChassisNumber(v.toUpperCase())}
                 autoCapitalize="characters"
                 autoCorrect={false}
-                optional={isFallbackStarted}
                 containerStyle={{borderRadius: 8}}
                 wrapperStyle={{marginBottom: 0}}
                 rightElement={

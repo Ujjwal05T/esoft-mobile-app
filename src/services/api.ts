@@ -1,8 +1,8 @@
 import * as Keychain from 'react-native-keychain';
 
 // API Base URL
-const API_BASE_URL = 'https://esoft.indusanalytics.co.in/api';
-export const SERVER_ORIGIN = 'https://esoft.indusanalytics.co.in';
+const API_BASE_URL = 'https://api.partsnow.in/api';
+export const SERVER_ORIGIN = 'https://api.partsnow.in';
 // const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';
 // export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
 
@@ -61,6 +61,7 @@ export interface UserInfo {
   workshopName?: string;
   city?: string;
   avatar?: string;
+  workshopOwnerId?: number;
 }
 
 // React Native file object (replaces browser File/Blob)

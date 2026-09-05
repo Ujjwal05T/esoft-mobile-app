@@ -376,7 +376,7 @@ export default function InquiryScreen() {
     try {
       const user = await getStoredUser();
       if (!user) return;
-      const res = await getInquiriesByWorkshopOwnerId(user.id);
+      const res = await getInquiriesByWorkshopOwnerId(user.workshopOwnerId ?? user.id);
       if (res.success && res.data) {
         const mapped = res.data.inquiries.map(mapApiInquiry);
         setInquiries(mapped);
@@ -394,7 +394,7 @@ export default function InquiryScreen() {
     try {
       const user = await getStoredUser();
       if (!user) return;
-      const res = await getQuotesByWorkshopOwnerId(user.id);
+      const res = await getQuotesByWorkshopOwnerId(user.workshopOwnerId ?? user.id);
       if (res.success && res.data) {
         const mapped = res.data.quotes.map(mapApiQuote);
         setQuotes(mapped);
@@ -412,7 +412,7 @@ export default function InquiryScreen() {
     try {
       const user = await getStoredUser();
       if (!user) return;
-      const res = await getDisputesByWorkshopOwner(user.id);
+      const res = await getDisputesByWorkshopOwner(user.workshopOwnerId ?? user.id);
       if (res.success && res.data) {
         const mapped = res.data.map(mapApiDispute);
         setDisputes(mapped);
@@ -426,7 +426,7 @@ export default function InquiryScreen() {
   }, [activeFilters, applyDisputeFilters]);
 
   const handleAcceptDispute = (dispute: DisputeWithDate) => {
-    if (!dispute.numericId || user?.role === 'staff') return;
+    if (!dispute.numericId) return;
     setAppAlert({
       type: 'confirm',
       title: 'Accept Dispute',
@@ -434,7 +434,7 @@ export default function InquiryScreen() {
       confirmText: 'Accept',
       onConfirm: async () => {
         if (!user?.id) return;
-        const res = await acceptDispute(dispute.numericId!, user.id);
+        const res = await acceptDispute(dispute.numericId!, user.workshopOwnerId ?? user.id);
         if (res.success) fetchDisputes();
         else setAppAlert({type: 'error', message: 'Failed to accept dispute. Please try again.'});
       },
@@ -446,7 +446,7 @@ export default function InquiryScreen() {
     const images = data.images.filter(Boolean);
     const result = await createDisputeWithFiles(
       Number(data.orderId),
-      user.id,
+      user.workshopOwnerId ?? user.id,
       data.partName,
       data.reason,
       data.remark,
@@ -662,13 +662,13 @@ export default function InquiryScreen() {
 
       const result = await createInquiryWithMedia(
         selectedVehicle.id,
-        user.id,
+        user.workshopOwnerId ?? user.id,
         activeVisitCategories,
         items,
         audioFiles,
         imageFiles,
         activeVisitId,
-        null,
+        user.role === 'staff' ? user.id : null,
       );
 
       if (result.success) {
@@ -717,7 +717,7 @@ export default function InquiryScreen() {
 
       const result = await createDisputeWithFiles(
         numericOrderId,
-        user.id,
+        user.workshopOwnerId ?? user.id,
         formData.partName,
         formData.reason,
         formData.remark,
@@ -726,6 +726,7 @@ export default function InquiryScreen() {
         imageFiles[0],
         imageFiles[1],
         imageFiles[2],
+        user.role === 'staff' ? user.id : undefined,
       );
 
       if (result.success) {
@@ -996,8 +997,7 @@ export default function InquiryScreen() {
                   key={dispute.id}
                   dispute={{
                     ...dispute,
-                    // Only owners see Accept Dispute; staff see Edit instead
-                    action: dispute.action === 'accept' && user?.role === 'staff' ? 'edit' : dispute.action,
+                    action: dispute.action,
                   }}
                   onEdit={_id => setEditDisputeItem(dispute)}
                   onAccept={_id => handleAcceptDispute(dispute)}

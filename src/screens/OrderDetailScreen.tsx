@@ -463,7 +463,7 @@ export default function OrderDetailScreen() {
     const images = data.images.filter(Boolean);
     const result = await createDisputeWithFiles(
       order.id,
-      user.id,
+      user.workshopOwnerId ?? user.id,
       data.partName,
       data.reason,
       data.remark,

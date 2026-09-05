@@ -85,14 +85,6 @@ const LogoutIcon = () => (
   </Svg>
 );
 
-const DeleteIcon = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-    <Path d="M21 5.98C17.67 5.65 14.32 5.48 10.98 5.48C9 5.48 7.02 5.58 5.04 5.78L3 5.98" stroke="white" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M8.5 4.97L8.72 3.66C8.88 2.71 9 2 10.69 2H13.31C15 2 15.13 2.75 15.28 3.67L15.5 4.97" stroke="white" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M18.85 9.14L18.2 19.21C18.09 20.78 18 22 15.21 22H8.79C6 22 5.91 20.78 5.8 19.21L5.15 9.14" stroke="white" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
-
 const BackIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
     <Path d="M15 19.92L8.48 13.4C7.71 12.63 7.71 11.37 8.48 10.6L15 4.08" stroke="white" strokeWidth={1.5} strokeMiterlimit={10} strokeLinecap="round" strokeLinejoin="round" />
@@ -147,10 +139,6 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
     setShowContactOverlay(true);
   };
 
-  const handleDeleteAccount = () => {
-    setShowDeleteOverlay(true);
-  };
-
   const handleLogout = () => {
     onClose();
     signOut();
@@ -167,14 +155,11 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
       label: t('common.my_account'),
       action: () => navigate(isOwner ? 'Profile' : 'StaffProfile'),
     },
-    ...(isOwner ? [
-      {icon: <StaffIcon />, label: t('nav.staff'), action: () => navigate('Staff')},
-      {icon: <ReportIcon />, label: t('nav.reports'), action: () => navigate('Reports')},
-    ] : []),
+    {icon: <StaffIcon />, label: t('nav.staff'), action: () => navigate('Staff')},
+    {icon: <ReportIcon />, label: t('nav.reports'), action: () => navigate('Reports')},
     {icon: <PhoneIcon />, label: t('common.contact_parts_now'), action: handleContactETNA},
     {icon: <FAQIcon />, label: t('nav.faqs'), action: () => navigate('FAQs')},
     {icon: <PolicyIcon />, label: t('nav.policies'), action: () => navigate('Policies')},
-    {icon: <DeleteIcon />, label: t('common.delete_account'), action: handleDeleteAccount},
     {icon: <LogoutIcon />, label: t('nav.logout'), action: handleLogout},
   ];
 

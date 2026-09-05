@@ -16,8 +16,6 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {
   sendRegistrationOtp,
   verifyRegistrationOtp,
-  sendRegistrationOtpByEmail,
-  verifyRegistrationOtpByEmail,
   submitWorkshopRegistration,
 } from '../services/api';
 import FloatingInput from '../components/ui/FloatingInput';
@@ -25,13 +23,7 @@ import {useTranslation} from 'react-i18next';
 import CheckIcon from '../assets/icons/check.svg';
 import {getCurrentAddress} from '../utils/location';
 
-type RegistrationStep =
-  | 'enter-credentials'
-  | 'verify-otp'
-  | 'workshop-details'
-  | 'request-sent';
-
-type RegisterMode = 'email' | 'phone';
+type RegistrationStep = 'workshop-details' | 'verify-otp' | 'onboarded';
 
 const OTP_LENGTH = 6;
 
@@ -41,20 +33,15 @@ interface RegisterScreenProps {
 
 const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const {t} = useTranslation();
-  const [registerMode, setRegisterMode] = useState<RegisterMode>('phone');
-  const [currentStep, setCurrentStep] = useState<RegistrationStep>('enter-credentials');
+  const [currentStep, setCurrentStep] = useState<RegistrationStep>('workshop-details');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  // Step 1
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
 
   // Step 2
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const otpRefs = useRef<Array<TextInput | null>>(Array(OTP_LENGTH).fill(null));
 
-  // Step 3
+  // Step 1
   const [workshopDetails, setWorkshopDetails] = useState({
     fullName: '',
     contactNumber: '',
@@ -73,9 +60,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const setField = (field: keyof typeof workshopDetails) => (value: string) =>
     setWorkshopDetails(prev => ({...prev, [field]: value}));
 
-  const isEmailValid = email.includes('@') && email.includes('.');
-  const isPhoneValid = /^[6-9]\d{9}$/.test(phone);
-  const isInputValid = registerMode === 'email' ? isEmailValid : isPhoneValid;
   const isOtpComplete = otp.every(d => d !== '');
   const isContactNumberValid = /^[6-9]\d{9}$/.test(workshopDetails.contactNumber);
   const isPinCodeValid = /^\d{6}$/.test(workshopDetails.pinCode);
@@ -92,20 +76,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
 
   // ── Handlers ──
 
-  const handleModeSwitch = (mode: RegisterMode) => {
-    setRegisterMode(mode);
-    setEmail('');
-    setPhone('');
-    setError('');
-  };
-
   const handleGetOTP = async () => {
-    if (!isInputValid) return;
+    if (!isWorkshopFormValid) return;
     setError('');
     setLoading(true);
-    const result = registerMode === 'email'
-      ? await sendRegistrationOtpByEmail(email)
-      : await sendRegistrationOtp(phone);
+    const result = await sendRegistrationOtp(workshopDetails.contactNumber);
     setLoading(false);
     if (!result.success) {
       setError(result.error || 'Failed to send OTP. Please try again.');
@@ -119,43 +94,30 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
     if (!isOtpComplete) return;
     setError('');
     setLoading(true);
-    const result = registerMode === 'email'
-      ? await verifyRegistrationOtpByEmail(email, otp.join(''))
-      : await verifyRegistrationOtp(phone, otp.join(''));
-    setLoading(false);
-    if (!result.success) {
-      setError(result.error || 'Invalid OTP. Please try again.');
+
+    const verifyResult = await verifyRegistrationOtp(workshopDetails.contactNumber, otp.join(''));
+    if (!verifyResult.success) {
+      setLoading(false);
+      setError(verifyResult.error || 'Invalid OTP. Please try again.');
       return;
     }
-    // Pre-fill contact number from phone if phone mode
-    if (registerMode === 'phone' && phone) {
-      setWorkshopDetails(prev => ({...prev, contactNumber: phone}));
-    }
-    setCurrentStep('workshop-details');
-  };
 
-  const handleSendRequest = async () => {
-    if (!isWorkshopFormValid) return;
-    setError('');
-    setLoading(true);
-    const payload = {
+    const submitResult = await submitWorkshopRegistration({
       ownerName: workshopDetails.fullName,
-      phoneNumber: registerMode === 'phone' ? phone : workshopDetails.contactNumber,
-      email: registerMode === 'email' ? email : (workshopDetails.contactNumber || undefined),
+      phoneNumber: workshopDetails.contactNumber,
       workshopName: workshopDetails.workshopName,
       address: workshopDetails.address,
       landmark: workshopDetails.landmark || undefined,
       pinCode: workshopDetails.pinCode,
       city: workshopDetails.city,
       gstNumber: workshopDetails.gstNumber || undefined,
-    };
-    const result = await submitWorkshopRegistration(payload);
+    });
     setLoading(false);
-    if (!result.success) {
-      setError(result.error || 'Failed to submit registration. Please try again.');
+    if (!submitResult.success) {
+      setError(submitResult.error || 'Failed to complete registration. Please try again.');
       return;
     }
-    setCurrentStep('request-sent');
+    setCurrentStep('onboarded');
   };
 
   const handleUseCurrentLocation = async () => {
@@ -189,9 +151,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   const handleResend = async () => {
     setOtp(Array(OTP_LENGTH).fill(''));
     setLoading(true);
-    const result = registerMode === 'email'
-      ? await sendRegistrationOtpByEmail(email)
-      : await sendRegistrationOtp(phone);
+    const result = await sendRegistrationOtp(workshopDetails.contactNumber);
     setLoading(false);
     if (result.success) {
       otpRefs.current[0]?.focus();
@@ -201,14 +161,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   };
 
   const handleBack = () => {
-    if (currentStep === 'request-sent') {
+    if (currentStep === 'onboarded') {
       navigation?.navigate('Login');
     } else if (currentStep === 'verify-otp') {
-      setCurrentStep('enter-credentials');
+      setCurrentStep('workshop-details');
       setOtp(Array(OTP_LENGTH).fill(''));
-      setError('');
-    } else if (currentStep === 'workshop-details') {
-      setCurrentStep('verify-otp');
       setError('');
     } else {
       navigation?.goBack();
@@ -268,101 +225,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
             </View>
           )}
 
-          {/* Step 1: Enter Credentials */}
-          {currentStep === 'enter-credentials' && (
-            <View style={styles.stepContent}>
-              {/* Mode Toggle */}
-              <View style={styles.modeToggle}>
-                <TouchableOpacity
-                  style={[styles.modeTab, registerMode === 'phone' && styles.modeTabActive]}
-                  onPress={() => handleModeSwitch('phone')}>
-                  <Text style={[styles.modeTabText, registerMode === 'phone' && styles.modeTabTextActive]}>
-                    Phone
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modeTab, registerMode === 'email' && styles.modeTabActive]}
-                  onPress={() => handleModeSwitch('email')}>
-                  <Text style={[styles.modeTabText, registerMode === 'email' && styles.modeTabTextActive]}>
-                    Email
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {registerMode === 'email' ? (
-                <FloatingInput
-                  label={t('auth.email_placeholder')}
-                  value={email}
-                  onChange={setEmail}
-                  keyboardType="email-address"
-                  required
-                  error={email.length > 0 && !isEmailValid ? t('auth.email_error') : undefined}
-                />
-              ) : (
-                <FloatingInput
-                  label={t('auth.phone_placeholder')}
-                  value={phone}
-                  onChange={v => setPhone(v.replace(/[^0-9]/g, ''))}
-                  keyboardType="number-pad"
-                  maxLength={10}
-                  required
-                  error={phone.length > 0 && !isPhoneValid ? t('auth.phone_error') : undefined}
-                />
-              )}
-
-              {!!error && (
-                <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Step 2: Verify OTP */}
-          {currentStep === 'verify-otp' && (
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>{t('auth.verify_otp')}</Text>
-              <Text style={styles.otpSubtitle}>
-                {registerMode === 'email'
-                  ? `Enter the 6-digit code sent to ${email}`
-                  : `Enter the 6-digit code sent to your WhatsApp (+91 ${phone})`}
-              </Text>
-
-              <View style={styles.otpRow}>
-                {otp.map((digit, i) => (
-                  <TextInput
-                    key={i}
-                    ref={ref => {
-                      otpRefs.current[i] = ref;
-                    }}
-                    style={[styles.otpBox, digit ? styles.otpBoxFilled : null]}
-                    value={digit}
-                    onChangeText={val => handleOtpChange(val, i)}
-                    onKeyPress={({nativeEvent}) =>
-                      handleOtpKeyPress(nativeEvent.key, i)
-                    }
-                    keyboardType="number-pad"
-                    maxLength={1}
-                    textAlign="center"
-                    selectTextOnFocus
-                  />
-                ))}
-              </View>
-
-              <TouchableOpacity onPress={handleResend}>
-                <Text style={styles.resendLink}>Resend OTP</Text>
-              </TouchableOpacity>
-
-              {/* Error message below form */}
-              {!!error && (
-                <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Step 3: Workshop Details */}
+          {/* Step 1: Workshop Details */}
           {currentStep === 'workshop-details' && (
             <View style={styles.stepContent}>
               <Text style={styles.stepTitle}>Workshop Details</Text>
@@ -435,43 +298,95 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 onChange={setField('city')}
                 required
               />
+
+              {!!error && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
             </View>
           )}
 
-          {/* Step 4: Request Sent */}
-          {currentStep === 'request-sent' && (
+          {/* Step 2: Verify OTP */}
+          {currentStep === 'verify-otp' && (
+            <View style={styles.stepContent}>
+              <Text style={styles.stepTitle}>{t('auth.verify_otp')}</Text>
+              <Text style={styles.otpSubtitle}>
+                {`Enter the 6-digit code sent to your WhatsApp (+91 ${workshopDetails.contactNumber})`}
+              </Text>
+
+              <View style={styles.otpRow}>
+                {otp.map((digit, i) => (
+                  <TextInput
+                    key={i}
+                    ref={ref => {
+                      otpRefs.current[i] = ref;
+                    }}
+                    style={[styles.otpBox, digit ? styles.otpBoxFilled : null]}
+                    value={digit}
+                    onChangeText={val => handleOtpChange(val, i)}
+                    onKeyPress={({nativeEvent}) =>
+                      handleOtpKeyPress(nativeEvent.key, i)
+                    }
+                    keyboardType="number-pad"
+                    maxLength={1}
+                    textAlign="center"
+                    selectTextOnFocus
+                  />
+                ))}
+              </View>
+
+              <TouchableOpacity onPress={handleResend}>
+                <Text style={styles.resendLink}>Resend OTP</Text>
+              </TouchableOpacity>
+
+              {/* Error message below form */}
+              {!!error && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Step 3: Onboarded */}
+          {currentStep === 'onboarded' && (
             <View style={styles.successContent}>
               <View style={styles.successCircle}>
                 <CheckIcon width={40} height={40} fill="#ffffff" />
               </View>
-              <Text style={styles.successTitle}>Request Sent</Text>
+              <Text style={styles.successTitle}>You're Onboarded!</Text>
               <Text style={styles.successDesc}>
-                Our Representative will visit your workshop to verify and get
-                you onboarded.
+                Your workshop has been set up successfully. Log in with your
+                phone number to get started.
               </Text>
+              <TouchableOpacity
+                style={[styles.actionButton, {marginTop: 32}]}
+                onPress={() => navigation?.navigate('Login')}
+                activeOpacity={0.8}>
+                <Text style={styles.actionButtonText}>LOG IN</Text>
+              </TouchableOpacity>
             </View>
           )}
 
         </ScrollView>
 
-        {/* Fixed Bottom Section — hidden on request-sent */}
-        {currentStep !== 'request-sent' && (
+        {/* Fixed Bottom Section — hidden on onboarded */}
+        {currentStep !== 'onboarded' && (
           <View style={styles.bottomSection}>
 
-            {currentStep === 'enter-credentials' && (
+            {currentStep === 'workshop-details' && (
               <TouchableOpacity
                 style={[
                   styles.actionButton,
-                  !(isInputValid && !loading) && styles.actionButtonDisabled,
+                  !(isWorkshopFormValid && !loading) && styles.actionButtonDisabled,
                 ]}
                 onPress={handleGetOTP}
-                disabled={!isInputValid || loading}>
+                disabled={!isWorkshopFormValid || loading}>
                 {loading ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
-                  <Text style={styles.actionButtonText}>
-                    {'GET OTP'}
-                  </Text>
+                  <Text style={styles.actionButtonText}>REGISTER</Text>
                 )}
               </TouchableOpacity>
             )}
@@ -488,22 +403,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                   <ActivityIndicator color="#ffffff" />
                 ) : (
                   <Text style={styles.actionButtonText}>VERIFY</Text>
-                )}
-              </TouchableOpacity>
-            )}
-
-            {currentStep === 'workshop-details' && (
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  !(isWorkshopFormValid && !loading) && styles.actionButtonDisabled,
-                ]}
-                onPress={handleSendRequest}
-                disabled={!isWorkshopFormValid || loading}>
-                {loading ? (
-                  <ActivityIndicator color="#ffffff" />
-                ) : (
-                  <Text style={styles.actionButtonText}>SEND REQUEST</Text>
                 )}
               </TouchableOpacity>
             )}
@@ -710,37 +609,6 @@ const styles = StyleSheet.create({
     color: '#e5383b',
     marginTop: -8,
     marginBottom: 4,
-  },
-  modeToggle: {
-    flexDirection: 'row',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 3,
-    marginBottom: 20,
-  },
-  modeTab: {
-    flex: 1,
-    height: 36,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modeTabActive: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  modeTabText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#9ca3af',
-  },
-  modeTabTextActive: {
-    color: '#e5383b',
-    fontWeight: '600',
   },
   locationButton: {
     height: 51,

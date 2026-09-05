@@ -5,15 +5,11 @@ import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
 import {
-  HomeScreen,
   VehicleScreen,
-  StaffVehicleScreen,
   InquiryScreen,
-  StaffInquiryScreen,
   OwnerDashboardScreen,
   OrdersScreen,
 } from '../screens';
-import {useAuth} from '../context/AuthContext';
 import HomeIcon from '../assets/icons/home.svg';
 import VehicleIcon from '../assets/icons/vehicle.svg';
 import OrderIcon from '../assets/icons/order.svg';
@@ -110,25 +106,14 @@ function TabBar({state, navigation}: BottomTabBarProps) {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const TabNavigator: React.FC = () => {
-  const {userRole} = useAuth();
-  const HomeComponent =
-    userRole === 'owner' ? OwnerDashboardScreen : HomeScreen;
-  const VehicleComponent =
-    userRole === 'owner' || userRole === 'admin' ? VehicleScreen : StaffVehicleScreen;
-  const InquiryComponent =
-    userRole === 'owner' || userRole === 'admin' ? InquiryScreen : StaffInquiryScreen;
-  const isAdminOrOwner = userRole === 'admin' || userRole === 'owner';
-
   return (
     <Tab.Navigator
       screenOptions={{headerShown: false}}
       tabBar={props => <TabBar {...props} />}>
-      <Tab.Screen name="Home" component={HomeComponent} />
-      <Tab.Screen name="Vehicle" component={VehicleComponent} />
-      {isAdminOrOwner && (
-        <Tab.Screen name="Orders" component={OrdersScreen} />
-      )}
-      <Tab.Screen name="Inquiry" component={InquiryComponent} />
+      <Tab.Screen name="Home" component={OwnerDashboardScreen} />
+      <Tab.Screen name="Vehicle" component={VehicleScreen} />
+      <Tab.Screen name="Orders" component={OrdersScreen} />
+      <Tab.Screen name="Inquiry" component={InquiryScreen} />
     </Tab.Navigator>
   );
 };

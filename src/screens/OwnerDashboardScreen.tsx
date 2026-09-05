@@ -150,13 +150,13 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
       });
       const result = await createInquiryWithMedia(
         selectedVehicle.id,
-        user.id,
+        user.workshopOwnerId ?? user.id,
         activeVisitCategories,
         items,
         audioFiles,
         imageFiles,
         activeVisitId,
-        null,
+        user.role === 'staff' ? user.id : null,
       );
       if (result.success) {
         setAlert({type: 'success', message: `Inquiry created successfully!\n\nInquiry Number: ${result.data?.inquiryNumber || 'N/A'}`, onDone: () => setShowRequestPart(false)});

@@ -59,7 +59,7 @@ const ArrowRightIcon = () => (
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isAvailable(coupon: Coupon): boolean {
+export function isAvailable(coupon: Coupon): boolean {
   if (!coupon.isActive) return false;
   const now = new Date();
   if (new Date(coupon.validFrom) > now) return false;
@@ -68,7 +68,7 @@ function isAvailable(coupon: Coupon): boolean {
   return true;
 }
 
-function discountLabel(coupon: Coupon): string {
+export function discountLabel(coupon: Coupon): string {
   return coupon.discountType === 'percentage'
     ? `${coupon.discountValue}% OFF`
     : `₹${coupon.discountValue} OFF`;
