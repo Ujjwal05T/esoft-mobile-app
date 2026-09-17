@@ -25,13 +25,8 @@ class AppDelegate: ExpoAppDelegate {
     reactNativeDelegate = delegate
     reactNativeFactory = factory
 
-    window = UIWindow(frame: UIScreen.main.bounds)
-
-    factory.startReactNative(
-      withModuleName: "esoft",
-      in: window,
-      launchOptions: launchOptions
-    )
+    // Window creation + startReactNative now happens in SceneDelegate.swift
+    // (scene(_:willConnectTo:options:)) — required for Scene lifecycle adoption.
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }

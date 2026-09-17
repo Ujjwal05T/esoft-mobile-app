@@ -1,10 +1,11 @@
 import * as Keychain from 'react-native-keychain';
+import { logNetworkError } from './errorLogging';
 
 // API Base URL
-const API_BASE_URL = 'https://api.partsnow.in/api';
-export const SERVER_ORIGIN = 'https://api.partsnow.in';
-// const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';
-// export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
+// const API_BASE_URL = 'https://api.partsnow.in/api';
+// export const SERVER_ORIGIN = 'https://api.partsnow.in';
+const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';   //Cloudflared Tunnel That Points to localhost:5000 
+export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -113,7 +114,7 @@ async function apiRequest<T>(
 
     return { success: true, data };
   } catch (error) {
-    console.error('API Error:', error);
+    logNetworkError(endpoint, options.method ?? 'GET', error);
     return { success: false, error: 'Network error. Please try again.' };
   }
 }
@@ -387,7 +388,7 @@ export async function uploadOwnerPhoto(email: string, file: RNFile) {
 
     return { success: true, data };
   } catch (error) {
-    console.error('Upload Error:', error);
+    logNetworkError('/verification/photos/owner', 'POST', error);
     return { success: false, error: 'Network error. Please try again.' };
   }
 }
@@ -413,7 +414,7 @@ export async function uploadWorkshopPhoto(email: string, file: RNFile) {
 
     return { success: true, data };
   } catch (error) {
-    console.error('Upload Error:', error);
+    logNetworkError('/verification/photos/workshop', 'POST', error);
     return { success: false, error: 'Network error. Please try again.' };
   }
 }
@@ -697,7 +698,7 @@ export async function createVehicleWithAudio(data: CreateVehicleData, audioFile?
 
     return { success: true, data: result as VehicleResponse };
   } catch (error) {
-    console.error('API Error:', error);
+    logNetworkError('/vehicle/with-audio', 'POST', error);
     return { success: false, error: 'Network error. Please try again.' };
   }
 }
@@ -732,7 +733,7 @@ export async function createVehicleWithMedia(
     if (!response.ok) return {success: false, error: result.message || 'Failed to create vehicle'};
     return {success: true, data: result as VehicleResponse};
   } catch (error) {
-    console.error('API Error:', error);
+    logNetworkError('/vehicle/with-media', 'POST', error);
     return {success: false, error: 'Network error. Please try again.'};
   }
 }
@@ -941,7 +942,7 @@ export async function gateInVehicleWithMedia(
 
     return { success: true, data: result as VehicleVisitResponse };
   } catch (error) {
-    console.error('API Error:', error);
+    logNetworkError('/vehiclevisit/gate-in/with-media', 'POST', error);
     return { success: false, error: 'Network error. Please try again.' };
   }
 }
@@ -1225,7 +1226,7 @@ export async function createStaffWithPhoto(data: CreateStaffData, photo: RNFile)
 
     return { success: true, data: responseData as WorkshopStaffResponse };
   } catch (error) {
-    console.error('API Error:', error);
+    logNetworkError('/staff/with-photo', 'POST', error);
     return { success: false, error: 'Network error. Please try again.' };
   }
 }
@@ -1275,7 +1276,7 @@ export async function uploadStaffPhoto(id: number, photo: RNFile) {
 
     return { success: true, data: responseData as { photoUrl: string } };
   } catch (error) {
-    console.error('API Error:', error);
+    logNetworkError('/staff/{id}/photo', 'POST', error);
     return { success: false, error: 'Network error. Please try again.' };
   }
 }
@@ -1429,7 +1430,7 @@ export async function createJobCardWithMedia(
 
     return { success: true, data: result as JobCardResponse };
   } catch (error) {
-    console.error('API Error:', error);
+    logNetworkError('/jobcard/with-media', 'POST', error);
     return { success: false, error: 'Network error. Please try again.' };
   }
 }
@@ -1608,7 +1609,7 @@ export async function createInquiryWithMedia(
 
     return { success: true, data: result as InquiryResponse };
   } catch (error) {
-    console.error('API Error (createInquiryWithMedia):', error);
+    logNetworkError('/inquiry/with-media', 'POST', error);
     return { success: false, error: 'Network error. Please try again.' };
   }
 }
@@ -1717,7 +1718,7 @@ export async function updateInquiryItemsWithFiles(
     if (!response.ok) return {success: false, error: data.message || 'Failed to update'};
     return {success: true, data};
   } catch (error) {
-    console.error('API Error (updateInquiryItemsWithFiles):', error);
+    logNetworkError('/inquiry/{inquiryId}/items/with-files', 'PUT', error);
     return {success: false, error: 'Network error. Please try again.'};
   }
 }
@@ -2226,7 +2227,7 @@ export async function createDisputeWithFiles(
 
     return {success: true, data};
   } catch (error) {
-    console.error('API Error (createDisputeWithFiles):', error);
+    logNetworkError('/disputes/with-files', 'POST', error);
     return {success: false, error: 'Network error. Please try again.'};
   }
 }

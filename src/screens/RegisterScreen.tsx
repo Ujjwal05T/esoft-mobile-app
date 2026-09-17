@@ -1,4 +1,4 @@
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {
   View,
   Text,
@@ -40,6 +40,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   // Step 2
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const otpRefs = useRef<Array<TextInput | null>>(Array(OTP_LENGTH).fill(null));
+  const resendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [resendTimer, setResendTimer] = useState(0);
 
   // Step 1
   const [workshopDetails, setWorkshopDetails] = useState({
@@ -76,6 +78,25 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
 
   // ── Handlers ──
 
+  useEffect(() => {
+    return () => {
+      if (resendTimerRef.current) clearInterval(resendTimerRef.current);
+    };
+  }, []);
+
+  const startResendTimer = () => {
+    setResendTimer(30);
+    resendTimerRef.current = setInterval(() => {
+      setResendTimer(prev => {
+        if (prev <= 1) {
+          clearInterval(resendTimerRef.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   const handleGetOTP = async () => {
     if (!isWorkshopFormValid) return;
     setError('');
@@ -87,6 +108,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
       return;
     }
     setCurrentStep('verify-otp');
+    startResendTimer();
     setTimeout(() => otpRefs.current[0]?.focus(), 200);
   };
 
@@ -149,11 +171,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
   };
 
   const handleResend = async () => {
+    if (resendTimer > 0) return;
     setOtp(Array(OTP_LENGTH).fill(''));
+    setError('');
     setLoading(true);
     const result = await sendRegistrationOtp(workshopDetails.contactNumber);
     setLoading(false);
     if (result.success) {
+      startResendTimer();
       otpRefs.current[0]?.focus();
     } else {
       setError(result.error || 'Failed to resend OTP.');
@@ -336,8 +361,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({navigation}) => {
                 ))}
               </View>
 
-              <TouchableOpacity onPress={handleResend}>
-                <Text style={styles.resendLink}>Resend OTP</Text>
+              <TouchableOpacity onPress={handleResend} disabled={resendTimer > 0}>
+                <Text
+                  style={[
+                    styles.resendLink,
+                    resendTimer > 0 && styles.resendDisabled,
+                  ]}>
+                  {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}
+                </Text>
               </TouchableOpacity>
 
               {/* Error message below form */}
@@ -520,6 +551,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#e5383b',
     marginTop: 4,
+  },
+  resendDisabled: {
+    color: '#9ca3af',
   },
   demoBox: {
     marginTop: 24,
