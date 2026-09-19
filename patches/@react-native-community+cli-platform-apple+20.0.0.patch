@@ -1,0 +1,40 @@
+diff --git a/node_modules/@react-native-community/cli-platform-apple/build/commands/runCommand/runOnSimulator.js b/node_modules/@react-native-community/cli-platform-apple/build/commands/runCommand/runOnSimulator.js
+index 0000000..0000000 100644
+--- a/node_modules/@react-native-community/cli-platform-apple/build/commands/runCommand/runOnSimulator.js
++++ b/node_modules/@react-native-community/cli-platform-apple/build/commands/runCommand/runOnSimulator.js
+@@ -18,6 +18,13 @@ function _cliTools() {
+   };
+   return data;
+ }
++function _fs() {
++  const data = _interopRequireDefault(require("fs"));
++  _fs = function () {
++    return data;
++  };
++  return data;
++}
+ var _buildProject = require("../buildCommand/buildProject");
+ var _matchingDevice = require("./matchingDevice");
+ var _installApp = _interopRequireDefault(require("./installApp"));
+@@ -42,7 +49,20 @@ async function runOnSimulator(xcodeProject, platform, mode, scheme, args, simu
+   const activeDeveloperDir = _child_process().default.execFileSync('xcode-select', ['-p'], {
+     encoding: 'utf8'
+   }).trim();
+-  _child_process().default.execFileSync('open', [`${activeDeveloperDir}/Applications/Simulator.app`, '--args', '-CurrentDeviceUDID', simulator.udid]);
++  const simulatorAppPath = `${activeDeveloperDir}/Applications/Simulator.app`;
++  const deviceHubAppPath = `${activeDeveloperDir}/../Applications/DeviceHub.app`;
++  try {
++    if (_fs().default.existsSync(simulatorAppPath)) {
++      _child_process().default.execFileSync('open', [simulatorAppPath, '--args', '-CurrentDeviceUDID', simulator.udid]);
++    } else if (_fs().default.existsSync(deviceHubAppPath)) {
++      // Xcode 27+ replaced Simulator.app with DeviceHub.app, focused via URL scheme.
++      _child_process().default.execFileSync('open', [`devices://device/open?id=${simulator.udid}`]);
++    } else {
++      _cliTools().logger.warn('Could not find Simulator.app or DeviceHub.app — continuing without bringing the simulator window to front. You can open it manually if needed.');
++    }
++  } catch (e) {
++    _cliTools().logger.warn('Could not open the simulator window — continuing without bringing it to front. You can open it manually if needed.');
++  }
+   if (simulator.state !== 'Booted') {
+     bootSimulator(simulator);
+   }
