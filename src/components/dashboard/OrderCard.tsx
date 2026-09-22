@@ -10,14 +10,6 @@ import {
 import Svg, {Path, Circle, Rect} from 'react-native-svg';
 import StatusBadge, {StatusType, normalizeStatus} from '../ui/StatusBadge';
 import {useTranslation} from 'react-i18next';
-const EyeIcon = () => (
-  <Svg width={20} height={13} viewBox="0 0 20 13" fill="none">
-      <Path
-        d="M10 0.5C5.45 0.5 1.57 3.23 0 7.125c1.57 3.895 5.45 6.625 10 6.625s8.43-2.73 10-6.625C18.43 3.23 14.55 0.5 10 0.5zm0 11.042c-2.485 0-4.5-2.015-4.5-4.5S7.515 2.542 10 2.542s4.5 2.015 4.5 4.5-2.015 4.5-4.5 4.5zm0-7.2c-1.49 0-2.7 1.21-2.7 2.7s1.21 2.7 2.7 2.7 2.7-1.21 2.7-2.7-1.21-2.7-2.7-2.7z"
-        fill="#E5383B"
-      />
-    </Svg>
-);
 
 export type OrderStatus = 'in-process' | 'shipped' | 'delivered';
 
@@ -82,7 +74,12 @@ export default function OrderCard({
 }: OrderCardProps) {
   const {t} = useTranslation();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const visibleParts = isExpanded ? order.orderedParts.slice(0, 3) : [];
+  const [showAllParts, setShowAllParts] = useState(false);
+  const visibleParts = isExpanded
+    ? showAllParts
+      ? order.orderedParts
+      : order.orderedParts.slice(0, 3)
+    : [];
   const remainingCount = order.orderedParts.length - 3;
   const deliveryLabel = order.status === 'delivered' ? t('orders.delivered_at_label') : t('orders.delivery_by');
 
@@ -154,10 +151,16 @@ export default function OrderCard({
           </View>
 
           {isExpanded && remainingCount > 0 && (
-            <View style={styles.moreRow}>
+            <TouchableOpacity
+              onPress={() => setShowAllParts(v => !v)}
+              style={styles.moreRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.moreText}>{t('card.more', {count: remainingCount})}</Text>
-            </View>
+              <Text style={styles.moreText}>
+                {showAllParts
+                  ? t('card.show_less')
+                  : t('card.more', {count: remainingCount})}
+              </Text>
+            </TouchableOpacity>
           )}
 
           <View style={styles.actionRow}>
@@ -174,11 +177,6 @@ export default function OrderCard({
                   style={[styles.actionBtn, styles.flex1]}>
                   <Text style={styles.actionBtnText}>{t('orders.view_order')}</Text>
                 </TouchableOpacity>
-                {/* <TouchableOpacity
-                  onPress={() => onViewOrder?.(order.id)}
-                  style={styles.trackIconBtn}>
-                  <EyeIcon />
-                </TouchableOpacity> */}
               </>
             )}
           </View>

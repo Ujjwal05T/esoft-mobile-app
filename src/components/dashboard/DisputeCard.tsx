@@ -1,6 +1,5 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
-import Svg, {Path} from 'react-native-svg';
 import StatusBadge, {StatusType} from '../ui/StatusBadge';
 import {useTranslation} from 'react-i18next';
 
@@ -38,15 +37,6 @@ interface DisputeCardProps {
   onView?: (id: string) => void;
   onChat?: (id: string) => void;
 }
-
-const ViewIcon = () => (
-  <Svg width={20} height={13} viewBox="0 0 20 13" fill="none">
-    <Path
-      d="M10 0.5C5.45 0.5 1.57 3.23 0 7.125c1.57 3.895 5.45 6.625 10 6.625s8.43-2.73 10-6.625C18.43 3.23 14.55 0.5 10 0.5zm0 11.042c-2.485 0-4.5-2.015-4.5-4.5S7.515 2.542 10 2.542s4.5 2.015 4.5 4.5-2.015 4.5-4.5 4.5zm0-7.2c-1.49 0-2.7 1.21-2.7 2.7s1.21 2.7 2.7 2.7 2.7-1.21 2.7-2.7-1.21-2.7-2.7-2.7z"
-      fill="#E5383B"
-    />
-  </Svg>
-);
 
 export default function DisputeCard({
   dispute,
@@ -138,7 +128,7 @@ export default function DisputeCard({
             <TouchableOpacity
               onPress={() => onView(dispute.id)}
               style={styles.viewBtn}>
-              <ViewIcon />
+              <Text style={styles.viewBtnText}>{t('card.view_details')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -188,7 +178,8 @@ const styles = StyleSheet.create({
   mainActionText: {fontSize: 10, fontWeight: '600', color: '#ffffff'},
   viewBtn: {
     borderWidth: 1, borderColor: '#e5383b',
-    borderRadius: 5, height: 38, width: 111,
+    borderRadius: 5, height: 38, paddingHorizontal: 16,
     alignItems: 'center', justifyContent: 'center',
   },
+  viewBtnText: {fontSize: 12, fontWeight: '600', color: '#e5383b'},
 });

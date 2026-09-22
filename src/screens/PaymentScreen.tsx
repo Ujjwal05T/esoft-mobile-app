@@ -627,25 +627,15 @@ export default function PaymentScreen() {
 
           <View style={styles.divider} />
 
-          {/* Delivery + Parts Subtotal */}
+          {/* Parts Subtotal + Additional Charges */}
           <View style={styles.financialRow}>
-            <View>
-              <Text style={styles.financialLabel}>{t('orders.delivery_by')}</Text>
-              <Text style={styles.financialValue}>
-                {quote.expiresAt ? formatDateIST(quote.expiresAt) : '-'}
-              </Text>
-            </View>
             <View>
               <Text style={styles.financialLabel}>{t('orders.parts_subtotal')}</Text>
               <Text style={styles.financialValue}>
                 {formatPrice(partsSubtotal)}
               </Text>
             </View>
-          </View>
-
-          {/* Additional Charges + Grand Total */}
-          <View style={styles.financialRow}>
-            <View style={styles.flex1}>
+            <View>
               <Text style={styles.financialLabel}>
                 {t('payment.additional_charges')}
               </Text>
@@ -653,7 +643,11 @@ export default function PaymentScreen() {
                 {formatPrice(additionalCharges)}
               </Text>
             </View>
-            <View style={styles.grandTotalCol}>
+          </View>
+
+          {/* Grand Total */}
+          <View style={styles.financialRow}>
+            <View>
               <Text style={styles.financialLabel}>{t('orders.grand_total')}</Text>
               <Text style={styles.financialValue}>
                 {formatPrice(grandTotal)}
@@ -973,8 +967,6 @@ const styles = StyleSheet.create({
     color: '#e5383b',
     marginTop: 4,
   },
-  flex1: {flex: 1},
-  grandTotalCol: {minWidth: 75},
 
   // Payment method card
   methodCard: {

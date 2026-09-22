@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
 import StatusBadge, {StatusType} from '../ui/StatusBadge';
@@ -38,15 +38,6 @@ interface QuoteCardProps {
   maxVisibleUnavailable?: number;
 }
 
-const ViewIcon = () => (
-  <Svg width={20} height={13} viewBox="0 0 20 13" fill="none">
-    <Path
-      d="M10 0.5C5.45 0.5 1.57 3.23 0 7.125c1.57 3.895 5.45 6.625 10 6.625s8.43-2.73 10-6.625C18.43 3.23 14.55 0.5 10 0.5zm0 11.042c-2.485 0-4.5-2.015-4.5-4.5S7.515 2.542 10 2.542s4.5 2.015 4.5 4.5-2.015 4.5-4.5 4.5zm0-7.2c-1.49 0-2.7 1.21-2.7 2.7s1.21 2.7 2.7 2.7 2.7-1.21 2.7-2.7-1.21-2.7-2.7-2.7z"
-      fill="#E5383B"
-    />
-  </Svg>
-);
-
 const ItemPlaceholder = () => (
   <Svg width={48} height={48} viewBox="0 0 80 80" fill="none">
     <Rect x={4} y={4} width={72} height={72} rx={8} stroke="#d3d3d3" strokeWidth={2} fill="none" />
@@ -67,11 +58,17 @@ export default function QuoteCard({
   maxVisibleUnavailable = 2,
 }: QuoteCardProps) {
   const {t} = useTranslation();
+  const [showAllAvailable, setShowAllAvailable] = useState(false);
+  const [showAllUnavailable, setShowAllUnavailable] = useState(false);
   const availableItems = quote.items.filter(i => i.isAvailable);
   const unavailableItems = quote.items.filter(i => !i.isAvailable);
-  const visibleAvailable = availableItems.slice(0, maxVisibleAvailable);
+  const visibleAvailable = showAllAvailable
+    ? availableItems
+    : availableItems.slice(0, maxVisibleAvailable);
   const extraAvailable = Math.max(0, availableItems.length - maxVisibleAvailable);
-  const visibleUnavailable = unavailableItems.slice(0, maxVisibleUnavailable);
+  const visibleUnavailable = showAllUnavailable
+    ? unavailableItems
+    : unavailableItems.slice(0, maxVisibleUnavailable);
   const extraUnavailable = Math.max(0, unavailableItems.length - maxVisibleUnavailable);
 
   return (
@@ -144,7 +141,13 @@ export default function QuoteCard({
                 ))}
               </View>
               {extraAvailable > 0 && (
-                <Text style={styles.moreText}>{t('card.more', {count: extraAvailable})}</Text>
+                <TouchableOpacity onPress={() => setShowAllAvailable(v => !v)}>
+                  <Text style={styles.moreText}>
+                    {showAllAvailable
+                      ? t('card.show_less')
+                      : t('card.more', {count: extraAvailable})}
+                  </Text>
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -174,13 +177,30 @@ export default function QuoteCard({
                           <Text style={styles.itemMeta}>{t('card.brand')}{item.brand}</Text>
                         )}
                       </View>
-                      <Text style={styles.itemQty}>{t('card.qty')}{item.quantity}</Text>
+                      <View style={styles.priceCol}>
+                        {item.mrp != null && item.mrp > item.price && (
+                          <Text style={styles.itemMrp}>{formatPrice(item.mrp)}</Text>
+                        )}
+                        <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
+                        {item.mrp != null && item.mrp > item.price && (
+                          <Text style={styles.itemDiscount}>
+                            ({Math.round((item.mrp - item.price) / item.mrp * 100)}% off)
+                          </Text>
+                        )}
+                        <Text style={styles.itemQty}>{t('card.qty')}{item.quantity}</Text>
+                      </View>
                     </View>
                   </View>
                 ))}
               </View>
               {extraUnavailable > 0 && (
-                <Text style={styles.moreText}>{t('card.more', {count: extraUnavailable})}</Text>
+                <TouchableOpacity onPress={() => setShowAllUnavailable(v => !v)}>
+                  <Text style={styles.moreText}>
+                    {showAllUnavailable
+                      ? t('card.show_less')
+                      : t('card.more', {count: extraUnavailable})}
+                  </Text>
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -195,7 +215,7 @@ export default function QuoteCard({
           <TouchableOpacity
             onPress={() => onView?.(quote.id)}
             style={styles.viewBtn}>
-            <ViewIcon />
+            <Text style={styles.viewBtnText}>{t('card.view_details')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -267,4 +287,5 @@ const styles = StyleSheet.create({
   itemQty: {fontSize: 12, fontWeight: '500', color: '#828282'},
   moreText: {fontSize: 14, fontWeight: '600', color: '#e5383b', textAlign: 'center', marginTop: 12},
   viewBtn: {marginTop: 16, borderWidth: 1, borderColor: '#e5383b', height: 44, borderRadius: 8, alignItems: 'center', justifyContent: 'center'},
+  viewBtnText: {fontSize: 14, fontWeight: '600', color: '#e5383b'},
 });

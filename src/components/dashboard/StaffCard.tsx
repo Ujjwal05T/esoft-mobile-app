@@ -1,6 +1,5 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
-import Svg, {Path} from 'react-native-svg';
 import {SERVER_ORIGIN} from '../../services/api';
 import {useTranslation} from 'react-i18next';
 
@@ -22,25 +21,6 @@ interface StaffCardProps {
   onView?: () => void;
   showActions?: boolean;
 }
-
-const EyeIcon = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z"
-      stroke="#e5383b"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <Path
-      d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
-      stroke="#e5383b"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 export default function StaffCard({
   staff,
@@ -91,7 +71,7 @@ export default function StaffCard({
           <TouchableOpacity
             onPress={() => onView?.()}
             style={styles.viewBtn}>
-            <EyeIcon />
+            <Text style={styles.viewBtnText}>{t('card.view_details')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -165,12 +145,17 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   viewBtn: {
-    width: 56,
+    flex: 1,
     borderWidth: 1,
     borderColor: '#e5383b',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  viewBtnText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#e5383b',
   },
 });

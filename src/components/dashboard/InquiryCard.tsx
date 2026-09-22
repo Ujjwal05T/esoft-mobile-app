@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
 import StatusBadge, {StatusType} from '../ui/StatusBadge';
@@ -47,15 +47,6 @@ interface InquiryCardProps {
   maxVisibleItems?: number;
 }
 
-const ViewIcon = () => (
-  <Svg width={20} height={13} viewBox="0 0 20 13" fill="none">
-    <Path
-      d="M10 0.5C5.45 0.5 1.57 3.23 0 7.125c1.57 3.895 5.45 6.625 10 6.625s8.43-2.73 10-6.625C18.43 3.23 14.55 0.5 10 0.5zm0 11.042c-2.485 0-4.5-2.015-4.5-4.5S7.515 2.542 10 2.542s4.5 2.015 4.5 4.5-2.015 4.5-4.5 4.5zm0-7.2c-1.49 0-2.7 1.21-2.7 2.7s1.21 2.7 2.7 2.7 2.7-1.21 2.7-2.7-1.21-2.7-2.7-2.7z"
-      fill="#E5383B"
-    />
-  </Svg>
-);
-
 const ItemPlaceholder = () => (
   <Svg width={48} height={48} viewBox="0 0 80 80" fill="none">
     <Rect x={4} y={4} width={72} height={72} rx={8} stroke="#d3d3d3" strokeWidth={2} fill="none" />
@@ -78,7 +69,10 @@ export default function InquiryCard({
   maxVisibleItems = 3,
 }: InquiryCardProps) {
   const {t} = useTranslation();
-  const visibleItems = inquiry.items?.slice(0, maxVisibleItems) || [];
+  const [showAllItems, setShowAllItems] = useState(false);
+  const visibleItems = showAllItems
+    ? inquiry.items || []
+    : inquiry.items?.slice(0, maxVisibleItems) || [];
   const extraItemsCount = Math.max(
     0,
     (inquiry.items?.length || 0) - maxVisibleItems,
@@ -207,10 +201,16 @@ export default function InquiryCard({
               </View>
 
               {extraItemsCount > 0 && (
-                <View style={styles.moreIndicator}>
+                <TouchableOpacity
+                  onPress={() => setShowAllItems(v => !v)}
+                  style={styles.moreIndicator}>
                   <View style={styles.dividerLine} />
-                  <Text style={styles.moreText}>{t('card.more', {count: extraItemsCount})}</Text>
-                </View>
+                  <Text style={styles.moreText}>
+                    {showAllItems
+                      ? t('card.show_less')
+                      : t('card.more', {count: extraItemsCount})}
+                  </Text>
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -226,7 +226,7 @@ export default function InquiryCard({
                 <TouchableOpacity
                   onPress={() => onView(inquiry.id)}
                   style={styles.viewBtn}>
-                  <ViewIcon />
+                  <Text style={styles.viewBtnText}>{t('card.view_details')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   viewBtn: {
-    width: 100,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: '#e5383b',
     height: 48,
@@ -406,4 +406,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  viewBtnText: {fontSize: 14, fontWeight: '600', color: '#e5383b'},
 });

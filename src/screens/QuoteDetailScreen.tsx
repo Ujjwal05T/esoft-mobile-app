@@ -219,13 +219,6 @@ export default function QuoteDetailScreen() {
     : 0;
   const grandTotal = quote?.totalAmount || 0;
 
-  const deliveryByDate = quote?.items.reduce<string | null>((max, item) => {
-    if (!item.estimatedDelivery) return max;
-    if (!max || new Date(item.estimatedDelivery) > new Date(max))
-      return item.estimatedDelivery;
-    return max;
-  }, null);
-
   const getExpiresInText = () => {
     if (!quote?.expiresAt) return null;
     const diff = new Date(quote.expiresAt).getTime() - Date.now();
@@ -351,20 +344,12 @@ export default function QuoteDetailScreen() {
             <>
               <View style={styles.summaryRow}>
                 <View>
-                  <Text style={styles.summaryLabel}>{t('orders.delivery_by')}</Text>
-                  <Text style={styles.summaryValue}>
-                    {formatShortDate(deliveryByDate || quote.createdAt)}
-                  </Text>
-                </View>
-                <View>
                   <Text style={styles.summaryLabel}>{t('orders.parts_subtotal')}</Text>
                   <Text style={styles.summaryValue}>
                     {formatPrice(partsSubtotal)}
                   </Text>
                 </View>
-              </View>
-              <View style={styles.summaryRow}>
-                <View style={styles.flex1}>
+                <View>
                   <Text style={styles.summaryLabel}>
                     {t('payment.additional_charges')}
                   </Text>
@@ -372,7 +357,9 @@ export default function QuoteDetailScreen() {
                     {formatPrice(additionalCharges)}
                   </Text>
                 </View>
-                <View style={styles.totalCol}>
+              </View>
+              <View style={styles.summaryRow}>
+                <View>
                   <Text style={styles.summaryLabel}>{t('orders.grand_total')}</Text>
                   <Text style={styles.summaryValue}>
                     {formatPrice(grandTotal)}
@@ -425,16 +412,28 @@ export default function QuoteDetailScreen() {
                   {/* Part name + price */}
                   <View style={styles.partRow}>
                     <Text style={styles.partName}>{item.partName}</Text>
-                    <Text style={styles.partPrice}>
-                      {formatPrice(item.unitPrice)}
-                    </Text>
+                    <View style={styles.priceCol}>
+                      {item.mrp != null && item.mrp > item.unitPrice && (
+                        <Text style={styles.itemMrp}>{formatPrice(item.mrp)}</Text>
+                      )}
+                      <Text style={styles.partPrice}>
+                        {formatPrice(item.unitPrice)}
+                      </Text>
+                      {item.mrp != null && item.mrp > item.unitPrice && (
+                        <Text style={styles.itemDiscount}>
+                          ({Math.round((item.mrp - item.unitPrice) / item.mrp * 100)}% off)
+                        </Text>
+                      )}
+                    </View>
                   </View>
 
                   {/* Delivery + qty */}
                   <View style={styles.metaRow}>
                     <Text style={styles.metaText}>
                       {t('quote.exp_delivery')}{' '}
-                      {formatDeliveryDateIST(item.estimatedDelivery)}
+                      <Text style={styles.metaTextBold}>
+                        {formatDeliveryDateIST(item.estimatedDelivery)}
+                      </Text>
                     </Text>
                     <Text style={styles.metaText}>
                       {item.quantity} of {item.quantity} pcs
@@ -453,11 +452,35 @@ export default function QuoteDetailScreen() {
 
                 {/* Content */}
                 <View style={styles.itemContent}>
-                  {/* Part name + unavailable badge */}
-                  <View style={styles.partRow}>
-                    <Text style={styles.partName}>{item.partName}</Text>
+                  {/* Brand + unavailable badge */}
+                  <View style={styles.badgeRow}>
+                    {item.brand ? (
+                      <View style={styles.brandBadge}>
+                        <Text style={styles.brandText}>{item.brand}</Text>
+                      </View>
+                    ) : (
+                      <View />
+                    )}
                     <View style={styles.unavailableBadge}>
                       <Text style={styles.unavailableText}>{t('quote.unavailable')}</Text>
+                    </View>
+                  </View>
+
+                  {/* Part name + price */}
+                  <View style={styles.partRow}>
+                    <Text style={styles.partName}>{item.partName}</Text>
+                    <View style={styles.priceCol}>
+                      {item.mrp != null && item.mrp > item.unitPrice && (
+                        <Text style={styles.itemMrp}>{formatPrice(item.mrp)}</Text>
+                      )}
+                      <Text style={styles.partPrice}>
+                        {formatPrice(item.unitPrice)}
+                      </Text>
+                      {item.mrp != null && item.mrp > item.unitPrice && (
+                        <Text style={styles.itemDiscount}>
+                          ({Math.round((item.mrp - item.unitPrice) / item.mrp * 100)}% off)
+                        </Text>
+                      )}
                     </View>
                   </View>
 
@@ -465,7 +488,9 @@ export default function QuoteDetailScreen() {
                   <View style={styles.metaRow}>
                     <Text style={styles.metaText}>
                       {t('quote.exp_arrival')}{' '}
-                      {formatDeliveryDateIST(item.estimatedDelivery)}
+                      <Text style={styles.metaTextBold}>
+                        {formatDeliveryDateIST(item.estimatedDelivery)}
+                      </Text>
                     </Text>
                     <Text style={styles.metaText}>
                       0 of {item.quantity} pcs
@@ -697,7 +722,6 @@ const styles = StyleSheet.create({
   summaryLabel: {fontSize: 11, fontWeight: '500', color: '#000'},
   summaryValue: {fontSize: 14, fontWeight: '700', color: '#e5383b', marginTop: 4},
   totalCol: {width: 75},
-  flex1: {flex: 1},
 
   // Items list
   itemsList: {marginTop: 8, gap: 5},
@@ -783,6 +807,9 @@ const styles = StyleSheet.create({
   partName: {fontSize: 14, fontWeight: '700', color: '#323232', flex: 1},
   partPrice: {fontSize: 14, fontWeight: '700', color: '#000'},
   partPriceGray: {color: '#b1a7a6'},
+  priceCol: {alignItems: 'flex-end'},
+  itemMrp: {fontSize: 11, color: '#9ca3af', textDecorationLine: 'line-through'},
+  itemDiscount: {fontSize: 11, fontWeight: '600', color: '#16a34a'},
 
   metaRow: {
     flexDirection: 'row',
@@ -790,6 +817,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   metaText: {fontSize: 12, fontWeight: '500', color: '#939393'},
+  metaTextBold: {fontWeight: '700', color: '#000'},
 
   // CTA Bar
   ctaBar: {

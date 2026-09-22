@@ -35,23 +35,6 @@ const CheckIcon = () => (
   </Svg>
 );
 
-const EyeIcon = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-      stroke="#161a1d"
-      strokeWidth={2}
-      strokeLinecap="round"
-    />
-    <Path
-      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-      stroke="#161a1d"
-      strokeWidth={2}
-      strokeLinecap="round"
-    />
-  </Svg>
-);
-
 export default function VehicleCard({
   plateNumber,
   year,
@@ -141,7 +124,7 @@ export default function VehicleCard({
             onPress={onView}
             style={[styles.viewBtnLight, styles.roundedBR]}
             activeOpacity={0.8}>
-            <EyeIcon />
+            <Text style={styles.viewBtnLightText}>{t('card.view_details')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -183,7 +166,7 @@ export default function VehicleCard({
             onPress={onView}
             style={[styles.viewBtnLight, styles.flex1, styles.rounded7]}
             activeOpacity={0.8}>
-            <EyeIcon />
+            <Text style={styles.viewBtnLightText}>{t('card.view_details')}</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -389,6 +372,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  viewBtnLightText: {fontSize: 14, fontWeight: '600', color: '#161a1d'},
   roundedBL: {
     borderBottomLeftRadius: 7,
   },

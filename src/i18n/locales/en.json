@@ -484,7 +484,7 @@
 
   "payment.loading": "Loading payment details...",
   "payment.title": "Payment",
-  "payment.additional_charges": "Additional Charges (Shipping and Labor)",
+  "payment.additional_charges": "Additional Charges (Shipping)",
   "payment.unavailable": "Payment Unavailable",
   "payment.success": "Payment successful! Your order has been placed.",
   "payment.verify_failed": "Payment verification failed. Please contact support.",
@@ -589,6 +589,8 @@
   "card.more": "+{{count}} more",
   "card.na": "N/A",
   "card.mrp": "MRP: ",
+  "card.view_details": "View Details",
+  "card.show_less": "Show less",
 
   "orders.delivered_at_label": "Delivered at:",
   "orders.delivery_by": "Delivery by:",

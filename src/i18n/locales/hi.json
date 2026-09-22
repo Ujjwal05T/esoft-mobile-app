@@ -482,7 +482,7 @@
 
   "payment.loading": "भुगतान विवरण लोड हो रहा है...",
   "payment.title": "भुगतान",
-  "payment.additional_charges": "अतिरिक्त शुल्क (शिपिंग और श्रम)",
+  "payment.additional_charges": "अतिरिक्त शुल्क (शिपिंग)",
   "payment.unavailable": "भुगतान उपलब्ध नहीं",
   "payment.success": "भुगतान सफल! आपका ऑर्डर दे दिया गया है।",
   "payment.verify_failed": "भुगतान सत्यापन विफल। कृपया सहायता से संपर्क करें।",
@@ -584,6 +584,8 @@
   "card.more": "+{{count}} और",
   "card.na": "N/A",
   "card.mrp": "MRP: ",
+  "card.view_details": "विवरण देखें",
+  "card.show_less": "कम दिखाएं",
 
   "orders.delivered_at_label": "पहुंचाया गया:",
   "orders.delivery_by": "डिलीवरी:",
