@@ -194,6 +194,7 @@ export default function OrdersScreen() {
 
         return {
           partName: part.partName,
+          partNumber: part.partNumber || undefined,
           preferredBrand: part.preferredBrand,
           quantity: parseInt(part.quantity, 10) || 1,
           remark: part.remark,

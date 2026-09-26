@@ -2,10 +2,10 @@ import * as Keychain from 'react-native-keychain';
 import { logNetworkError } from './errorLogging';
 
 // API Base URL
-// const API_BASE_URL = 'https://api.partsnow.in/api';
-// export const SERVER_ORIGIN = 'https://api.partsnow.in';
-const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';   //Cloudflared Tunnel That Points to localhost:5000 
-export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
+const API_BASE_URL = 'https://api.partsnow.in/api';
+export const SERVER_ORIGIN = 'https://api.partsnow.in';
+// const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';   //Cloudflared Tunnel That Points to localhost:5000 
+// export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -1477,6 +1477,7 @@ export async function deleteJobCard(id: number) {
 
 export interface InquiryItemRequest {
   partName: string;
+  partNumber?: string;
   preferredBrand: string;
   quantity: number;
   remark: string;
@@ -1499,6 +1500,7 @@ export interface CreateInquiryRequest {
 export interface InquiryItemResponse {
   id: number;
   partName: string;
+  partNumber?: string | null;
   preferredBrand: string;
   afterMarketBrandName?: string | null;
   quantity: number;

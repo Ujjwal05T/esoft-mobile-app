@@ -211,9 +211,10 @@ export default function QuoteDetailScreen() {
       i => i.availability !== 'in_stock' && i.availability !== 'on_order',
     ) || [];
 
-  const partsSubtotal =
-    quote?.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) ||
-    0;
+  const partsSubtotal = availableItems.reduce(
+    (sum, item) => sum + item.unitPrice * item.quantity,
+    0,
+  );
   const additionalCharges = quote
     ? quote.packingCharges + quote.forwardingCharges + quote.shippingCharges
     : 0;

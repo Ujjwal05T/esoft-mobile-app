@@ -201,6 +201,7 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
 
         return {
           partName: part.partName,
+          partNumber: part.partNumber || undefined,
           preferredBrand: part.preferredBrand,
           afterMarketBrandName: part.preferredBrand === 'After Market' ? part.afterMarketBrandName : undefined,
           quantity: parseInt(part.quantity, 10) || 1,

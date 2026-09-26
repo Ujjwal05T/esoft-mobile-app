@@ -599,6 +599,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
         });
         return {
           partName: part.partName,
+          partNumber: part.partNumber || undefined,
           preferredBrand: part.preferredBrand,
           afterMarketBrandName: part.preferredBrand === 'After Market' ? part.afterMarketBrandName : undefined,
           quantity: parseInt(part.quantity, 10) || 1,

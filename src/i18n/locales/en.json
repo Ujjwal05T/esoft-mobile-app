@@ -632,7 +632,7 @@
   "vehicle.added_by": "Added by {{name}}",
   "vehicle.add_new": "Add a New\nVehicle",
 
-  "staff.add_new": "Add a New\nStaff",
+  "staff.add_new": "Add New Staff",
   "staff.edit": "Edit",
 
   "jobs.card_title": "Jobs\nCard Open",
@@ -644,6 +644,9 @@
 
   "raise_parts.title1": "Raise Parts",
   "raise_parts.title2": "Inquiry",
+
+  "aftermarket.title": "Check Out Aftermarket\nSpareparts Catalog!",
+  "aftermarket.valvoline_title": "Valvoline Engine Oils",
 
   "dispute.header_title": "Raise Dispute",
   "dispute.order_id_label": "Order ID",

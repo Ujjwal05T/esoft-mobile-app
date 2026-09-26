@@ -627,7 +627,7 @@
   "vehicle.added_by": "{{name}} द्वारा जोड़ा गया",
   "vehicle.add_new": "नया वाहन\nजोड़ें",
 
-  "staff.add_new": "नया स्टाफ\nजोड़ें",
+  "staff.add_new": "नया स्टाफ जोड़ें",
   "staff.edit": "संपादित करें",
 
   "jobs.card_title": "जॉब्स\nकार्ड खुला",
@@ -639,6 +639,9 @@
 
   "raise_parts.title1": "पार्ट्स",
   "raise_parts.title2": "पूछताछ उठाएं",
+
+  "aftermarket.title": "आफ्टरमार्केट स्पेयरपार्ट्स\nकैटलॉग देखें!",
+  "aftermarket.valvoline_title": "वाल्वोलिन इंजन ऑयल",
 
   "dispute.header_title": "विवाद उठाएं",
   "dispute.order_id_label": "ऑर्डर आईडी",
