@@ -45,7 +45,7 @@ export default function RaisePartsCard({
       <View style={styles.logosRow}>
         {brandLogos.map((Logo, i) => (
           <View key={i} style={styles.logoBox}>
-            <Logo width={49} height={49} />
+            <Logo width="100%" height="100%" />
           </View>
         ))}
       </View>
@@ -83,15 +83,18 @@ const styles = StyleSheet.create({
   },
   logosRow: {
     position: 'absolute',
+    // left+right (rather than a fixed-width row) define this row's width from
+    // the card's own size, so it can never overflow a narrower screen.
     left: 18,
+    right: 18,
     top: 90,
     flexDirection: 'row',
     gap: 7,
     zIndex: 1,
   },
   logoBox: {
-    width: 65,
-    height: 65,
+    flex: 1,
+    aspectRatio: 1,
     backgroundColor: '#ffffff',
     borderRadius: 8,
     alignItems: 'center',

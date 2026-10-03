@@ -45,6 +45,7 @@
   "nav.vehicles": "Vehicle",
   "nav.orders": "Orders",
   "nav.inquiry": "Inquiry",
+  "nav.catalog": "Catalog",
   "nav.staff": "My Staff",
   "nav.reports": "Generate Reports",
   "nav.faqs": "FAQs",
@@ -297,7 +298,7 @@
   "orders.no_orders": "No Orders Found",
   "orders.no_orders_subtitle": "Your orders will appear here",
   "orders.select_vehicle_parts": "Select Vehicle for Request Part",
-  "orders.order_running_parts": "Order Running Parts",
+  "orders.order_running_parts": "Open Parts Catalog",
 
   "inquiry.loading": "Loading inquiries...",
   "inquiry.loading_quotes": "Loading quotes...",
@@ -630,7 +631,7 @@
   "job.assigned_to": "Assigned To: ",
 
   "vehicle.added_by": "Added by {{name}}",
-  "vehicle.add_new": "Add a New\nVehicle",
+  "vehicle.add_new": "Add New\nVehicle",
 
   "staff.add_new": "Add New Staff",
   "staff.edit": "Edit",

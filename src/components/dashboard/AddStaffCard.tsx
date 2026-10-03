@@ -12,16 +12,12 @@ export default function AddStaffCard({onPress}: AddStaffCardProps) {
   const {t} = useTranslation();
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
-      <LinearGradient
-        colors={['#e5383b', '#bb282b']}
-        start={{x: 0, y: 0}}
-        end={{x: 0, y: 1}}
-        style={styles.gradient}>
+      <View style={styles.gradient}>
         {/* Background staff silhouette */}
         <Image
-          source={require('../../assets/images/twin-brothers.png')}
+          source={require('../../assets/images/add-staff-card.png')}
           style={styles.staffSilhouette}
-          resizeMode="contain"
+          resizeMode="cover"
         />
 
         {/* Title */}
@@ -31,14 +27,14 @@ export default function AddStaffCard({onPress}: AddStaffCardProps) {
         <View style={styles.arrowContainer}>
           <ArrowDiagonalIcon width={32} height={32} />
         </View>
-      </LinearGradient>
+      </View>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    height: 155,
+    height: 65,
     borderRadius: 9,
     width: '100%',
     overflow: 'hidden',
@@ -46,30 +42,30 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
     position: 'relative',
+    backgroundColor: '#ffad2a',
   },
   staffSilhouette: {
     position: 'absolute',
-    right: -20,
-    top: -10,
-    width: 220,
-    height: 200,
+    opacity: 0.19,
+    width: 400,
+    height: 100,
   },
   title: {
     position: 'absolute',
     left: 11,
-    top: 21,
+    top: 15,
     fontWeight: '900',
-    fontSize: 30,
+    fontSize: 24,
     color: '#ffffff',
     letterSpacing: -1.28,
     lineHeight: 36,
-    width: 169,
+    width: 250,
   },
   arrowContainer: {
     position: 'absolute',
-    left: 11,
-    top: 103,
-    width: 32,
-    height: 32,
+    right: 12,
+    top: 15,
+    width: 35,
+    height: 35,
   },
 });

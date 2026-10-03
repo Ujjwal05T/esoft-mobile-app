@@ -1,8 +1,8 @@
 import React from 'react';
-import {NavigationContainer} from '@react-navigation/native';
+import {NavigationContainer, type NavigatorScreenParams} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import AuthStack from './AuthStack';
-import TabNavigator from './TabNavigator';
+import TabNavigator, {type MainTabParamList} from './TabNavigator';
 import {useAuth} from '../context/AuthContext';
 import {AIAssistantScreen, NotificationsScreen} from '../screens';
 import VehicleDetailScreen from '../screens/VehicleDetailScreen';
@@ -22,17 +22,15 @@ import StaffProfileScreen from '../screens/StaffProfileScreen';
 import InquiryDetailScreen from '../screens/InquiryDetailScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
 import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
-import RunningPartsScreen from '../screens/RunningPartsScreen';
 
 export type RootStackParamList = {
   Auth: undefined;
-  MainTabs: undefined;
+  MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   LanguageSelection: undefined;
   AIAssistant: undefined;
   Notifications: undefined;
   VehicleDetail: {vehicleId: number};
   StaffVehicleDetail: {vehicleId: number};
-  RunningParts: undefined;
   InquiryDetail: {inquiryId: number};
   QuoteDetail: {quoteId: number};
   OrderDetail: {orderId: number};
@@ -111,11 +109,6 @@ const RootNavigator: React.FC = () => {
             <Stack.Screen
               name="StaffVehicleDetail"
               component={StaffVehicleDetailScreen}
-              options={{animation: 'slide_from_right', headerShown: false}}
-            />
-            <Stack.Screen
-              name="RunningParts"
-              component={RunningPartsScreen}
               options={{animation: 'slide_from_right', headerShown: false}}
             />
             <Stack.Screen

@@ -39,7 +39,7 @@ export default function AddVehicleCard({onPress}: AddVehicleCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    height: 155,
+    height: 130,
     borderRadius: 9,
     width: '100%',
     overflow: 'hidden',
@@ -50,17 +50,19 @@ const styles = StyleSheet.create({
   },
   carSilhouette: {
     position: 'absolute',
-    right: -410,
-    top: -165,
-    width: 680,
-    height: 395,
+    // Anchored from the left (not the right) so its position doesn't shift
+    // with the card's width — see AddVehicleCard note below.
+    left: 60,
+    top: -150,
+    width: 600,
+    height: 350,
   },
   title: {
     position: 'absolute',
     left: 11,
-    top: 21,
+    top: 31,
     fontWeight: '900',
-    fontSize: 30,
+    fontSize: 27,
     color: '#ffffff',
     letterSpacing: -1.28,
     lineHeight: 36,
@@ -68,8 +70,8 @@ const styles = StyleSheet.create({
   },
   arrowContainer: {
     position: 'absolute',
-    left: 11,
-    top: 103,
+    right: 12,
+    top: 53,
     width: 32,
     height: 32,
   },

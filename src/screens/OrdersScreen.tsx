@@ -143,7 +143,7 @@ export default function OrdersScreen() {
   // ── FAB Handlers ─────────────────────────────────────────────────────────────
 
   const handleRequestPart = () => setShowVehicleTypeSelection(true);
-  const handleOrderRunningParts = () => navigation.navigate('RunningParts');
+  const handleOpenPartsCatalog = () => navigation.navigate('MainTabs', {screen: 'Catalog'});
 
   const handleVehicleSelected = async (vehicle: VehicleResponse, _info: VehicleInfo) => {
     setSelectedVehicle(vehicle);
@@ -296,7 +296,7 @@ export default function OrdersScreen() {
       <FloatingActionButton
         navigationOptions={[
           {label: t('vehicle.request_part'), onPress: handleRequestPart},
-          {label: t('orders.order_running_parts'), onPress: handleOrderRunningParts},
+          {label: t('orders.order_running_parts'), onPress: handleOpenPartsCatalog},
         ]}
       />
 
@@ -361,7 +361,7 @@ export default function OrdersScreen() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#f5f5f5'},
+  container: {flex: 1, backgroundColor: '#ffffff'},
 
   // Title bar
   titleBar: {
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  title: {fontSize: 24, fontWeight: '700', color: '#e85383'},
+  title: {fontSize: 24, fontWeight: '700', color: '#000000'},
   subtitle: {fontSize: 14, color: '#757575', marginTop: 4},
 
   // States

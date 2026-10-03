@@ -17,6 +17,12 @@ export interface PartProduct {
   mrp: number;
   imageUrl?: string;
   image?: ImageSourcePropType;
+  badge?: string;
+  volume?: string;
+  category?: string;
+  outOfStock?: boolean;
+  images?: ImageSourcePropType[];
+  compatibleVehicles?: string[];
 }
 
 interface PartProductCardProps {
@@ -25,10 +31,10 @@ interface PartProductCardProps {
   onAdd?: (id: string) => void;
   onIncrement?: (id: string) => void;
   onDecrement?: (id: string) => void;
+  onPress?: (product: PartProduct) => void;
 }
 
 const formatPrice = (value: number) => `₹${value.toLocaleString('en-IN')}`;
-
 
 export default function PartProductCard({
   product,
@@ -36,77 +42,125 @@ export default function PartProductCard({
   onAdd,
   onIncrement,
   onDecrement,
+  onPress,
 }: PartProductCardProps) {
   const imageSource: ImageSourcePropType | undefined = product.image
     ? product.image
     : product.imageUrl
-    ? {uri: product.imageUrl}
+    ? { uri: product.imageUrl }
     : undefined;
 
   return (
-    <View style={styles.card}>
-      <View style={styles.imageBox}>
-        {imageSource && (
-          <Image source={imageSource} style={styles.image} resizeMode="contain" />
+    <TouchableOpacity
+      activeOpacity={0.95}
+      disabled={!onPress}
+      onPress={() => onPress?.(product)}
+      style={styles.card}
+    >
+      {!!product.badge && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{product.badge}</Text>
+        </View>
+      )}
+      <View style={styles.imageWrap}>
+        <View style={styles.imageBox}>
+          {imageSource && (
+            <Image
+              source={imageSource}
+              style={styles.image}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+
+        {quantity > 0 ? (
+          <View style={styles.stepper}>
+            <TouchableOpacity
+              style={[styles.stepperBtn, styles.stepperBtnLeft]}
+              activeOpacity={0.8}
+              onPress={() => onDecrement?.(product.id)}
+            >
+              <Text style={styles.stepperBtnText}>-</Text>
+            </TouchableOpacity>
+            <View style={styles.stepperQtyBox}>
+              <Text style={styles.stepperQtyText}>{quantity}</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.stepperBtn, styles.stepperBtnRight]}
+              activeOpacity={0.8}
+              onPress={() => onIncrement?.(product.id)}
+            >
+              <Text style={styles.stepperBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.addBtn}
+            activeOpacity={0.8}
+            onPress={() => onAdd?.(product.id)}
+          >
+            <Text style={styles.addBtnText}>Add</Text>
+          </TouchableOpacity>
         )}
       </View>
 
       <View style={styles.info}>
-        <Text style={styles.sku} numberOfLines={1}>{product.sku}</Text>
-        <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
-        <Text style={styles.brand} numberOfLines={1}>{product.brand}</Text>
+        <Text style={styles.sku} numberOfLines={1}>
+          {product.sku}
+        </Text>
+        <Text style={styles.name} numberOfLines={2}>
+          {product.name}
+        </Text>
+        <Text style={styles.brand} numberOfLines={1}>
+          {product.brand}
+        </Text>
         <View style={styles.priceRow}>
           <Text style={styles.price}>{formatPrice(product.price)}</Text>
           <Text style={styles.mrp}>MRP{formatPrice(product.mrp)}</Text>
         </View>
       </View>
-
-      {quantity > 0 ? (
-        <View style={styles.stepper}>
-          <TouchableOpacity
-            style={[styles.stepperBtn, styles.stepperBtnLeft]}
-            activeOpacity={0.8}
-            onPress={() => onDecrement?.(product.id)}>
-            <Text style={styles.stepperBtnText}>-</Text>
-          </TouchableOpacity>
-          <View style={styles.stepperQtyBox}>
-            <Text style={styles.stepperQtyText}>{quantity}</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.stepperBtn, styles.stepperBtnRight]}
-            activeOpacity={0.8}
-            onPress={() => onIncrement?.(product.id)}>
-            <Text style={styles.stepperBtnText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity
-          style={styles.addBtn}
-          activeOpacity={0.8}
-          onPress={() => onAdd?.(product.id)}>
-          <Text style={styles.addBtnText}>Add</Text>
-        </TouchableOpacity>
-      )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    width: 146,
+    width: '100%',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    padding: 8,
+  },
+  badge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 1,
+    backgroundColor: 'rgba(229,56,59,0.5)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderTopLeftRadius: 10,
+    borderBottomRightRadius: 8,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#ffffff',
+  },
+  imageWrap: {
+    position: 'relative',
   },
   imageBox: {
-    width: 146,
-    height: 146,
-    backgroundColor: '#f5f3f4',
-    borderRadius: 10,
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
   image: {
-    width: 125,
-    height: 125,
+    width: '88%',
+    height: '88%',
   },
   info: {
     marginTop: 8,
@@ -142,8 +196,8 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     position: 'absolute',
-    top: 119,
-    right: 0,
+    bottom: 6,
+    right: 6,
     width: 68,
     height: 25,
     borderRadius: 3,
@@ -153,7 +207,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 2,
     elevation: 2,
@@ -164,8 +218,8 @@ const styles = StyleSheet.create({
   },
   stepper: {
     position: 'absolute',
-    top: 119,
-    right: 0,
+    bottom: 6,
+    right: 6,
     width: 68,
     height: 25,
     borderRadius: 3,
@@ -176,7 +230,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 2,
     elevation: 2,

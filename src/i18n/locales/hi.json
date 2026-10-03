@@ -45,6 +45,7 @@
   "nav.vehicles": "वाहन",
   "nav.orders": "ऑर्डर",
   "nav.inquiry": "पूछताछ",
+  "nav.catalog": "कैटलॉग",
   "nav.staff": "मेरा स्टाफ",
   "nav.reports": "रिपोर्ट बनाएं",
   "nav.faqs": "सामान्य प्रश्न",
@@ -295,7 +296,7 @@
   "orders.no_orders": "कोई ऑर्डर नहीं मिला",
   "orders.no_orders_subtitle": "आपके ऑर्डर यहां दिखेंगे",
   "orders.select_vehicle_parts": "पार्ट अनुरोध के लिए वाहन चुनें",
-  "orders.order_running_parts": "रनिंग पार्ट्स ऑर्डर करें",
+  "orders.order_running_parts": "पार्ट्स कैटलॉग खोलें",
 
   "inquiry.loading": "पूछताछ लोड हो रही है...",
   "inquiry.loading_quotes": "कोटेशन लोड हो रहे हैं...",

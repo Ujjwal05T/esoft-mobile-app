@@ -1,7 +1,7 @@
 import React from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import type {BottomTabBarProps} from '@react-navigation/bottom-tabs';
-import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, Text, TouchableOpacity, StyleSheet, useWindowDimensions, Platform} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
 import {
@@ -10,17 +10,19 @@ import {
   OwnerDashboardScreen,
   OrdersScreen,
 } from '../screens';
+import CatalogStack from './CatalogStack';
 import HomeIcon from '../assets/icons/home.svg';
 import VehicleIcon from '../assets/icons/vehicle.svg';
 import OrderIcon from '../assets/icons/order.svg';
 import InquiryIcon from '../assets/icons/inquiry.svg';
-import PlusIcon from '../assets/icons/plus.svg';
+import CatalogIcon from '../assets/icons/catalog.svg';
 
 export type MainTabParamList = {
   Home: undefined;
   Vehicle: undefined;
   Orders: undefined;
   Inquiry: {initialTab?: 'inquiries' | 'quotes' | 'disputes'} | undefined;
+  Catalog: undefined;
 };
 
 type SvgIcon = React.FC<{width?: number; height?: number; color?: string}>;
@@ -30,23 +32,30 @@ const iconMap: Record<string, SvgIcon> = {
   Vehicle: VehicleIcon as unknown as SvgIcon,
   Orders: OrderIcon as unknown as SvgIcon,
   Inquiry: InquiryIcon as unknown as SvgIcon,
+  Catalog: CatalogIcon as unknown as SvgIcon,
 };
 
 
 function TabBar({state, navigation}: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const {t} = useTranslation();
+  const {width} = useWindowDimensions();
+  const isTablet = width >= 600;
   const tabLabels: Record<string, string> = {
     Home: t('nav.home'),
     Vehicle: t('nav.vehicles'),
     Orders: t('nav.orders'),
     Inquiry: t('nav.inquiry'),
+    Catalog: t('nav.catalog'),
   };
 
   return (
-    <View style={[styles.container, {paddingBottom: insets.bottom + 6}]}>
+    <View
+      style={[
+        styles.container,
+        {paddingBottom: Math.max(insets.bottom - (Platform.OS === 'ios' ? 12 : 6), 6)},
+      ]}>
       <View style={styles.row}>
-        {/* Tabs — flex: 1 so they fill all space except the FAB */}
         <View style={styles.tabsRow}>
           {state.routes.map((route, index) => {
             const isFocused = state.index === index;
@@ -67,37 +76,31 @@ function TabBar({state, navigation}: BottomTabBarProps) {
               <TouchableOpacity
                 key={route.key}
                 onPress={onPress}
-                style={[styles.tabItem, isFocused && styles.tabItemActive]}
+                style={[
+                  styles.tabItem,
+                  isTablet && styles.tabItemTablet,
+                  isFocused && styles.tabItemActive,
+                ]}
                 activeOpacity={0.8}>
                 {Icon && (
                   <Icon
-                    width={18}
-                    height={18}
+                    width={isTablet ? 24 : 18}
+                    height={isTablet ? 24 : 18}
                     color={isFocused ? '#ffffff' : '#2b2b2b'}
                   />
                 )}
                 <Text
-                  style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
+                  style={[
+                    styles.tabLabel,
+                    isTablet && styles.tabLabelTablet,
+                    isFocused && styles.tabLabelActive,
+                  ]}>
                   {tabLabels[route.name] ?? route.name}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
-
-        {/* FAB - AI Assistant */}
-        <TouchableOpacity
-          style={styles.fabContainer}
-          activeOpacity={0.8}
-          onPress={() => navigation.getParent()?.navigate('AIAssistant' as never)}>
-          <View style={styles.fabGlow} />
-          <View style={styles.fabBackground}>
-            <View style={styles.fabInnerCircle} />
-            <View style={styles.fabIcon}>
-              <PlusIcon width={22} height={22} color="#e5383b" />
-            </View>
-          </View>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -114,6 +117,7 @@ const TabNavigator: React.FC = () => {
       <Tab.Screen name="Vehicle" component={VehicleScreen} />
       <Tab.Screen name="Orders" component={OrdersScreen} />
       <Tab.Screen name="Inquiry" component={InquiryScreen} />
+      <Tab.Screen name="Catalog" component={CatalogStack} />
     </Tab.Navigator>
   );
 };
@@ -129,8 +133,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8ebf2',
     paddingHorizontal: 10,
     paddingTop: 6,
-    maxWidth: 520, // Slightly increased for better spacing
-    alignSelf: 'center',
     width: '100%',
   },
   row: {
@@ -152,6 +154,9 @@ const styles = StyleSheet.create({
     gap: 6,
     overflow: 'hidden',
   },
+  tabItemTablet: {
+    height: 84,
+  },
   tabItemActive: {
     backgroundColor: '#e5383b',
   },
@@ -160,6 +165,9 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#2b2b2b',
     textAlign: 'center',
+  },
+  tabLabelTablet: {
+    fontSize: 15,
   },
   tabLabelActive: {
     color: '#ffffff',
