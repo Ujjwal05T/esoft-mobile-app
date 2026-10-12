@@ -52,55 +52,53 @@ function TabBar({state, navigation}: BottomTabBarProps) {
   return (
     <View
       style={[
-        styles.container,
-        {paddingBottom: Math.max(insets.bottom - (Platform.OS === 'ios' ? 12 : 6), 6)},
+        styles.wrapper,
+        {bottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 12)-10},
       ]}>
-      <View style={styles.row}>
-        <View style={styles.tabsRow}>
-          {state.routes.map((route, index) => {
-            const isFocused = state.index === index;
-            const Icon = iconMap[route.name];
+      <View style={styles.tabsRow}>
+        {state.routes.map((route, index) => {
+          const isFocused = state.index === index;
+          const Icon = iconMap[route.name];
 
-            const onPress = () => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
-              if (!isFocused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
-              }
-            };
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
 
-            return (
-              <TouchableOpacity
-                key={route.key}
-                onPress={onPress}
-                style={[
-                  styles.tabItem,
-                  isTablet && styles.tabItemTablet,
-                  isFocused && styles.tabItemActive,
-                ]}
-                activeOpacity={0.8}>
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={onPress}
+              style={styles.tabItem}
+              activeOpacity={0.75}>
+              <View
+                style={[styles.iconWrap, isTablet && styles.iconWrapTablet]}>
                 {Icon && (
                   <Icon
-                    width={isTablet ? 24 : 18}
-                    height={isTablet ? 24 : 18}
-                    color={isFocused ? '#ffffff' : '#2b2b2b'}
+                    width={isTablet ? 22 : 18}
+                    height={isTablet ? 22 : 18}
+                    color={isFocused ? '#e5383b' : '#9aa0ae'}
                   />
                 )}
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    isTablet && styles.tabLabelTablet,
-                    isFocused && styles.tabLabelActive,
-                  ]}>
-                  {tabLabels[route.name] ?? route.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+              </View>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.tabLabel,
+                  isTablet && styles.tabLabelTablet,
+                  isFocused && styles.tabLabelActive,
+                ]}>
+                {tabLabels[route.name] ?? route.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
@@ -125,91 +123,54 @@ const TabNavigator: React.FC = () => {
 export default TabNavigator;
 
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#e8ebf2',
+    left: 16,
+    right: 16,
+    backgroundColor: '#eef0f4',
+    borderRadius: 32,
+    overflow: 'hidden',
+    paddingVertical: 8,
     paddingHorizontal: 10,
-    paddingTop: 6,
-    width: '100%',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    shadowColor: '#1a1a2e',
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 14,
   },
   tabsRow: {
-    flex: 1,
     flexDirection: 'row',
-    gap: 6,
   },
   tabItem: {
     flex: 1,
-    height: 70,
-    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    overflow: 'hidden',
+    gap: 3,
+    paddingVertical: 2,
   },
-  tabItemTablet: {
-    height: 84,
+  iconWrap: {
+    width: 36,
+    height: 30,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  tabItemActive: {
-    backgroundColor: '#e5383b',
+  iconWrapTablet: {
+    width: 44,
+    height: 36,
+    borderRadius: 14,
   },
   tabLabel: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#2b2b2b',
+    fontSize: 10.5,
+    fontWeight: '500',
+    color: '#9aa0ae',
     textAlign: 'center',
   },
   tabLabelTablet: {
-    fontSize: 15,
+    fontSize: 13,
   },
   tabLabelActive: {
-    color: '#ffffff',
-  },
-  fabContainer: {
-    position: 'relative',
-    marginLeft: 8,
-    width: 70,
-    height: 70,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fabGlow: {
-    shadowColor: '#e5383b',
-    shadowOffset: {width: 0, height: 0},
-    shadowOpacity: 0.4,
-    shadowRadius: 25,
-    elevation: 0,
-  },
-  fabBackground: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#e5383b',
-    shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  fabInnerCircle: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  fabIcon: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
+    color: '#e5383b',
+    fontWeight: '700',
   },
 });

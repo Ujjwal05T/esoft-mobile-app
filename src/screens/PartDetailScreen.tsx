@@ -24,6 +24,7 @@ import PartProductCard, {
 import RedHeader from '../components/catalog/RedHeader';
 import VehiclePicker from '../components/catalog/VehiclePicker';
 import { ChevronDown } from '../components/catalog/icons';
+import PillButton from '../components/catalog/PillButton';
 import { getVehicleFullName } from '../components/catalog/SelectCarOverlay';
 import { formatPrice } from '../components/catalog/CartParts';
 import { useTabBarHeight } from '../components/catalog/useTabBarHeight';
@@ -116,7 +117,7 @@ export default function PartDetailScreen() {
   const { vehicle, quantities, addItem, increment, decrement } = useCart();
   const sendInquiry = useSendInquiry();
 
-  const [qty, setQty] = useState(1);
+  const cartQty = quantities[product.id] ?? 0;
   const [imageIndex, setImageIndex] = useState(0);
   const [compatOpen, setCompatOpen] = useState(true);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
@@ -137,13 +138,14 @@ export default function PartDetailScreen() {
     setImageIndex(Math.round(e.nativeEvent.contentOffset.x / carouselWidth));
   };
 
+  const handleAddToCart = () => addItem(product, 1);
+
   const handleCta = () => {
     if (isInquiry) {
-      const error = sendInquiry([{ product, quantity: qty }]);
+      const error = sendInquiry([{ product, quantity: cartQty }]);
       if (error) setAlertMessage(error);
       return;
     }
-    addItem(product, qty);
     navigation.navigate('PlaceOrder');
   };
 
@@ -283,59 +285,61 @@ export default function PartDetailScreen() {
       </ScrollView>
 
       <View style={[styles.bottomBar, { bottom: tabBarHeight }]}>
-        <View style={styles.stepper}>
-          <TouchableOpacity
-            style={styles.stepperBtn}
-            activeOpacity={0.8}
-            disabled={qty <= 1}
-            onPress={() => setQty(q => Math.max(1, q - 1))}
-          >
-            <Text style={styles.stepperBtnText}>−</Text>
-          </TouchableOpacity>
-          <View style={styles.stepperQty}>
-            <Text style={styles.stepperQtyText}>{qty}</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.stepperBtn}
-            activeOpacity={0.8}
-            onPress={() => setQty(q => q + 1)}
-          >
-            <Text style={styles.stepperBtnText}>+</Text>
-          </TouchableOpacity>
-        </View>
+        {cartQty <= 0 ? (
+          <PillButton
+            style={styles.addToCartBtn}
+            icon={
+              images[0] ? (
+                <Image
+                  source={images[0]}
+                  style={styles.ctaIconImg}
+                  resizeMode="contain"
+                />
+              ) : undefined
+            }
+            label="Add to Cart"
+            subtitle={formatPrice(product.price)}
+            onPress={handleAddToCart}
+          />
+        ) : (
+          <>
+            <View style={styles.stepper}>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                activeOpacity={0.8}
+                onPress={() => decrement(product.id)}
+              >
+                <Text style={styles.stepperBtnText}>−</Text>
+              </TouchableOpacity>
+              <View style={styles.stepperQty}>
+                <Text style={styles.stepperQtyText}>{cartQty}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                activeOpacity={0.8}
+                onPress={() => increment(product.id)}
+              >
+                <Text style={styles.stepperBtnText}>+</Text>
+              </TouchableOpacity>
+            </View>
 
-        <TouchableOpacity
-          style={styles.cta}
-          activeOpacity={0.85}
-          onPress={handleCta}
-        >
-          <View style={styles.thumbs}>
-            <View style={[styles.thumb, styles.thumbBack]}>
-              {images[0] && (
-                <Image
-                  source={images[0]}
-                  style={styles.thumbImg}
-                  resizeMode="contain"
-                />
-              )}
-            </View>
-            <View style={[styles.thumb, styles.thumbFront]}>
-              {images[0] && (
-                <Image
-                  source={images[0]}
-                  style={styles.thumbImg}
-                  resizeMode="contain"
-                />
-              )}
-            </View>
-          </View>
-          <Text style={styles.ctaText}>
-            {isInquiry ? 'Create Inquiry' : 'Place Order'}
-          </Text>
-          <View style={styles.ctaChevron}>
-            <ChevronDown color="#ffffff" size={20} />
-          </View>
-        </TouchableOpacity>
+            <PillButton
+              style={styles.ctaCompact}
+              icon={
+                images[0] ? (
+                  <Image
+                    source={images[0]}
+                    style={styles.ctaIconImg}
+                    resizeMode="contain"
+                  />
+                ) : undefined
+              }
+              label={isInquiry ? 'Create Inquiry' : 'Place Order'}
+              subtitle={formatPrice(product.price * cartQty)}
+              onPress={handleCta}
+            />
+          </>
+        )}
       </View>
 
       <AppAlert
@@ -451,7 +455,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    backgroundColor: '#ffffff',
     paddingHorizontal: SCREEN_PADDING,
     paddingVertical: 10,
     flexDirection: 'row',
@@ -465,9 +468,11 @@ const styles = StyleSheet.create({
     borderColor: '#e5383b',
     borderRadius: 4,
     overflow: 'hidden',
+    height: 35,
+    width: 100,
   },
   stepperBtn: {
-    width: 44,
+    width: 30,
     height: 46,
     backgroundColor: '#e5383b',
     alignItems: 'center',
@@ -475,37 +480,25 @@ const styles = StyleSheet.create({
   },
   stepperBtnText: { fontSize: 20, color: '#ffffff', fontWeight: '600' },
   stepperQty: {
-    width: 46,
+    width: 38,
     height: 46,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepperQtyText: { fontSize: 16, color: '#e5383b' },
+  stepperQtyText: { fontSize: 14, color: '#e5383b' },
 
-  cta: {
-    flex: 1,
-    height: 54,
-    borderRadius: 8,
-    backgroundColor: '#e5383b',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    gap: 14,
-  },
-  thumbs: { width: 62, height: 46 },
-  thumb: {
-    position: 'absolute',
-    width: 42,
+  ctaCompact: {
+    width: '50%',
+    marginLeft: 'auto',
     height: 46,
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 23,
   },
-  thumbBack: { left: 20, opacity: 0.85 },
-  thumbFront: { left: 0 },
-  thumbImg: { width: 32, height: 38 },
-  ctaText: { flex: 1, fontSize: 15, fontWeight: '700', color: '#ffffff' },
-  ctaChevron: { transform: [{ rotate: '-90deg' }] },
+  addToCartBtn: {
+    width: '50%',
+    marginLeft: 'auto',
+    height: 46,
+    borderRadius: 23,
+  },
+  ctaIconImg: { width: 22, height: 26 },
 });

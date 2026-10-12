@@ -29,8 +29,10 @@ import {
 import CategorySidebar, {
   CatalogCategory,
 } from '../components/catalog/CategorySidebar';
+import CatalogCartBar from '../components/catalog/CatalogCartBar';
 
 import CartIcon from '../assets/icons/cart.svg';
+import SearchIcon from '../assets/icons/search.svg';
 import OilImg from '../assets/images/oil_and_lubricant.png';
 import ShockIcon from '../assets/icons/shock-absorber.svg';
 import BodyIcon from '../assets/icons/body-parts.svg';
@@ -207,6 +209,8 @@ export default function CatalogScreen() {
   };
 
   const [selectedCategory, setSelectedCategory] = useState('oil');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<FilterSelections>(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filtersSection, setFiltersSection] =
@@ -222,7 +226,26 @@ export default function CatalogScreen() {
     return Array.isArray(value) ? value.length > 0 : value !== null;
   }).map(section => section.title);
 
-  const categoryProducts = selectedCategory === 'oil' ? MOCK_PRODUCTS : [];
+  // Search looks across every category; every typed word must match somewhere.
+  const searchTerms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const isSearching = searchTerms.length > 0;
+  const matchesSearch = (p: PartProduct) => {
+    const haystack = [p.name, p.sku, p.brand, p.volume, p.category]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return searchTerms.every(term => haystack.includes(term));
+  };
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setQuery('');
+  };
+
+  const categoryProducts = isSearching
+    ? MOCK_PRODUCTS.filter(matchesSearch)
+    : selectedCategory === 'oil'
+    ? MOCK_PRODUCTS
+    : [];
   const products = sortBy
     ? [...categoryProducts].sort((a, b) =>
         sortBy === 'price_low_high' ? a.price - b.price : b.price - a.price,
@@ -233,24 +256,40 @@ export default function CatalogScreen() {
     <View style={styles.container}>
       <RedHeader
         title="Catalog"
-        onBack={() => navigation.goBack()}
+        onBack={() => (searchOpen ? closeSearch() : navigation.goBack())}
+        search={{
+          active: searchOpen,
+          value: query,
+          onChange: setQuery,
+          onClose: closeSearch,
+          placeholder: 'Search parts, brands or part numbers',
+        }}
         right={
-          <TouchableOpacity
-            activeOpacity={0.7}
-            style={styles.headerBtn}
-            onPress={() => navigation.navigate('MyCart')}
-          >
-            <CartIcon width={24} height={24} color="#ffffff" />
-            {cartCount > 0 && (
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>
-                  {cartCount > CART_BADGE_MAX
-                    ? `${CART_BADGE_MAX}+`
-                    : cartCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.headerBtn}
+              onPress={() => setSearchOpen(true)}
+            >
+              <SearchIcon width={22} height={22} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.headerBtn}
+              onPress={() => navigation.navigate('MyCart')}
+            >
+              <CartIcon width={24} height={24} color="#ffffff" />
+              {cartCount > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>
+                    {cartCount > CART_BADGE_MAX
+                      ? `${CART_BADGE_MAX}+`
+                      : cartCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -284,7 +323,7 @@ export default function CatalogScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[
               styles.grid,
-              { paddingBottom: tabBarHeight + 16 },
+              { paddingBottom: tabBarHeight + (cartCount > 0 ? 68 : 16) },
             ]}
             refreshControl={
               <RefreshControl
@@ -295,6 +334,12 @@ export default function CatalogScreen() {
               />
             }
           >
+            {isSearching && products.length > 0 && (
+              <Text style={styles.resultsText}>
+                {products.length} {products.length === 1 ? 'result' : 'results'}{' '}
+                for “{query.trim()}”
+              </Text>
+            )}
             {products.length > 0 ? (
               products.map(product => (
                 <View key={product.id} style={styles.gridItem}>
@@ -317,7 +362,9 @@ export default function CatalogScreen() {
               ))
             ) : (
               <Text style={styles.emptyText}>
-                No products in this category yet
+                {isSearching
+                  ? `No parts found for “${query.trim()}”`
+                  : 'No products in this category yet'}
               </Text>
             )}
           </ScrollView>
@@ -331,12 +378,19 @@ export default function CatalogScreen() {
         onApply={setFilters}
         initialSection={filtersSection}
       />
+
+      <CatalogCartBar
+        count={cartCount}
+        bottom={tabBarHeight - 3}
+        onPress={() => navigation.navigate('MyCart')}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   headerBtn: { width: 32, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, flexDirection: 'row' },
   main: { flex: 1, paddingRight: 10 },
@@ -349,6 +403,11 @@ const styles = StyleSheet.create({
     rowGap: 10,
   },
   gridItem: { width: '48.5%' },
+  resultsText: {
+    width: '100%',
+    fontSize: 13,
+    color: '#99a2b6',
+  },
   emptyText: {
     fontSize: 14,
     color: '#99a2b6',

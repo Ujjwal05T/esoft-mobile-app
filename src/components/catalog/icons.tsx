@@ -19,6 +19,24 @@ export const ChevronDown = ({
   </Svg>
 );
 
+export const ChevronRight = ({
+  color = '#161a1d',
+  size = 14,
+}: {
+  color?: string;
+  size?: number;
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M9 6L15 12L9 18"
+      stroke={color}
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
 export const SlidersIcon = ({
   color = '#161a1d',
   size = 14,

@@ -35,7 +35,7 @@ import FiltersOverlay from '../components/overlays/FiltersOverlay';
 import VehicleSelectionOverlay, {type VehicleInfo} from '../components/overlays/VehicleSelectionOverlay';
 import VehicleTypeSelectionOverlay from '../components/overlays/VehicleTypeSelectionOverlay';
 import RequestPartOverlay from '../components/overlays/RequestPartOverlay';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 
 interface OwnerDashboardScreenProps {
   navigation?: any;
@@ -43,6 +43,7 @@ interface OwnerDashboardScreenProps {
 
 
 export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenProps) {
+  const insets = useSafeAreaInsets();
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
   const [addStaffOpen, setAddStaffOpen] = useState(false);
   const [alert, setAlert] = useState<AlertState | null>(null);
@@ -165,7 +166,10 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
 
       {/* Main Scrollable Content */}
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {paddingBottom: insets.bottom + 120},
+        ]}
         showsVerticalScrollIndicator={false}>
 
         {/* ── Get Instant Quotes Card ── */}
@@ -294,7 +298,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 120,
     gap: 12,
   },
   taglineBlock: {
