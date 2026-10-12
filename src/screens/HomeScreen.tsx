@@ -30,6 +30,8 @@ import {
   getStoredUser,
   getInquiriesByWorkshopOwnerId,
   createInquiryWithMedia,
+  createBulkInquiry,
+  type BulkRequestData,
   getStaffProfile,
   getActiveVehicleVisit,
   getJobCardsByVehicle,
@@ -166,6 +168,21 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
     }
 
     setShowRequestPart(true);
+  };
+
+  // Bulk request: free text / photo-or-PDF / voice note. An admin itemises it later.
+  const handleBulkRequestSubmit = async (data: BulkRequestData) => {
+    const user = await getStoredUser();
+    if (!user || !selectedVehicle) {
+      return {success: false, error: 'User or vehicle not found. Please try again.'};
+    }
+    const staffProfileRes = await getStaffProfile();
+    const workshopOwnerId = staffProfileRes.data?.workshopOwnerId ?? user.id;
+    const result = await createBulkInquiry(selectedVehicle.id, workshopOwnerId, data, undefined, user.id);
+    if (result.success) {
+      fetchDashboardData();
+    }
+    return result;
   };
 
   const handleRequestPartSubmit = async (parts: any[]) => {
@@ -335,6 +352,7 @@ const HomeScreen: React.FC<HomeScreenProps> = () => {
           isOpen={showRequestPart}
           onClose={() => setShowRequestPart(false)}
           onSubmit={handleRequestPartSubmit}
+          onBulkSubmit={handleBulkRequestSubmit}
         />
       )}
 

@@ -38,6 +38,7 @@ interface PartItem {
   id: string;
   itemId?: number; // server DB id — present for existing items, absent for new ones
   partName: string;
+  partNumber: string;
   preferredBrand: string;
   afterMarketBrandName: string;
   quantity: string;
@@ -70,6 +71,7 @@ const generateId = () => `part-${Date.now()}-${Math.random().toString(36).slice(
 const createEmptyPart = (): PartItem => ({
   id: generateId(),
   partName: '',
+  partNumber: '',
   preferredBrand: 'OEM - Original Brands',
   afterMarketBrandName: '',
   quantity: '',
@@ -87,6 +89,7 @@ const fromInquiryItem = (item: InquiryItemResponse): PartItem => ({
   id: String(item.id),
   itemId: item.id,
   partName: item.partName,
+  partNumber: item.partNumber || '',
   preferredBrand: item.preferredBrand,
   afterMarketBrandName: item.afterMarketBrandName || '',
   quantity: String(item.quantity),
@@ -382,6 +385,7 @@ export default function EditInquiryOverlay({
         return {
           id: p.itemId,
           partName: p.partName,
+          partNumber: p.partNumber.trim() || undefined,
           preferredBrand: p.preferredBrand,
           afterMarketBrandName: p.preferredBrand === 'After Market' ? p.afterMarketBrandName : undefined,
           quantity: parseInt(p.quantity, 10) || 1,
@@ -452,6 +456,14 @@ export default function EditInquiryOverlay({
                 <TextInput value={part.partName} onChangeText={v => updatePart(part.id, {partName: v})} placeholder={t('inquiry.part_name')} placeholderTextColor="#828282" style={styles.inputText} />
               </View>
               {part.hasAttemptedSubmit && !part.partName.trim() && <Text style={styles.errorMsg}>{t('inquiry.part_name_required')}</Text>}
+            </View>
+
+            {/* Part Number (optional) */}
+            <View style={styles.fieldWrap}>
+              <View style={[styles.inputBox, !!part.partNumber && styles.inputFilled]}>
+                {!!part.partNumber && <Text style={styles.floatLabel}>{t('request_part.part_number')}</Text>}
+                <TextInput value={part.partNumber} onChangeText={v => updatePart(part.id, {partNumber: v})} placeholder={t('request_part.part_number_optional')} placeholderTextColor="#828282" style={styles.inputText} />
+              </View>
             </View>
 
             {/* Brand */}

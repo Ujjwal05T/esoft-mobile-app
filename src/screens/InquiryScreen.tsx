@@ -44,6 +44,8 @@ import {
   getOrderById,
   createInquiry,
   createInquiryWithMedia,
+  createBulkInquiry,
+  type BulkRequestData,
   createDisputeWithFiles,
   updateDisputeStatus,
   acceptDispute,
@@ -82,6 +84,7 @@ function mapApiInquiry(api: InquiryResponse): InquiryWithDate {
     status: api.status.toLowerCase() as Inquiry['status'],
     inquiryBy: api.requestedByName ?? 'Owner',
     jobCategories: api.jobCategories ?? [],
+    isBulk: api.requestType === 'bulk',
     items: api.items.map(item => ({
       id: item.id.toString(),
       itemName: item.partName,
@@ -618,6 +621,25 @@ export default function InquiryScreen() {
     }
   };
 
+  // Bulk request: free text / photo-or-PDF / voice note. An admin itemises it later.
+  const handleBulkRequestSubmit = async (data: BulkRequestData) => {
+    const user = await getStoredUser();
+    if (!user || !selectedVehicle) {
+      return {success: false, error: 'User or vehicle not found. Please try again.'};
+    }
+    const result = await createBulkInquiry(
+      selectedVehicle.id,
+      user.workshopOwnerId ?? user.id,
+      data,
+      activeVisitId,
+      user.role === 'staff' ? user.id : null,
+    );
+    if (result.success) {
+      fetchInquiries();
+    }
+    return result;
+  };
+
   const handleRequestPartSubmit = async (parts: any[]) => {
     try {
       const user = await getStoredUser();
@@ -1093,6 +1115,7 @@ export default function InquiryScreen() {
           isOpen={showRequestPart}
           onClose={() => setShowRequestPart(false)}
           onSubmit={handleRequestPartSubmit}
+          onBulkSubmit={handleBulkRequestSubmit}
         />
       )}
 

@@ -30,6 +30,7 @@ import CategorySidebar, {
   CatalogCategory,
 } from '../components/catalog/CategorySidebar';
 import CatalogCartBar from '../components/catalog/CatalogCartBar';
+import ComingSoonOverlay from '../components/catalog/ComingSoonOverlay';
 
 import CartIcon from '../assets/icons/cart.svg';
 import SearchIcon from '../assets/icons/search.svg';
@@ -181,6 +182,10 @@ const MOCK_PRODUCTS: PartProduct[] = [
   },
 ];
 
+// While the catalog backend is not live, the whole screen is covered by a non-dismissible
+// "Coming Soon" overlay and its content is disabled. Set to false to restore the screen.
+const CATALOG_COMING_SOON = true;
+
 // Cart badge shows the exact count up to this number, then "N+".
 const CART_BADGE_MAX = 3;
 
@@ -254,142 +259,156 @@ export default function CatalogScreen() {
 
   return (
     <View style={styles.container}>
-      <RedHeader
-        title="Catalog"
-        onBack={() => (searchOpen ? closeSearch() : navigation.goBack())}
-        search={{
-          active: searchOpen,
-          value: query,
-          onChange: setQuery,
-          onClose: closeSearch,
-          placeholder: 'Search parts, brands or part numbers',
-        }}
-        right={
-          <View style={styles.headerRight}>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={styles.headerBtn}
-              onPress={() => setSearchOpen(true)}
-            >
-              <SearchIcon width={22} height={22} color="#ffffff" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={styles.headerBtn}
-              onPress={() => navigation.navigate('MyCart')}
-            >
-              <CartIcon width={24} height={24} color="#ffffff" />
-              {cartCount > 0 && (
-                <View style={styles.cartBadge}>
-                  <Text style={styles.cartBadgeText}>
-                    {cartCount > CART_BADGE_MAX
-                      ? `${CART_BADGE_MAX}+`
-                      : cartCount}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
+      {/* Content stays visible behind the overlay, but cannot be touched or read by screen readers */}
+      <View
+        style={styles.content}
+        pointerEvents={CATALOG_COMING_SOON ? 'none' : 'auto'}
+        accessibilityElementsHidden={CATALOG_COMING_SOON}
+        importantForAccessibility={
+          CATALOG_COMING_SOON ? 'no-hide-descendants' : 'auto'
         }
-      />
-
-      <View style={styles.body}>
-        <CategorySidebar
-          categories={CATEGORIES}
-          selectedKey={selectedCategory}
-          onSelect={setSelectedCategory}
-          bottomInset={tabBarHeight}
+      >
+        <RedHeader
+          title="Catalog"
+          onBack={() => (searchOpen ? closeSearch() : navigation.goBack())}
+          search={{
+            active: searchOpen,
+            value: query,
+            onChange: setQuery,
+            onClose: closeSearch,
+            placeholder: 'Search parts, brands or part numbers',
+          }}
+          right={
+            <View style={styles.headerRight}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.headerBtn}
+                onPress={() => setSearchOpen(true)}
+              >
+                <SearchIcon width={22} height={22} color="#ffffff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.headerBtn}
+                onPress={() => navigation.navigate('MyCart')}
+              >
+                <CartIcon width={24} height={24} color="#ffffff" />
+                {cartCount > 0 && (
+                  <View style={styles.cartBadge}>
+                    <Text style={styles.cartBadgeText}>
+                      {cartCount > CART_BADGE_MAX
+                        ? `${CART_BADGE_MAX}+`
+                        : cartCount}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          }
         />
 
-        <View style={styles.main}>
-          <View style={styles.topControls}>
-            <VehiclePicker />
-            <CatalogFilterBar
-              appliedCount={countSelections(filters)}
-              onOpenFilters={() => openFilters('brands')}
-              onClear={() => setFilters(EMPTY_FILTERS)}
-              activeDropdowns={activeDropdowns}
-              dropdowns={CHIP_LABELS}
-              onPressDropdown={label => {
-                const section = FILTER_SECTIONS.find(
-                  sec => sec.title === label,
-                );
-                if (section) openFilters(section.key);
-              }}
-            />
-          </View>
+        <View style={styles.body}>
+          <CategorySidebar
+            categories={CATEGORIES}
+            selectedKey={selectedCategory}
+            onSelect={setSelectedCategory}
+            bottomInset={tabBarHeight}
+          />
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.grid,
-              { paddingBottom: tabBarHeight + (cartCount > 0 ? 68 : 16) },
-            ]}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={['#e5383b']}
-                tintColor="#e5383b"
+          <View style={styles.main}>
+            <View style={styles.topControls}>
+              <VehiclePicker />
+              <CatalogFilterBar
+                appliedCount={countSelections(filters)}
+                onOpenFilters={() => openFilters('brands')}
+                onClear={() => setFilters(EMPTY_FILTERS)}
+                activeDropdowns={activeDropdowns}
+                dropdowns={CHIP_LABELS}
+                onPressDropdown={label => {
+                  const section = FILTER_SECTIONS.find(
+                    sec => sec.title === label,
+                  );
+                  if (section) openFilters(section.key);
+                }}
               />
-            }
-          >
-            {isSearching && products.length > 0 && (
-              <Text style={styles.resultsText}>
-                {products.length} {products.length === 1 ? 'result' : 'results'}{' '}
-                for “{query.trim()}”
-              </Text>
-            )}
-            {products.length > 0 ? (
-              products.map(product => (
-                <View key={product.id} style={styles.gridItem}>
-                  <PartProductCard
-                    product={product}
-                    quantity={quantities[product.id] ?? 0}
-                    onAdd={() => addItem(product)}
-                    onIncrement={increment}
-                    onDecrement={decrement}
-                    onPress={p =>
-                      navigation.navigate('PartDetail', {
-                        product: p,
-                        categoryTitle:
-                          CATEGORIES.find(c => c.key === selectedCategory)
-                            ?.label ?? 'Catalog',
-                      })
-                    }
-                  />
-                </View>
-              ))
-            ) : (
-              <Text style={styles.emptyText}>
-                {isSearching
-                  ? `No parts found for “${query.trim()}”`
-                  : 'No products in this category yet'}
-              </Text>
-            )}
-          </ScrollView>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={[
+                styles.grid,
+                { paddingBottom: tabBarHeight + (cartCount > 0 ? 68 : 16) },
+              ]}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={['#e5383b']}
+                  tintColor="#e5383b"
+                />
+              }
+            >
+              {isSearching && products.length > 0 && (
+                <Text style={styles.resultsText}>
+                  {products.length}{' '}
+                  {products.length === 1 ? 'result' : 'results'} for “
+                  {query.trim()}”
+                </Text>
+              )}
+              {products.length > 0 ? (
+                products.map(product => (
+                  <View key={product.id} style={styles.gridItem}>
+                    <PartProductCard
+                      product={product}
+                      quantity={quantities[product.id] ?? 0}
+                      onAdd={() => addItem(product)}
+                      onIncrement={increment}
+                      onDecrement={decrement}
+                      onPress={p =>
+                        navigation.navigate('PartDetail', {
+                          product: p,
+                          categoryTitle:
+                            CATEGORIES.find(c => c.key === selectedCategory)
+                              ?.label ?? 'Catalog',
+                        })
+                      }
+                    />
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.emptyText}>
+                  {isSearching
+                    ? `No parts found for “${query.trim()}”`
+                    : 'No products in this category yet'}
+                </Text>
+              )}
+            </ScrollView>
+          </View>
         </View>
+
+        <FiltersOverlay
+          isOpen={filtersOpen}
+          onClose={() => setFiltersOpen(false)}
+          selections={filters}
+          onApply={setFilters}
+          initialSection={filtersSection}
+        />
+
+        <CatalogCartBar
+          count={cartCount}
+          bottom={tabBarHeight - 3}
+          onPress={() => navigation.navigate('MyCart')}
+        />
       </View>
 
-      <FiltersOverlay
-        isOpen={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
-        selections={filters}
-        onApply={setFilters}
-        initialSection={filtersSection}
-      />
-
-      <CatalogCartBar
-        count={cartCount}
-        bottom={tabBarHeight - 3}
-        onPress={() => navigation.navigate('MyCart')}
-      />
+      {CATALOG_COMING_SOON && <ComingSoonOverlay />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
+  content: { flex: 1 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   headerBtn: { width: 32, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, flexDirection: 'row' },

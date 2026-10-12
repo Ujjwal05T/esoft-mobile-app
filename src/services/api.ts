@@ -2,10 +2,10 @@ import * as Keychain from 'react-native-keychain';
 import { logNetworkError } from './errorLogging';
 
 // API Base URL
-const API_BASE_URL = 'https://api.partsnow.in/api';
-export const SERVER_ORIGIN = 'https://api.partsnow.in';
-// const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';   //Cloudflared Tunnel That Points to localhost:5000 
-// export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
+// const API_BASE_URL = 'https://api.partsnow.in/api';
+// export const SERVER_ORIGIN = 'https://api.partsnow.in';
+const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';   //Cloudflared Tunnel That Points to localhost:5000 
+export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -1513,6 +1513,15 @@ export interface InquiryItemResponse {
   createdAt: string;
 }
 
+export interface InquiryAttachmentResponse {
+  id: number;
+  kind: 'image' | 'pdf' | 'audio';
+  url: string;
+  fileName: string | null;
+  audioDuration: number | null;
+  createdAt: string;
+}
+
 export interface InquiryResponse {
   id: number;
   vehicleId: number;
@@ -1530,6 +1539,11 @@ export interface InquiryResponse {
   numberPlate: string | null;
   requestedByName: string | null;
   workshopName: string | null;
+  // Bulk request: free text / one image-or-PDF / one audio note, itemised later by an admin.
+  // A bulk inquiry has no items until then.
+  requestType?: 'standard' | 'bulk';
+  requestText?: string | null;
+  attachments?: InquiryAttachmentResponse[];
 }
 
 export interface InquiryListResponse {
@@ -1613,6 +1627,76 @@ export async function createInquiryWithMedia(
   } catch (error) {
     logNetworkError('/inquiry/with-media', 'POST', error);
     return { success: false, error: 'Network error. Please try again.' };
+  }
+}
+
+// What the customer sends in a bulk request — at least one of the three is required
+export interface BulkRequestData {
+  requestText?: string;
+  file?: RNFile; // image or PDF
+  audio?: RNFile;
+  audioDuration?: number;
+}
+
+export async function createBulkInquiry(
+  vehicleId: number,
+  workshopOwnerId: number,
+  data: BulkRequestData,
+  vehicleVisitId?: number,
+  requestedByStaffId?: number | null
+) {
+  try {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append('vehicleId', vehicleId.toString());
+    formData.append('workshopOwnerId', workshopOwnerId.toString());
+    if (vehicleVisitId) formData.append('vehicleVisitId', vehicleVisitId.toString());
+    if (requestedByStaffId !== undefined && requestedByStaffId !== null) {
+      formData.append('requestedByStaffId', requestedByStaffId.toString());
+    }
+    if (data.requestText?.trim()) formData.append('requestText', data.requestText.trim());
+    if (data.file) formData.append('file', data.file as any);
+    if (data.audio) {
+      formData.append('audioFile', data.audio as any);
+      if (data.audioDuration) formData.append('audioDuration', data.audioDuration.toString());
+    }
+
+    const response = await fetch(`${API_BASE_URL}/inquiry/bulk`, {
+      method: 'POST',
+      headers: {...(token ? {Authorization: `Bearer ${token}`} : {})},
+      body: formData,
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      return {success: false, error: result.message || 'Failed to submit request'};
+    }
+    return {success: true, data: result as InquiryResponse};
+  } catch (error) {
+    logNetworkError('/inquiry/bulk', 'POST', error);
+    return {success: false, error: 'Network error. Please try again.'};
+  }
+}
+
+// Customer amends the free-text part of their bulk request (only while it is still open)
+export async function updateBulkRequestText(inquiryId: number, requestText: string) {
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/inquiry/${inquiryId}/request-text`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? {Authorization: `Bearer ${token}`} : {}),
+      },
+      body: JSON.stringify({requestText}),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      return {success: false, error: result.message || 'Failed to update request'};
+    }
+    return {success: true};
+  } catch (error) {
+    logNetworkError('/inquiry/{id}/request-text', 'PATCH', error);
+    return {success: false, error: 'Network error. Please try again.'};
   }
 }
 

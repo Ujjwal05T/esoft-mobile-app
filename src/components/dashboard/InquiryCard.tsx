@@ -30,6 +30,8 @@ export interface Inquiry {
   inquiryBy: string;
   jobCategories: string[];
   items: InquiryItem[];
+  // Bulk request (text / file / voice note) — has no items until an admin itemises it
+  isBulk?: boolean;
   media?: {id: string; type: string; url: string}[];
 }
 
@@ -87,6 +89,10 @@ export default function InquiryCard({
     return 'edit';
   })();
 
+  const isBulkPending = !!inquiry.isBulk && (inquiry.items?.length ?? 0) === 0;
+  // A bulk request with no parts yet can't be edited — send the user to the details page instead
+  const opensDetails = isBulkPending && effectiveAction === 'edit';
+
   const getDateText = () => {
     if (inquiry.status === 'closed' && inquiry.closedDate) {
       return `${t('inquiry.date_closed_prefix')}${inquiry.closedDate}`;
@@ -101,7 +107,7 @@ export default function InquiryCard({
     switch (effectiveAction) {
       case 're-request': return t('inquiry.re_request_action');
       case 'approve': return t('inquiry.approve_inquiry');
-      default: return t('common.edit');
+      default: return opensDetails ? t('card.view_details') : t('common.edit');
     }
   };
 
@@ -109,7 +115,7 @@ export default function InquiryCard({
     switch (effectiveAction) {
       case 're-request': onReRequest?.(inquiry.id); break;
       case 'approve': onApprove?.(inquiry.id); break;
-      default: onEdit?.(inquiry.id); break;
+      default: (opensDetails ? onView : onEdit)?.(inquiry.id); break;
     }
   };
 
@@ -139,6 +145,7 @@ export default function InquiryCard({
           {(!showNumberPlate || !inquiry.numberPlate) && <View />}
         </View>
         <Text style={styles.dateText}>{getDateText()}</Text>
+        {!!inquiry.isBulk && <Text style={styles.bulkBadge}>{t('bulk_request.badge')}</Text>}
 
         <View style={styles.divider} />
 
@@ -164,6 +171,10 @@ export default function InquiryCard({
       {isExpanded && (
         <View style={styles.expandedContent}>
           <View style={styles.divider} />
+
+          {isBulkPending && (
+            <Text style={styles.bulkPendingText}>{t('bulk_request.awaiting_body')}</Text>
+          )}
 
           {inquiry.items && inquiry.items.length > 0 && (
             <View style={styles.partsSection}>
@@ -222,7 +233,7 @@ export default function InquiryCard({
                 style={styles.actionBtn}>
                 <Text style={styles.actionBtnText}>{getActionLabel()}</Text>
               </TouchableOpacity>
-              {onView && (
+              {onView && !opensDetails && (
                 <TouchableOpacity
                   onPress={() => onView(inquiry.id)}
                   style={styles.viewBtn}>
@@ -238,6 +249,19 @@ export default function InquiryCard({
 }
 
 const styles = StyleSheet.create({
+  bulkBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: '#fdecec',
+    color: '#e5383b',
+    fontSize: 11,
+    fontWeight: '700',
+    overflow: 'hidden',
+  },
+  bulkPendingText: {fontSize: 13, color: '#8a5a00', lineHeight: 18, marginBottom: 8},
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 17,

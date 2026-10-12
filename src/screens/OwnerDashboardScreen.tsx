@@ -13,6 +13,8 @@ import {
   getStoredUser,
   getActiveVehicleVisit,
   createInquiryWithMedia,
+  createBulkInquiry,
+  type BulkRequestData,
   type CreateStaffData,
   type RNFile,
   type VehicleResponse,
@@ -108,6 +110,25 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
     setActiveVisitId(visitRes.data?.id);
     setAddVehicleForOrderParts(false);
     setShowRequestPart(true);
+  };
+
+  // Bulk request: free text / photo-or-PDF / voice note. An admin itemises it later.
+  const handleBulkRequestSubmit = async (data: BulkRequestData) => {
+    const user = await getStoredUser();
+    if (!user || !selectedVehicle) {
+      return {success: false, error: 'User or vehicle not found. Please try again.'};
+    }
+    const result = await createBulkInquiry(
+      selectedVehicle.id,
+      user.workshopOwnerId ?? user.id,
+      data,
+      activeVisitId,
+      user.role === 'staff' ? user.id : null,
+    );
+    if (result.success) {
+      // nothing to refresh on this screen
+    }
+    return result;
   };
 
   const handleRequestPartSubmit = async (parts: any[]) => {
@@ -273,6 +294,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
           isOpen={showRequestPart}
           onClose={() => setShowRequestPart(false)}
           onSubmit={handleRequestPartSubmit}
+          onBulkSubmit={handleBulkRequestSubmit}
         />
       )}
 

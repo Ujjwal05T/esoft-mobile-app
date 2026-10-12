@@ -26,6 +26,8 @@ import {
 import Svg, {Path} from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import BulkRequestSummary from '../components/dashboard/BulkRequestSummary';
+import EditBulkRequestOverlay from '../components/overlays/EditBulkRequestOverlay';
 import {useAuth} from '../context/AuthContext';
 import {formatDateIST} from '../utils/dateUtils';
 
@@ -77,6 +79,7 @@ export default function InquiryDetailScreen() {
   const [selectedItem, setSelectedItem] = useState<InquiryItemResponse | null>(null);
   const [showEditOverlay, setShowEditOverlay] = useState(false);
   const [showEditInquiryOverlay, setShowEditInquiryOverlay] = useState(false);
+  const [showEditRequestText, setShowEditRequestText] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
   const fetchInquiry = useCallback(async () => {
@@ -111,6 +114,8 @@ export default function InquiryDetailScreen() {
   const isRequested = status === 'requested';
   const isDeclined = status === 'declined';
   const isClosed = status === 'closed';
+  // Bulk request that an admin hasn't itemised yet: nothing to edit, quote is on its way
+  const isBulkPending = inquiry?.requestType === 'bulk' && (inquiry?.items.length ?? 0) === 0;
 
   // Get the date label based on status
   const getDateLabel = () => {
@@ -424,6 +429,17 @@ export default function InquiryDetailScreen() {
         {/* ════════════════════════════════════════
             INQUIRY ITEMS LIST
             ════════════════════════════════════════ */}
+        {inquiry.requestType === 'bulk' && (
+          <View style={styles.itemsList}>
+            <BulkRequestSummary
+              requestText={inquiry.requestText}
+              attachments={inquiry.attachments}
+              awaitingItems={isBulkPending}
+              onEdit={isOpen || isRequested ? () => setShowEditRequestText(true) : undefined}
+            />
+          </View>
+        )}
+
         <View style={styles.itemsList}>
           {inquiry.items.map(item => {
             // Determine brand badge style
@@ -482,13 +498,15 @@ export default function InquiryDetailScreen() {
             {/* ── Open status: EDIT + CANCEL REQUEST ── */}
             {isOpen && (
               <>
-                <TouchableOpacity
-                  style={[styles.primaryButton, actionLoading && styles.buttonDisabled]}
-                  onPress={() => setShowEditInquiryOverlay(true)}
-                  disabled={actionLoading}
-                  activeOpacity={0.8}>
-                  <Text style={styles.primaryButtonText}>{t('inquiry.edit')}</Text>
-                </TouchableOpacity>
+                {!isBulkPending && (
+                  <TouchableOpacity
+                    style={[styles.primaryButton, actionLoading && styles.buttonDisabled]}
+                    onPress={() => setShowEditInquiryOverlay(true)}
+                    disabled={actionLoading}
+                    activeOpacity={0.8}>
+                    <Text style={styles.primaryButtonText}>{t('inquiry.edit')}</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={[styles.secondaryButton, actionLoading && styles.buttonDisabled]}
                   onPress={handleCancelRequest}
@@ -566,6 +584,14 @@ export default function InquiryDetailScreen() {
 
       {/* Edit Inquiry Item Overlay */}
       {inquiry && (
+        <>
+        <EditBulkRequestOverlay
+          isOpen={showEditRequestText}
+          onClose={() => setShowEditRequestText(false)}
+          inquiryId={inquiry.id}
+          initialText={inquiry.requestText ?? ''}
+          onSuccess={fetchInquiry}
+        />
         <EditInquiryOverlay
           isOpen={showEditInquiryOverlay}
           onClose={() => setShowEditInquiryOverlay(false)}
@@ -576,6 +602,7 @@ export default function InquiryDetailScreen() {
             if (updated.success && updated.data) setInquiry(updated.data);
           }}
         />
+        </>
       )}
       {selectedItem && (
         <EditInquiryItemOverlay

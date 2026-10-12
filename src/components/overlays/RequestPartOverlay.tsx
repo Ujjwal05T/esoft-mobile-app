@@ -20,6 +20,8 @@ import {launchImageLibrary} from 'react-native-image-picker';
 import {launchCameraWithPermission} from '../../utils/cameraPermission';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
 import AppAlert, {AlertState} from './AppAlert';
+import BulkRequestOverlay from './BulkRequestOverlay';
+import type {BulkRequestData, InquiryResponse} from '../../services/api';
 import {useTranslation} from 'react-i18next';
 
 const SCREEN_H = Dimensions.get('window').height;
@@ -67,6 +69,8 @@ interface RequestPartOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit?: (parts: PartItem[]) => void;
+  // When provided, a "Bulk Request" option is shown (text / photo-or-PDF / voice note, itemised later by an admin)
+  onBulkSubmit?: (data: BulkRequestData) => Promise<{success: boolean; error?: string; data?: InquiryResponse}>;
 }
 
 /* ── Icons ─────────────────────────────────────────────────────────── */
@@ -195,6 +199,7 @@ export default function RequestPartOverlay({
   isOpen,
   onClose,
   onSubmit,
+  onBulkSubmit,
 }: RequestPartOverlayProps) {
   const {t} = useTranslation();
   /* AppAlert */
@@ -203,6 +208,7 @@ export default function RequestPartOverlay({
   /* View */
   const [currentView, setCurrentView] = useState<'search' | 'form'>('search');
   const [partNumber, setPartNumber] = useState('');
+  const [showBulk, setShowBulk] = useState(false);
 
   /* Parts */
   const [parts, setParts] = useState<PartItem[]>([createEmptyPart()]);
@@ -234,6 +240,7 @@ export default function RequestPartOverlay({
   useEffect(() => {
     if (!isOpen) {
       setCurrentView('search');
+      setShowBulk(false);
       setPartNumber('');
       setParts([createEmptyPart()]);
       setIsRecording(false);
@@ -845,6 +852,17 @@ export default function RequestPartOverlay({
                 resizeMode="contain"
               />
             </TouchableOpacity>
+
+            {/* Bulk request: customer sends text / photo-or-PDF / voice note, admin itemises it */}
+            {!!onBulkSubmit && (
+              <TouchableOpacity
+                onPress={() => setShowBulk(true)}
+                style={styles.bulkCard}
+                activeOpacity={0.85}>
+                <Text style={styles.bulkCardTitle}>{t('bulk_request.card_title')}</Text>
+                <Text style={styles.bulkCardSubtitle}>{t('bulk_request.card_subtitle')}</Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
         ) : (
           /* ── FORM VIEW ── */
@@ -948,6 +966,14 @@ export default function RequestPartOverlay({
         onGallery={() => handleImageSource('gallery')}
         onClose={() => setPendingPickPartId(null)}
       />
+      {!!onBulkSubmit && (
+        <BulkRequestOverlay
+          isOpen={showBulk}
+          onClose={() => setShowBulk(false)}
+          onSubmit={onBulkSubmit}
+          onSuccess={onClose}
+        />
+      )}
     </Modal>
   );
 }
@@ -1018,6 +1044,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 6,
   },
+  bulkCard: {
+    marginTop: 14,
+    borderWidth: 1.5,
+    borderColor: '#e5383b',
+    borderRadius: 16,
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  bulkCardTitle: {fontSize: 18, fontWeight: '700', color: '#e5383b'},
+  bulkCardSubtitle: {fontSize: 13, color: '#555', marginTop: 4, lineHeight: 18},
   manualCard: {
     backgroundColor: '#e5383b',
     borderRadius: 16,

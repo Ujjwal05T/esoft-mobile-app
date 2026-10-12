@@ -45,6 +45,8 @@ import {
   getProfile,
   createInquiry,
   createInquiryWithMedia,
+  createBulkInquiry,
+  type BulkRequestData,
   getInquiryById,
   SERVER_ORIGIN,
   type VehicleResponse,
@@ -91,6 +93,7 @@ function mapApiInquiry(api: InquiryResponse, vehicle: VehicleResponse): InquiryW
     status: api.status.toLowerCase() as Inquiry['status'],
     inquiryBy: api.requestedByName ?? 'Owner',
     jobCategories: api.jobCategories ?? [],
+    isBulk: api.requestType === 'bulk',
     items: api.items.map(item => ({
       id: item.id.toString(),
       itemName: item.partName,
@@ -640,6 +643,26 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
   };
 
   // Handle request part form submission
+  // Bulk request: free text / photo-or-PDF / voice note. An admin itemises it later.
+  const handleBulkRequestSubmit = async (data: BulkRequestData) => {
+    const user = await getStoredUser();
+    if (!user) {
+      return {success: false, error: 'User not found. Please log in again.'};
+    }
+    const result = await createBulkInquiry(
+      vehicleId,
+      user.workshopOwnerId ?? user.id,
+      data,
+      activeVisit?.id,
+      user.role === 'staff' ? user.id : null,
+    );
+    if (result.success) {
+      fetchInquiries();
+      setActiveTab('inquiry');
+    }
+    return result;
+  };
+
   const handleRequestPartSubmit = async (parts: any[]) => {
     try {
       // Get workshopOwnerId from stored user
@@ -1160,6 +1183,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
         isOpen={showRequestPart}
         onClose={() => setShowRequestPart(false)}
         onSubmit={handleRequestPartSubmit}
+        onBulkSubmit={handleBulkRequestSubmit}
       />
 
       <EditInquiryOverlay
