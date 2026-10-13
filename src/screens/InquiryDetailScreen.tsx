@@ -26,6 +26,7 @@ import {
 import Svg, {Path} from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
+import BulkBadge from '../components/ui/BulkBadge';
 import BulkRequestSummary from '../components/dashboard/BulkRequestSummary';
 import EditBulkRequestOverlay from '../components/overlays/EditBulkRequestOverlay';
 import {useAuth} from '../context/AuthContext';
@@ -403,6 +404,7 @@ export default function InquiryDetailScreen() {
             {/* Right: status badge */}
             <View style={styles.statusBadgeContainer}>
               <StatusBadge status={normalizeStatus(inquiry.status)} />
+              {inquiry.requestType === 'bulk' && <BulkBadge compact pending={isBulkPending} />}
             </View>
           </View>
 
@@ -756,6 +758,8 @@ const styles = StyleSheet.create({
   },
   statusBadgeContainer: {
     flexShrink: 0,
+    alignItems: 'flex-end',
+    gap: 6,
   },
   divider: {
     height: 1,

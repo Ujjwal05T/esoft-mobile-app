@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TextInput,
   TouchableWithoutFeedback,
@@ -14,6 +13,7 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, {Path, Rect} from 'react-native-svg';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {launchCameraWithPermission} from '../../utils/cameraPermission';
@@ -331,7 +331,7 @@ export default function RaiseDisputeOverlay({
   };
 
   return (
-    <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -647,7 +647,7 @@ export default function RaiseDisputeOverlay({
         onGallery={() => handleImageSource('gallery')}
         onClose={() => setPendingPickIndex(null)}
       />
-    </Modal>
+    </SheetModal>
   );
 }
 

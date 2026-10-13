@@ -4,13 +4,14 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TouchableWithoutFeedback,
   TextInput,
   Image,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, {Path} from 'react-native-svg';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {launchCameraWithPermission} from '../../utils/cameraPermission';
@@ -237,7 +238,7 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
 
   if (showPermissions) {
     return (
-      <Modal visible transparent animationType="slide" onRequestClose={() => setShowPermissions(false)}>
+      <SheetModal visible transparent animationType="slide" onRequestClose={() => setShowPermissions(false)}>
         <TouchableWithoutFeedback onPress={() => setShowPermissions(false)}>
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
@@ -275,12 +276,12 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
             </View>
           </ScrollView>
         </View>
-      </Modal>
+      </SheetModal>
     );
   }
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -375,7 +376,7 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
         onGallery={() => handlePhotoSource('gallery')}
         onClose={() => setShowPhotoPicker(false)}
       />
-    </Modal>
+    </SheetModal>
   );
 }
 

@@ -4,13 +4,13 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   TextInput,
   ScrollView,
   Image,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { CloseCircleIcon } from './icons';
 import {
@@ -159,7 +159,7 @@ export default function FiltersOverlay({
   };
 
   return (
-    <Modal
+    <SheetModal
       visible={isOpen}
       animationType="slide"
       transparent
@@ -314,7 +314,7 @@ export default function FiltersOverlay({
           </View>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </SheetModal>
   );
 }
 

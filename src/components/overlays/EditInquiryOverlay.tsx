@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TextInput,
   TouchableWithoutFeedback,
@@ -12,6 +11,7 @@ import {
   Platform,
   PermissionsAndroid,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, {Path, Rect} from 'react-native-svg';
 import {useTranslation} from 'react-i18next';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
@@ -611,7 +611,7 @@ export default function EditInquiryOverlay({
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -666,7 +666,7 @@ export default function EditInquiryOverlay({
         onGallery={() => handleImageSource('gallery')}
         onClose={() => setPendingPickPartId(null)}
       />
-    </Modal>
+    </SheetModal>
   );
 }
 

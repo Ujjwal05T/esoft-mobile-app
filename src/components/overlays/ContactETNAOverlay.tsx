@@ -4,10 +4,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   TouchableWithoutFeedback,
   Linking,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, {Path} from 'react-native-svg';
 import {useTranslation} from 'react-i18next';
 
@@ -71,7 +71,7 @@ export default function ContactETNAOverlay({
   ];
 
   return (
-    <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -101,7 +101,7 @@ export default function ContactETNAOverlay({
           <Text style={styles.cancelText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
       </View>
-    </Modal>
+    </SheetModal>
   );
 }
 

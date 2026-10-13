@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TextInput,
   TouchableWithoutFeedback,
@@ -16,6 +15,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import {useTranslation} from 'react-i18next';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {launchCameraWithPermission} from '../../utils/cameraPermission';
@@ -1057,7 +1057,7 @@ export default function AddVehicleOverlay({
   const isFallbackStarted = !!(selectedBrand || selectedModel || selectedYear || selectedVariant || vehicleNumber.trim());
 
   return (
-    <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -1745,7 +1745,7 @@ export default function AddVehicleOverlay({
       />
 
       {/* RC Image source picker */}
-      <Modal
+      <SheetModal
         visible={rcPickerSide !== null}
         transparent
         animationType="slide"
@@ -1787,7 +1787,7 @@ export default function AddVehicleOverlay({
             <Text style={styles.actionSheetCancelText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </View>
-      </Modal>
+      </SheetModal>
 
       <AppAlert
         isOpen={!!appAlert}
@@ -1805,7 +1805,7 @@ export default function AddVehicleOverlay({
           confirm();
         } : undefined}
       />
-    </Modal>
+    </SheetModal>
   );
 }
 

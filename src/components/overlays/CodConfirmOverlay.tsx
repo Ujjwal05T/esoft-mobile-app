@@ -4,9 +4,9 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ActivityIndicator,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, {Path, Circle} from 'react-native-svg';
 import {useTranslation} from 'react-i18next';
 
@@ -95,7 +95,7 @@ export default function CodConfirmOverlay({
   const formattedAmount = `Rs. ${payableAmount.toLocaleString('en-IN')}`;
 
   return (
-    <Modal
+    <SheetModal
       visible={isOpen}
       animationType="slide"
       transparent
@@ -158,7 +158,7 @@ export default function CodConfirmOverlay({
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </SheetModal>
   );
 }
 

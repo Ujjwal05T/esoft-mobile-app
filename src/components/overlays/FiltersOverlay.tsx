@@ -4,12 +4,12 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TouchableWithoutFeedback,
   TextInput,
   ActivityIndicator,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Svg, {Path} from 'react-native-svg';
 import {useTranslation} from 'react-i18next';
@@ -386,7 +386,7 @@ export default function FiltersOverlay({
   };
 
   return (
-    <Modal
+    <SheetModal
       visible={isOpen}
       transparent
       animationType="slide"
@@ -645,7 +645,7 @@ export default function FiltersOverlay({
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </SheetModal>
   );
 }
 

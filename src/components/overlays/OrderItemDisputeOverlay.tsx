@@ -4,9 +4,9 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   TouchableWithoutFeedback,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import type {OrderItemApiResponse} from '../../services/api';
 
 interface OrderItemDisputeOverlayProps {
@@ -55,7 +55,7 @@ export default function OrderItemDisputeOverlay({
   onRaiseDispute,
 }: OrderItemDisputeOverlayProps) {
   return (
-    <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
       {/* Backdrop */}
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
@@ -114,7 +114,7 @@ export default function OrderItemDisputeOverlay({
           </View>
         )}
       </View>
-    </Modal>
+    </SheetModal>
   );
 }
 

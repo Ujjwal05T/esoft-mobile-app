@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TextInput,
   TouchableWithoutFeedback,
@@ -13,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, {Path} from 'react-native-svg';
 import VehicleCard from '../dashboard/VehicleCard';
 import {generatePDF} from 'react-native-html-to-pdf';
@@ -497,7 +497,7 @@ export default function EstimationOverlay({
   };
 
   return (
-    <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -1020,7 +1020,7 @@ export default function EstimationOverlay({
           )}
         </ScrollView>
       </View>
-    </Modal>
+    </SheetModal>
   );
 }
 

@@ -4,9 +4,9 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   TouchableWithoutFeedback,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import {useTranslation} from 'react-i18next';
 import Svg, {Path, Circle} from 'react-native-svg';
 
@@ -25,7 +25,7 @@ export default function VehicleTypeSelectionOverlay({
 }: VehicleTypeSelectionOverlayProps) {
   const {t} = useTranslation();
   return (
-    <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -99,7 +99,7 @@ export default function VehicleTypeSelectionOverlay({
           </Svg>
         </TouchableOpacity>
       </View>
-    </Modal>
+    </SheetModal>
   );
 }
 

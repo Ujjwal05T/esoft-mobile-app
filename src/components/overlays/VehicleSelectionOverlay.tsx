@@ -4,13 +4,13 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   TextInput,
   ActivityIndicator,
   ScrollView,
   FlatList,
   Dimensions,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, {Path} from 'react-native-svg';
 import {useTranslation} from 'react-i18next';
 import VehicleCard from '../dashboard/VehicleCard';
@@ -169,7 +169,7 @@ export default function VehicleSelectionOverlay({
   const showDropdown = suggestions.length > 0 && !selectedVisit;
 
   return (
-    <Modal
+    <SheetModal
       visible={isOpen}
       animationType="slide"
       transparent
@@ -287,7 +287,7 @@ export default function VehicleSelectionOverlay({
           </ScrollView>
         </View>
       </View>
-    </Modal>
+    </SheetModal>
   );
 }
 

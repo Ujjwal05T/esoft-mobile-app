@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
 import StatusBadge, {StatusType} from '../ui/StatusBadge';
+import BulkBadge from '../ui/BulkBadge';
 import {useTranslation} from 'react-i18next';
 
 export type InquiryStatus = Extract<
@@ -89,8 +90,12 @@ export default function InquiryCard({
     return 'edit';
   })();
 
+  // Show the vehicle block when we know the name or the plate — vehicles without a plate must still show their name
+  const showVehicle = showNumberPlate && !!(inquiry.vehicleName || inquiry.numberPlate);
   const isBulkPending = !!inquiry.isBulk && (inquiry.items?.length ?? 0) === 0;
   // A bulk request with no parts yet can't be edited — send the user to the details page instead
+  // An unitemised bulk request shows a small Bulk badge in place of the status; once it has parts it is a regular card
+  const statusBadge = isBulkPending ? <BulkBadge minimal /> : <StatusBadge status={inquiry.status} />;
   const opensDetails = isBulkPending && effectiveAction === 'edit';
 
   const getDateText = () => {
@@ -123,29 +128,31 @@ export default function InquiryCard({
     <View style={styles.card}>
       {/* Header - Tappable */}
       <TouchableOpacity onPress={onToggle} activeOpacity={0.8} style={styles.header}>
-        {showNumberPlate && inquiry.numberPlate && (
+        {showVehicle && (
           <View style={styles.row}>
             <View style={styles.flex1}>
-              {inquiry.vehicleName && (
-                <Text style={styles.vehicleName}>{inquiry.vehicleName}</Text>
+              {inquiry.numberPlate ? (
+                <>
+                  {!!inquiry.vehicleName && (
+                    <Text style={styles.vehicleName}>{inquiry.vehicleName}</Text>
+                  )}
+                  <Text style={styles.numberPlate}>{inquiry.numberPlate}</Text>
+                </>
+              ) : (
+                // Some vehicles have no plate on record: show the name as the headline instead
+                <Text style={styles.vehicleNameSolo}>{inquiry.vehicleName}</Text>
               )}
-              <Text style={styles.numberPlate}>{inquiry.numberPlate}</Text>
             </View>
-            <StatusBadge status={inquiry.status} />
+            {statusBadge}
           </View>
         )}
 
+        {/* Number on the left; with no vehicle row (vehicle pages) the status sits on the same row, right-aligned */}
         <View style={styles.idRow}>
-          <View style={styles.flex1}>
-            <Text style={styles.inquiryId}>{inquiry.id}</Text>
-            {(!showNumberPlate || !inquiry.numberPlate) && (
-              <StatusBadge status={inquiry.status} />
-            )}
-          </View>
-          {(!showNumberPlate || !inquiry.numberPlate) && <View />}
+          <Text style={[styles.inquiryId, styles.flex1]}>{inquiry.id}</Text>
+          {!showVehicle && <View style={styles.statusWrap}>{statusBadge}</View>}
         </View>
         <Text style={styles.dateText}>{getDateText()}</Text>
-        {!!inquiry.isBulk && <Text style={styles.bulkBadge}>{t('bulk_request.badge')}</Text>}
 
         <View style={styles.divider} />
 
@@ -249,18 +256,6 @@ export default function InquiryCard({
 }
 
 const styles = StyleSheet.create({
-  bulkBadge: {
-    alignSelf: 'flex-start',
-    marginTop: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: '#fdecec',
-    color: '#e5383b',
-    fontSize: 11,
-    fontWeight: '700',
-    overflow: 'hidden',
-  },
   bulkPendingText: {fontSize: 13, color: '#8a5a00', lineHeight: 18, marginBottom: 8},
   card: {
     backgroundColor: '#ffffff',
@@ -299,6 +294,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
+  },
+  statusWrap: {flexShrink: 0},
+  vehicleNameSolo: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#4c4c4c',
   },
   inquiryId: {
     fontSize: 14,

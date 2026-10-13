@@ -4,13 +4,13 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   TextInput,
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import {useTranslation} from 'react-i18next';
 import AppAlert, {AlertState} from './AppAlert';
 import {updateBulkRequestText} from '../../services/api';
@@ -55,7 +55,7 @@ export default function EditBulkRequestOverlay({
   };
 
   return (
-    <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -104,7 +104,7 @@ export default function EditBulkRequestOverlay({
         message={appAlert?.message ?? ''}
         onClose={() => setAppAlert(null)}
       />
-    </Modal>
+    </SheetModal>
   );
 }
 

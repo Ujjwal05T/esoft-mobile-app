@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TextInput,
   TouchableWithoutFeedback,
@@ -15,6 +14,7 @@ import {
   Dimensions,
   Image,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, {Path, Rect} from 'react-native-svg';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import {
@@ -289,7 +289,7 @@ export default function DisputeCommentsOverlay({
   const hasNewEtnaComments = comments.some(isEtnaComment);
 
   return (
-    <Modal
+    <SheetModal
       visible={isOpen}
       transparent
       animationType="slide"
@@ -457,7 +457,7 @@ export default function DisputeCommentsOverlay({
           )}
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </SheetModal>
   );
 }
 

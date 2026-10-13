@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TextInput,
   TouchableWithoutFeedback,
@@ -14,6 +13,7 @@ import {
   Platform,
   PermissionsAndroid,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, {Path, Rect} from 'react-native-svg';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import {launchImageLibrary} from 'react-native-image-picker';
@@ -299,7 +299,7 @@ export default function BulkRequestOverlay({isOpen, onClose, onSubmit, onSuccess
   };
 
   return (
-    <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -426,7 +426,7 @@ export default function BulkRequestOverlay({isOpen, onClose, onSubmit, onSuccess
         onGallery={() => handleImageSource('gallery')}
         onClose={() => setShowImageSheet(false)}
       />
-    </Modal>
+    </SheetModal>
   );
 }
 

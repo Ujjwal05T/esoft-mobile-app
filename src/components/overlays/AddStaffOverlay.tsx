@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   Switch,
   TouchableWithoutFeedback,
@@ -12,6 +11,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, {Path} from 'react-native-svg';
 import {useTranslation} from 'react-i18next';
 import {launchImageLibrary} from 'react-native-image-picker';
@@ -270,7 +270,7 @@ export default function AddStaffOverlay({
 
   if (showPermissions) {
     return (
-      <Modal visible transparent animationType="slide" onRequestClose={() => setShowPermissions(false)}>
+      <SheetModal visible transparent animationType="slide" onRequestClose={() => setShowPermissions(false)}>
         <TouchableWithoutFeedback onPress={() => setShowPermissions(false)}>
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
@@ -308,12 +308,12 @@ export default function AddStaffOverlay({
             </View>
           </ScrollView>
         </View>
-      </Modal>
+      </SheetModal>
     );
   }
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -426,7 +426,7 @@ export default function AddStaffOverlay({
         onGallery={() => handlePhotoSource('gallery')}
         onClose={() => setShowPhotoPicker(false)}
       />
-    </Modal>
+    </SheetModal>
   );
 }
 

@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TextInput,
   TouchableWithoutFeedback,
@@ -14,6 +13,7 @@ import {
   Platform,
   PermissionsAndroid,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import {launchImageLibrary} from 'react-native-image-picker';
@@ -775,7 +775,7 @@ export default function RequestPartOverlay({
   };
 
   return (
-    <Modal
+    <SheetModal
       visible={isOpen}
       transparent
       animationType="slide"
@@ -974,7 +974,7 @@ export default function RequestPartOverlay({
           onSuccess={onClose}
         />
       )}
-    </Modal>
+    </SheetModal>
   );
 }
 

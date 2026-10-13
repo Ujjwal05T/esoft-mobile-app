@@ -4,12 +4,12 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TextInput,
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, {Path} from 'react-native-svg';
 import {useTranslation} from 'react-i18next';
 import {
@@ -163,7 +163,7 @@ export default function CouponOverlay({
   };
 
   return (
-    <Modal
+    <SheetModal
       visible={isOpen}
       animationType="slide"
       transparent
@@ -302,7 +302,7 @@ export default function CouponOverlay({
           </ScrollView>
         </View>
       </View>
-    </Modal>
+    </SheetModal>
   );
 }
 

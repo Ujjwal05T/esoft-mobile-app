@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TextInput,
   TouchableWithoutFeedback,
@@ -16,6 +15,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {launchCameraWithPermission} from '../../utils/cameraPermission';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
@@ -282,7 +282,7 @@ export default function NewJobCardOverlay({
   };
 
   return (
-    <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -703,7 +703,7 @@ export default function NewJobCardOverlay({
           </Animated.Text>
         </Animated.View>
       )}
-    </Modal>
+    </SheetModal>
   );
 }
 

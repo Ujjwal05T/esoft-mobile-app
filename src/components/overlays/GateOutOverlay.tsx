@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TouchableWithoutFeedback,
   ActivityIndicator,
@@ -13,6 +12,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Svg, {Path} from 'react-native-svg';
 import FloatingInput from '../ui/FloatingInput';
@@ -210,7 +210,7 @@ export default function GateOutOverlay({
   const isFormValid = driverName.trim() !== '' && driverContact.trim() !== '';
 
   return (
-    <Modal
+    <SheetModal
       visible={isOpen}
       transparent
       animationType="slide"
@@ -436,7 +436,7 @@ export default function GateOutOverlay({
           </Animated.Text>
         </Animated.View>
       )}
-    </Modal>
+    </SheetModal>
   );
 }
 

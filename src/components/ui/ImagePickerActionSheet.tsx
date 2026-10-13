@@ -1,12 +1,12 @@
 import React from 'react';
 import {
-  Modal,
   View,
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
   StyleSheet,
 } from 'react-native';
+import SheetModal from './SheetModal';
 import Svg, {Path, Rect} from 'react-native-svg';
 import {useTranslation} from 'react-i18next';
 
@@ -27,7 +27,7 @@ export default function ImagePickerActionSheet({
 }: ImagePickerActionSheetProps) {
   const {t} = useTranslation();
   return (
-    <Modal
+    <SheetModal
       visible={visible}
       transparent
       animationType="slide"
@@ -82,7 +82,7 @@ export default function ImagePickerActionSheet({
           <Text style={styles.cancelText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
       </View>
-    </Modal>
+    </SheetModal>
   );
 }
 

@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   TextInput,
   TouchableWithoutFeedback,
@@ -12,6 +11,7 @@ import {
   Platform,
   PermissionsAndroid,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {launchCameraWithPermission} from '../../utils/cameraPermission';
 import ImagePickerActionSheet from '../ui/ImagePickerActionSheet';
@@ -270,7 +270,7 @@ export default function EditInquiryItemOverlay({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
+    <SheetModal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -385,7 +385,7 @@ export default function EditInquiryItemOverlay({
         onGallery={() => handleImageSource('gallery')}
         onClose={() => setShowImagePicker(false)}
       />
-    </Modal>
+    </SheetModal>
   );
 }
 

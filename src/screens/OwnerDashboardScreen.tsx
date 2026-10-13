@@ -200,8 +200,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
         <AddVehicleCard onPress={() => setAddVehicleOpen(true)} />
 
         {/* ── Aftermarket Spareparts Catalog Card ── */}
-        {/* TODO: wire onPress once a Catalog screen/route exists */}
-        <AftermarketCatalogCard />
+        <AftermarketCatalogCard onPress={() => navigation?.navigate('Catalog')} />
 
         {/* ── Add Staff Card ── */}
         <AddStaffCard onPress={() => setAddStaffOpen(true)} />

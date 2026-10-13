@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   TextInput,
   FlatList,
   Image,
@@ -12,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import SheetModal from '../ui/SheetModal';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { CloseCircleIcon } from './icons';
 import { getCurrentVehicles, type VehicleBasicInfo } from '../../services/api';
@@ -156,7 +156,7 @@ export default function SelectCarOverlay({
     );
 
   return (
-    <Modal
+    <SheetModal
       visible={isOpen}
       animationType="slide"
       transparent
@@ -225,7 +225,7 @@ export default function SelectCarOverlay({
           )}
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </SheetModal>
   );
 }
 
