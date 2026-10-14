@@ -38,6 +38,7 @@ export default function VehiclePicker({
         style={style}
         selected={vehicle ? getVehicleFullName(vehicle) : null}
         onPress={() => setSelectOpen(true)}
+        onClear={vehicle ? () => setVehicle(null) : undefined}
       />
       <SelectCarOverlay
         isOpen={selectOpen}

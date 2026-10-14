@@ -17,6 +17,8 @@ export interface CatalogCategory {
   label: string;
   Icon?: SvgIcon;
   image?: ImageSourcePropType;
+  // Remote icon from the catalog API
+  imageUrl?: string | null;
 }
 
 interface CategorySidebarProps {
@@ -29,6 +31,15 @@ interface CategorySidebarProps {
 const ICON_SIZE = 44;
 
 function CategoryGraphic({ category }: { category: CatalogCategory }) {
+  if (category.imageUrl) {
+    return (
+      <Image
+        source={{ uri: category.imageUrl }}
+        style={{ width: ICON_SIZE, height: ICON_SIZE }}
+        resizeMode="contain"
+      />
+    );
+  }
   if (category.image) {
     return (
       <Image
@@ -39,9 +50,17 @@ function CategoryGraphic({ category }: { category: CatalogCategory }) {
     );
   }
   const Icon = category.Icon;
-  return Icon ? (
-    <Icon width={ICON_SIZE} height={ICON_SIZE} color="#e5383b" />
-  ) : null;
+  if (Icon) {
+    return <Icon width={ICON_SIZE} height={ICON_SIZE} color="#e5383b" />;
+  }
+  // No icon uploaded yet: show the category's first letter instead of an empty gap
+  return (
+    <View style={placeholderStyles.circle}>
+      <Text style={placeholderStyles.letter}>
+        {category.label.charAt(0).toUpperCase()}
+      </Text>
+    </View>
+  );
 }
 
 export default function CategorySidebar({
@@ -122,4 +141,16 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   labelActive: { color: '#ffffff' },
+});
+
+const placeholderStyles = StyleSheet.create({
+  circle: {
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    borderRadius: ICON_SIZE / 2,
+    backgroundColor: '#fdecec',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  letter: { fontSize: 20, fontWeight: '700', color: '#e5383b' },
 });

@@ -6,12 +6,15 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { ChevronDown } from './icons';
 
 interface VehicleSelectorProps {
   selected: string | null;
   onPress: () => void;
   placeholder?: string;
+  // When given and a vehicle is selected, shows an ✕ that clears the selection
+  onClear?: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -19,6 +22,7 @@ export default function VehicleSelector({
   selected,
   onPress,
   placeholder = 'Select Vehicle',
+  onClear,
   style,
 }: VehicleSelectorProps) {
   const hasSelection = !!selected;
@@ -42,6 +46,23 @@ export default function VehicleSelector({
       >
         {selected ?? placeholder}
       </Text>
+      {hasSelection && onClear && (
+        <TouchableOpacity
+          accessibilityLabel="Clear vehicle"
+          activeOpacity={0.7}
+          hitSlop={10}
+          onPress={onClear}
+        >
+          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M6 6L18 18M18 6L6 18"
+              stroke="#ffffff"
+              strokeWidth={2.2}
+              strokeLinecap="round"
+            />
+          </Svg>
+        </TouchableOpacity>
+      )}
       <ChevronDown color={hasSelection ? '#ffffff' : '#161a1d'} size={18} />
     </TouchableOpacity>
   );

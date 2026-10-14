@@ -47,7 +47,7 @@ export default function CatalogFilterBar({
         {active && (
           <TouchableOpacity activeOpacity={0.7} onPress={onClear}>
             <Text style={[styles.chipText, styles.chipTextActive]}>
-              · Clear
+              · Clear all
             </Text>
           </TouchableOpacity>
         )}

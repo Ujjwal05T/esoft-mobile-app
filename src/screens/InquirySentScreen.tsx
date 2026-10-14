@@ -83,7 +83,7 @@ export default function InquirySentScreen() {
 
         <View style={styles.outCard}>
           <Text style={styles.outTitle}>
-            Out of Stock ({params.items.length})
+            On Order ({params.items.length})
           </Text>
           <View style={styles.outDivider} />
           {params.items.map((item, i) => (

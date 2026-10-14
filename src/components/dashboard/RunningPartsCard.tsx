@@ -1,4 +1,5 @@
 import React from 'react';
+import ImagePlaceholder from '../catalog/ImagePlaceholder';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTranslation} from 'react-i18next';
 import {
@@ -115,7 +116,7 @@ export default function RunningPartsCard({
                   resizeMode="contain"
                 />
               ) : (
-                <Text style={styles.imagePlaceholder}>🔧</Text>
+                <ImagePlaceholder size={40} label={null} />
               )}
             </View>
 

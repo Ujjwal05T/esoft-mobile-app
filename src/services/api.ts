@@ -2,10 +2,10 @@ import * as Keychain from 'react-native-keychain';
 import { logNetworkError } from './errorLogging';
 
 // API Base URL
-const API_BASE_URL = 'https://api.partsnow.in/api';
-export const SERVER_ORIGIN = 'https://api.partsnow.in';
-// const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';   //Cloudflared Tunnel That Points to localhost:5000 
-// export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
+// const API_BASE_URL = 'https://api.partsnow.in/api';
+// export const SERVER_ORIGIN = 'https://api.partsnow.in';
+const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';   //Cloudflared Tunnel That Points to localhost:5000
+export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
 
 // ==========================================
 // TOKEN MANAGEMENT
@@ -16,7 +16,9 @@ const USER_SERVICE = 'auth_user';
 
 // Get stored auth token
 export async function getAuthToken(): Promise<string | null> {
-  const credentials = await Keychain.getGenericPassword({ service: TOKEN_SERVICE });
+  const credentials = await Keychain.getGenericPassword({
+    service: TOKEN_SERVICE,
+  });
   return credentials ? credentials.password : null;
 }
 
@@ -33,7 +35,9 @@ export async function removeAuthToken(): Promise<void> {
 
 // Get stored user info
 export async function getStoredUser(): Promise<UserInfo | null> {
-  const credentials = await Keychain.getGenericPassword({ service: USER_SERVICE });
+  const credentials = await Keychain.getGenericPassword({
+    service: USER_SERVICE,
+  });
   if (!credentials) return null;
   try {
     return JSON.parse(credentials.password);
@@ -44,7 +48,9 @@ export async function getStoredUser(): Promise<UserInfo | null> {
 
 // Set user info
 export async function setStoredUser(user: UserInfo): Promise<void> {
-  await Keychain.setGenericPassword('user', JSON.stringify(user), { service: USER_SERVICE });
+  await Keychain.setGenericPassword('user', JSON.stringify(user), {
+    service: USER_SERVICE,
+  });
 }
 
 // Check if user is authenticated
@@ -79,7 +85,7 @@ export interface RNFile {
 // Generic API request handler with automatic auth token
 async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<{ success: boolean; data?: T; error?: string }> {
   try {
     const token = await getAuthToken();
@@ -108,7 +114,11 @@ async function apiRequest<T>(
       }
       return {
         success: false,
-        error: data.message || data.errorMessage || data.errors?.[0] || 'An error occurred',
+        error:
+          data.message ||
+          data.errorMessage ||
+          data.errors?.[0] ||
+          'An error occurred',
       };
     }
 
@@ -194,40 +204,50 @@ export async function logout(): Promise<void> {
 
 // Send OTP for phone verification
 export async function sendRegistrationOtp(phoneNumber: string) {
-  return apiRequest<{ success: boolean; message: string; expiresInSeconds: number }>(
-    '/workshop/register/send-otp',
-    {
-      method: 'POST',
-      body: JSON.stringify({ phoneNumber }),
-    }
-  );
+  return apiRequest<{
+    success: boolean;
+    message: string;
+    expiresInSeconds: number;
+  }>('/workshop/register/send-otp', {
+    method: 'POST',
+    body: JSON.stringify({ phoneNumber }),
+  });
 }
 
 // Verify OTP during registration
 export async function verifyRegistrationOtp(phoneNumber: string, otp: string) {
-  return apiRequest<{ success: boolean; message: string; token: string | null }>(
-    '/workshop/register/verify-otp',
-    {
-      method: 'POST',
-      body: JSON.stringify({ phoneNumber, otp }),
-    }
-  );
+  return apiRequest<{
+    success: boolean;
+    message: string;
+    token: string | null;
+  }>('/workshop/register/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ phoneNumber, otp }),
+  });
 }
 
 // Send OTP to email for registration
 export async function sendRegistrationOtpByEmail(email: string) {
-  return apiRequest<{success: boolean; message: string; expiresInSeconds: number}>(
-    '/workshop/register/send-otp-email',
-    {method: 'POST', body: JSON.stringify({email})},
-  );
+  return apiRequest<{
+    success: boolean;
+    message: string;
+    expiresInSeconds: number;
+  }>('/workshop/register/send-otp-email', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
 }
 
 // Verify email OTP during registration
 export async function verifyRegistrationOtpByEmail(email: string, otp: string) {
-  return apiRequest<{success: boolean; message: string; token: string | null}>(
-    '/workshop/register/verify-otp-email',
-    {method: 'POST', body: JSON.stringify({email, otp})},
-  );
+  return apiRequest<{
+    success: boolean;
+    message: string;
+    token: string | null;
+  }>('/workshop/register/verify-otp-email', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp }),
+  });
 }
 
 // Submit workshop registration
@@ -243,14 +263,18 @@ export interface WorkshopRegistrationData {
   gstNumber?: string;
 }
 
-export async function submitWorkshopRegistration(data: WorkshopRegistrationData) {
-  return apiRequest<{ success: boolean; message: string; workshopId: number; status: string }>(
-    '/workshop/register/submit',
-    {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }
-  );
+export async function submitWorkshopRegistration(
+  data: WorkshopRegistrationData,
+) {
+  return apiRequest<{
+    success: boolean;
+    message: string;
+    workshopId: number;
+    status: string;
+  }>('/workshop/register/submit', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }
 
 export async function uploadWorkshopDocuments(
@@ -259,19 +283,27 @@ export async function uploadWorkshopDocuments(
   workshopPhoto?: RNFile,
 ) {
   const formData = new FormData();
-  if (ownerPhoto)    formData.append('ownerPhoto',    ownerPhoto    as unknown as Blob);
-  if (workshopPhoto) formData.append('workshopPhoto', workshopPhoto as unknown as Blob);
+  if (ownerPhoto) formData.append('ownerPhoto', ownerPhoto as unknown as Blob);
+  if (workshopPhoto)
+    formData.append('workshopPhoto', workshopPhoto as unknown as Blob);
 
   try {
-    const response = await fetch(`${API_BASE_URL}/admin/workshops/${workshopId}/documents`, {
-      method: 'POST',
-      body: formData,
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/admin/workshops/${workshopId}/documents`,
+      {
+        method: 'POST',
+        body: formData,
+      },
+    );
     const result = await response.json();
-    if (!response.ok) return {success: false, error: result.message || 'Failed to upload photos'};
-    return {success: true, data: result};
+    if (!response.ok)
+      return {
+        success: false,
+        error: result.message || 'Failed to upload photos',
+      };
+    return { success: true, data: result };
   } catch {
-    return {success: false, error: 'Network error uploading photos'};
+    return { success: false, error: 'Network error uploading photos' };
   }
 }
 
@@ -373,17 +405,22 @@ export async function uploadOwnerPhoto(email: string, file: RNFile) {
     formData.append('file', file as unknown as Blob);
 
     const response = await fetch(
-      `${API_BASE_URL}/verification/photos/owner?email=${encodeURIComponent(email)}`,
+      `${API_BASE_URL}/verification/photos/owner?email=${encodeURIComponent(
+        email,
+      )}`,
       {
         method: 'POST',
         body: formData,
-      }
+      },
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      return { success: false, error: data.message || data.errors?.[0] || 'Upload failed' };
+      return {
+        success: false,
+        error: data.message || data.errors?.[0] || 'Upload failed',
+      };
     }
 
     return { success: true, data };
@@ -399,17 +436,22 @@ export async function uploadWorkshopPhoto(email: string, file: RNFile) {
     formData.append('file', file as unknown as Blob);
 
     const response = await fetch(
-      `${API_BASE_URL}/verification/photos/workshop?email=${encodeURIComponent(email)}`,
+      `${API_BASE_URL}/verification/photos/workshop?email=${encodeURIComponent(
+        email,
+      )}`,
       {
         method: 'POST',
         body: formData,
-      }
+      },
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      return { success: false, error: data.message || data.errors?.[0] || 'Upload failed' };
+      return {
+        success: false,
+        error: data.message || data.errors?.[0] || 'Upload failed',
+      };
     }
 
     return { success: true, data };
@@ -456,9 +498,12 @@ export interface WorkshopListItem {
 }
 
 export async function getWorkshopsByCity(city: string) {
-  return apiRequest<WorkshopListItem[]>(`/workshopstaff/workshops/${encodeURIComponent(city)}`, {
-    method: 'GET',
-  });
+  return apiRequest<WorkshopListItem[]>(
+    `/workshopstaff/workshops/${encodeURIComponent(city)}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 // Staff Registration
@@ -485,18 +530,24 @@ export interface StaffResponse {
 }
 
 export async function registerStaff(data: StaffRegisterData) {
-  return apiRequest<{ message: string; data: StaffResponse }>('/workshopstaff/register', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
+  return apiRequest<{ message: string; data: StaffResponse }>(
+    '/workshopstaff/register',
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+    },
+  );
 }
 
 // Staff Phone Verification (SMS OTP)
 export async function verifyStaffPhone(phoneNumber: string, otp: string) {
-  return apiRequest<{ message: string; data: StaffResponse }>('/workshopstaff/verify-phone', {
-    method: 'POST',
-    body: JSON.stringify({ phoneNumber, otp }),
-  });
+  return apiRequest<{ message: string; data: StaffResponse }>(
+    '/workshopstaff/verify-phone',
+    {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber, otp }),
+    },
+  );
 }
 
 // Resend Staff OTP (SMS)
@@ -509,9 +560,12 @@ export async function resendStaffOtp(phoneNumber: string) {
 
 // Check Staff Registration Status
 export async function checkStaffStatus(email: string) {
-  return apiRequest<StaffResponse>(`/workshopstaff/status/${encodeURIComponent(email)}`, {
-    method: 'GET',
-  });
+  return apiRequest<StaffResponse>(
+    `/workshopstaff/status/${encodeURIComponent(email)}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 // Get Pending Staff Requests (for owner)
@@ -524,13 +578,19 @@ export interface PendingStaffRequest {
   requestedAt: string;
 }
 
-export async function getPendingStaffRequests(workshopOwnerId: number, token: string) {
-  return apiRequest<PendingStaffRequest[]>(`/workshopstaff/pending/${workshopOwnerId}`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
+export async function getPendingStaffRequests(
+  workshopOwnerId: number,
+  token: string,
+) {
+  return apiRequest<PendingStaffRequest[]>(
+    `/workshopstaff/pending/${workshopOwnerId}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 }
 
 // Approve/Reject Staff Request (for owner)
@@ -538,19 +598,22 @@ export async function processStaffApproval(
   staffId: number,
   approve: boolean,
   token: string,
-  rejectionReason?: string
+  rejectionReason?: string,
 ) {
-  return apiRequest<{ message: string; data: StaffResponse }>('/workshopstaff/approve', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
+  return apiRequest<{ message: string; data: StaffResponse }>(
+    '/workshopstaff/approve',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        staffId,
+        approve,
+        rejectionReason,
+      }),
     },
-    body: JSON.stringify({
-      staffId,
-      approve,
-      rejectionReason,
-    }),
-  });
+  );
 }
 
 // ==========================================
@@ -597,7 +660,10 @@ export async function scanChassisNumber(base64Image: string) {
 }
 
 // Generic scan (pass mode as parameter)
-export async function scanVehicleImage(base64Image: string, mode: 'plate' | 'rc') {
+export async function scanVehicleImage(
+  base64Image: string,
+  mode: 'plate' | 'rc',
+) {
   return apiRequest<VehicleOcrData>('/ocr/scan', {
     method: 'POST',
     body: JSON.stringify({ base64Image, mode }),
@@ -669,7 +735,10 @@ export async function createVehicle(data: CreateVehicleData) {
 }
 
 // Create vehicle with audio file
-export async function createVehicleWithAudio(data: CreateVehicleData, audioFile?: RNFile) {
+export async function createVehicleWithAudio(
+  data: CreateVehicleData,
+  audioFile?: RNFile,
+) {
   const formData = new FormData();
 
   // Append all vehicle data fields
@@ -693,7 +762,10 @@ export async function createVehicleWithAudio(data: CreateVehicleData, audioFile?
     const result = await response.json();
 
     if (!response.ok) {
-      return { success: false, error: result.message || 'Failed to create vehicle' };
+      return {
+        success: false,
+        error: result.message || 'Failed to create vehicle',
+      };
     }
 
     return { success: true, data: result as VehicleResponse };
@@ -717,10 +789,13 @@ export async function createVehicleWithMedia(
       formData.append(key, String(value));
     }
   });
-  if (rcFrontImage)  formData.append('rcFrontImage',  rcFrontImage  as unknown as Blob);
-  if (rcBackImage)   formData.append('rcBackImage',   rcBackImage   as unknown as Blob);
-  if (audioFile)     formData.append('audioFile',     audioFile     as unknown as Blob);
-  if (chassisImage)  formData.append('chassisImage',  chassisImage  as unknown as Blob);
+  if (rcFrontImage)
+    formData.append('rcFrontImage', rcFrontImage as unknown as Blob);
+  if (rcBackImage)
+    formData.append('rcBackImage', rcBackImage as unknown as Blob);
+  if (audioFile) formData.append('audioFile', audioFile as unknown as Blob);
+  if (chassisImage)
+    formData.append('chassisImage', chassisImage as unknown as Blob);
 
   try {
     const token = await getAuthToken();
@@ -730,11 +805,15 @@ export async function createVehicleWithMedia(
       body: formData,
     });
     const result = await response.json();
-    if (!response.ok) return {success: false, error: result.message || 'Failed to create vehicle'};
-    return {success: true, data: result as VehicleResponse};
+    if (!response.ok)
+      return {
+        success: false,
+        error: result.message || 'Failed to create vehicle',
+      };
+    return { success: true, data: result as VehicleResponse };
   } catch (error) {
     logNetworkError('/vehicle/with-media', 'POST', error);
-    return {success: false, error: 'Network error. Please try again.'};
+    return { success: false, error: 'Network error. Please try again.' };
   }
 }
 
@@ -754,21 +833,32 @@ export interface CarModelOption {
 
 // Get models for a selected brand (includes imageUrl from CarModelImages)
 export async function getCarModels(brand: string) {
-  return apiRequest<CarModelOption[]>(`/carmaster/models?brand=${encodeURIComponent(brand)}`, { method: 'GET' });
+  return apiRequest<CarModelOption[]>(
+    `/carmaster/models?brand=${encodeURIComponent(brand)}`,
+    { method: 'GET' },
+  );
 }
 
 // Get available years for a selected brand + model
 export async function getCarYears(brand: string, model: string) {
   return apiRequest<string[]>(
-    `/carmaster/years?brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}`,
+    `/carmaster/years?brand=${encodeURIComponent(
+      brand,
+    )}&model=${encodeURIComponent(model)}`,
     { method: 'GET' },
   );
 }
 
 // Get variants for a selected brand + model + year
-export async function getCarVariants(brand: string, model: string, year: string) {
+export async function getCarVariants(
+  brand: string,
+  model: string,
+  year: string,
+) {
   return apiRequest<string[]>(
-    `/carmaster/variants?brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&year=${encodeURIComponent(year)}`,
+    `/carmaster/variants?brand=${encodeURIComponent(
+      brand,
+    )}&model=${encodeURIComponent(model)}&year=${encodeURIComponent(year)}`,
     { method: 'GET' },
   );
 }
@@ -780,12 +870,14 @@ export async function getVehicles() {
   });
 }
 
-
 // Get vehicle by plate number
 export async function getVehicleByPlate(plateNumber: string) {
-  return apiRequest<VehicleResponse>(`/vehicle/plate/${encodeURIComponent(plateNumber)}`, {
-    method: 'GET',
-  });
+  return apiRequest<VehicleResponse>(
+    `/vehicle/plate/${encodeURIComponent(plateNumber)}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 // Get vehicle by ID
@@ -796,7 +888,10 @@ export async function getVehicleById(id: number) {
 }
 
 // Update vehicle
-export async function updateVehicle(id: number, data: CreateVehicleData & { status: number }) {
+export async function updateVehicle(
+  id: number,
+  data: CreateVehicleData & { status: number },
+) {
   return apiRequest<VehicleResponse>(`/vehicle/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
@@ -898,7 +993,7 @@ export async function gateInVehicle(data: CreateVehicleVisitData) {
 export async function gateInVehicleWithMedia(
   data: CreateVehicleVisitData,
   audioFile?: RNFile,
-  images?: RNFile[]
+  images?: RNFile[],
 ) {
   const formData = new FormData();
 
@@ -916,7 +1011,7 @@ export async function gateInVehicleWithMedia(
 
   // Append images if provided
   if (images && images.length > 0) {
-    images.forEach((image) => {
+    images.forEach(image => {
       formData.append('images', image as unknown as Blob);
     });
   }
@@ -928,16 +1023,22 @@ export async function gateInVehicleWithMedia(
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/vehiclevisit/gate-in/with-media`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/vehiclevisit/gate-in/with-media`,
+      {
+        method: 'POST',
+        headers,
+        body: formData,
+      },
+    );
 
     const result = await response.json();
 
     if (!response.ok) {
-      return { success: false, error: result.message || 'Failed to gate in vehicle' };
+      return {
+        success: false,
+        error: result.message || 'Failed to gate in vehicle',
+      };
     }
 
     return { success: true, data: result as VehicleVisitResponse };
@@ -978,9 +1079,12 @@ export async function getCurrentVehicles() {
 
 // Search active vehicle visits by plate number
 export async function searchActiveVehicleVisits(query: string) {
-  return apiRequest<VehicleVisitListResponse>(`/vehiclevisit/search?q=${encodeURIComponent(query)}`, {
-    method: 'GET',
-  });
+  return apiRequest<VehicleVisitListResponse>(
+    `/vehiclevisit/search?q=${encodeURIComponent(query)}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 // Get visit history (completed gate outs)
@@ -992,16 +1096,22 @@ export async function getVehicleVisitHistory() {
 
 // Get all visits for a specific vehicle
 export async function getVehicleVisitsForVehicle(vehicleId: number) {
-  return apiRequest<VehicleVisitListResponse>(`/vehiclevisit/vehicle/${vehicleId}`, {
-    method: 'GET',
-  });
+  return apiRequest<VehicleVisitListResponse>(
+    `/vehiclevisit/vehicle/${vehicleId}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 // Get active visit for a specific vehicle
 export async function getActiveVehicleVisit(vehicleId: number) {
-  return apiRequest<VehicleVisitResponse>(`/vehiclevisit/vehicle/${vehicleId}/active`, {
-    method: 'GET',
-  });
+  return apiRequest<VehicleVisitResponse>(
+    `/vehiclevisit/vehicle/${vehicleId}/active`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 // Get workshop summary (vehicles in/out count)
@@ -1183,7 +1293,10 @@ export async function createStaff(data: CreateStaffData) {
 }
 
 // Create a new staff member with photo
-export async function createStaffWithPhoto(data: CreateStaffData, photo: RNFile) {
+export async function createStaffWithPhoto(
+  data: CreateStaffData,
+  photo: RNFile,
+) {
   const formData = new FormData();
 
   // Add all data fields to form data
@@ -1240,7 +1353,10 @@ export async function updateStaff(id: number, data: UpdateStaffData) {
 }
 
 // Update staff permissions only
-export async function updateStaffPermissions(id: number, data: UpdateStaffPermissionsData) {
+export async function updateStaffPermissions(
+  id: number,
+  data: UpdateStaffPermissionsData,
+) {
   return apiRequest<{ message: string }>(`/staff/${id}/permissions`, {
     method: 'PATCH',
     body: JSON.stringify(data),
@@ -1379,16 +1495,19 @@ export async function createJobCardWithMedia(
   data: CreateJobCardData,
   audioFile?: RNFile,
   images?: RNFile[],
-  videos?: RNFile[]
+  videos?: RNFile[],
 ) {
   const formData = new FormData();
 
   // Append data
   formData.append('VehicleId', data.vehicleId.toString());
   formData.append('JobCategory', data.jobCategory);
-  if (data.vehicleVisitId) formData.append('VehicleVisitId', data.vehicleVisitId.toString());
+  if (data.vehicleVisitId)
+    formData.append('VehicleVisitId', data.vehicleVisitId.toString());
   if (data.assignedStaffIds && data.assignedStaffIds.length > 0) {
-    data.assignedStaffIds.forEach(id => formData.append('AssignedStaffIds', id.toString()));
+    data.assignedStaffIds.forEach(id =>
+      formData.append('AssignedStaffIds', id.toString()),
+    );
   }
   if (data.remark) formData.append('Remark', data.remark);
   if (data.priority) formData.append('Priority', data.priority);
@@ -1400,14 +1519,14 @@ export async function createJobCardWithMedia(
 
   // Append images
   if (images && images.length > 0) {
-    images.forEach((image) => {
+    images.forEach(image => {
       formData.append('images', image as unknown as Blob);
     });
   }
 
   // Append videos
   if (videos && videos.length > 0) {
-    videos.forEach((video) => {
+    videos.forEach(video => {
       formData.append('videos', video as unknown as Blob);
     });
   }
@@ -1425,7 +1544,10 @@ export async function createJobCardWithMedia(
     const result = await response.json();
 
     if (!response.ok) {
-      return { success: false, error: result.message || 'Failed to create job card' };
+      return {
+        success: false,
+        error: result.message || 'Failed to create job card',
+      };
     }
 
     return { success: true, data: result as JobCardResponse };
@@ -1568,7 +1690,7 @@ export async function createInquiryWithMedia(
   audioFiles: RNFile[],
   imageFiles: RNFile[],
   vehicleVisitId?: number,
-  requestedByStaffId?: number | null
+  requestedByStaffId?: number | null,
 ) {
   try {
     const token = await getAuthToken();
@@ -1620,7 +1742,10 @@ export async function createInquiryWithMedia(
     const result = await response.json();
 
     if (!response.ok) {
-      return { success: false, error: result.message || 'Failed to create inquiry with media' };
+      return {
+        success: false,
+        error: result.message || 'Failed to create inquiry with media',
+      };
     }
 
     return { success: true, data: result as InquiryResponse };
@@ -1643,60 +1768,75 @@ export async function createBulkInquiry(
   workshopOwnerId: number,
   data: BulkRequestData,
   vehicleVisitId?: number,
-  requestedByStaffId?: number | null
+  requestedByStaffId?: number | null,
 ) {
   try {
     const token = await getAuthToken();
     const formData = new FormData();
     formData.append('vehicleId', vehicleId.toString());
     formData.append('workshopOwnerId', workshopOwnerId.toString());
-    if (vehicleVisitId) formData.append('vehicleVisitId', vehicleVisitId.toString());
+    if (vehicleVisitId)
+      formData.append('vehicleVisitId', vehicleVisitId.toString());
     if (requestedByStaffId !== undefined && requestedByStaffId !== null) {
       formData.append('requestedByStaffId', requestedByStaffId.toString());
     }
-    if (data.requestText?.trim()) formData.append('requestText', data.requestText.trim());
+    if (data.requestText?.trim())
+      formData.append('requestText', data.requestText.trim());
     if (data.file) formData.append('file', data.file as any);
     if (data.audio) {
       formData.append('audioFile', data.audio as any);
-      if (data.audioDuration) formData.append('audioDuration', data.audioDuration.toString());
+      if (data.audioDuration)
+        formData.append('audioDuration', data.audioDuration.toString());
     }
 
     const response = await fetch(`${API_BASE_URL}/inquiry/bulk`, {
       method: 'POST',
-      headers: {...(token ? {Authorization: `Bearer ${token}`} : {})},
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: formData,
     });
     const result = await response.json();
     if (!response.ok) {
-      return {success: false, error: result.message || 'Failed to submit request'};
+      return {
+        success: false,
+        error: result.message || 'Failed to submit request',
+      };
     }
-    return {success: true, data: result as InquiryResponse};
+    return { success: true, data: result as InquiryResponse };
   } catch (error) {
     logNetworkError('/inquiry/bulk', 'POST', error);
-    return {success: false, error: 'Network error. Please try again.'};
+    return { success: false, error: 'Network error. Please try again.' };
   }
 }
 
 // Customer amends the free-text part of their bulk request (only while it is still open)
-export async function updateBulkRequestText(inquiryId: number, requestText: string) {
+export async function updateBulkRequestText(
+  inquiryId: number,
+  requestText: string,
+) {
   try {
     const token = await getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/inquiry/${inquiryId}/request-text`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? {Authorization: `Bearer ${token}`} : {}),
+    const response = await fetch(
+      `${API_BASE_URL}/inquiry/${inquiryId}/request-text`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ requestText }),
       },
-      body: JSON.stringify({requestText}),
-    });
+    );
     const result = await response.json();
     if (!response.ok) {
-      return {success: false, error: result.message || 'Failed to update request'};
+      return {
+        success: false,
+        error: result.message || 'Failed to update request',
+      };
     }
-    return {success: true};
+    return { success: true };
   } catch (error) {
     logNetworkError('/inquiry/{id}/request-text', 'PATCH', error);
-    return {success: false, error: 'Network error. Please try again.'};
+    return { success: false, error: 'Network error. Please try again.' };
   }
 }
 
@@ -1715,16 +1855,22 @@ export async function getInquiriesByVehicleId(vehicleId: number) {
 }
 
 export async function getInquiriesByVehicleVisitId(vehicleVisitId: number) {
-  return apiRequest<InquiryListResponse>(`/inquiry/vehiclevisit/${vehicleVisitId}`, {
-    method: 'GET',
-  });
+  return apiRequest<InquiryListResponse>(
+    `/inquiry/vehiclevisit/${vehicleVisitId}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 // Get inquiries by workshop owner ID
 export async function getInquiriesByWorkshopOwnerId(workshopOwnerId: number) {
-  return apiRequest<InquiryListResponse>(`/inquiry/workshop/${workshopOwnerId}`, {
-    method: 'GET',
-  });
+  return apiRequest<InquiryListResponse>(
+    `/inquiry/workshop/${workshopOwnerId}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 // Get inquiries created by a specific staff member
@@ -1736,10 +1882,13 @@ export async function getInquiriesByStaffId(staffId: number) {
 
 // Update inquiry status
 export async function updateInquiryStatus(id: number, status: string) {
-  return apiRequest<{ message: string; status: string }>(`/inquiry/${id}/status`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status }),
-  });
+  return apiRequest<{ message: string; status: string }>(
+    `/inquiry/${id}/status`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    },
+  );
 }
 
 // Delete inquiry
@@ -1750,14 +1899,20 @@ export async function deleteInquiry(id: number) {
 }
 
 // Update inquiry item
-export async function updateInquiryItem(itemId: number, data: Partial<InquiryItemResponse>) {
+export async function updateInquiryItem(
+  itemId: number,
+  data: Partial<InquiryItemResponse>,
+) {
   return apiRequest<{ message: string }>(`/inquiry/item/${itemId}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   });
 }
 
-export async function updateInquiryItems(inquiryId: number, items: InquiryItemRequest[]) {
+export async function updateInquiryItems(
+  inquiryId: number,
+  items: InquiryItemRequest[],
+) {
   return apiRequest<{ message: string }>(`/inquiry/${inquiryId}/items`, {
     method: 'PUT',
     body: JSON.stringify({ items }),
@@ -1795,17 +1950,21 @@ export async function updateInquiryItemsWithFiles(
     formData.append('itemsJson', JSON.stringify(items));
     audioFiles.forEach(f => formData.append('audioFiles', f as any));
     imageFiles.forEach(f => formData.append('imageFiles', f as any));
-    const response = await fetch(`${API_BASE_URL}/inquiry/${inquiryId}/items/with-files`, {
-      method: 'PUT',
-      headers: token ? {Authorization: `Bearer ${token}`} : {},
-      body: formData,
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/inquiry/${inquiryId}/items/with-files`,
+      {
+        method: 'PUT',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      },
+    );
     const data = await response.json();
-    if (!response.ok) return {success: false, error: data.message || 'Failed to update'};
-    return {success: true, data};
+    if (!response.ok)
+      return { success: false, error: data.message || 'Failed to update' };
+    return { success: true, data };
   } catch (error) {
     logNetworkError('/inquiry/{inquiryId}/items/with-files', 'PUT', error);
-    return {success: false, error: 'Network error. Please try again.'};
+    return { success: false, error: 'Network error. Please try again.' };
   }
 }
 
@@ -1863,16 +2022,22 @@ export async function getQuotesByVehicleId(vehicleId: number) {
 }
 
 export async function getQuotesByVehicleVisitId(vehicleVisitId: number) {
-  return apiRequest<QuoteListApiResponse>(`/quote/vehiclevisit/${vehicleVisitId}`, {
-    method: 'GET',
-  });
+  return apiRequest<QuoteListApiResponse>(
+    `/quote/vehiclevisit/${vehicleVisitId}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 // Get quotes by workshop owner ID
 export async function getQuotesByWorkshopOwnerId(workshopOwnerId: number) {
-  return apiRequest<QuoteListApiResponse>(`/quote/workshop/${workshopOwnerId}`, {
-    method: 'GET',
-  });
+  return apiRequest<QuoteListApiResponse>(
+    `/quote/workshop/${workshopOwnerId}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 // Get quote by ID
@@ -1884,10 +2049,13 @@ export async function getQuoteById(id: number) {
 
 // Update quote status
 export async function updateQuoteStatus(id: number, status: string) {
-  return apiRequest<{ message: string; status: string }>(`/quote/${id}/status`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status }),
-  });
+  return apiRequest<{ message: string; status: string }>(
+    `/quote/${id}/status`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    },
+  );
 }
 
 // ==========================================
@@ -1946,7 +2114,11 @@ export async function getAvailableCoupons() {
 }
 
 // Validate a coupon code before payment
-export async function validateCoupon(code: string, workshopOwnerId: number, orderAmount: number) {
+export async function validateCoupon(
+  code: string,
+  workshopOwnerId: number,
+  orderAmount: number,
+) {
   return apiRequest<CouponValidationResponse>('/coupon/validate', {
     method: 'POST',
     body: JSON.stringify({ code, workshopOwnerId, orderAmount }),
@@ -1977,10 +2149,18 @@ export async function placeCodOrder(data: {
 
 // Create a Razorpay payment order for a quote
 // Pass selectedItemIds for partial payment (only charge for those items)
-export async function createPaymentOrder(quoteId: number, selectedItemIds?: number[], couponCode?: string) {
+export async function createPaymentOrder(
+  quoteId: number,
+  selectedItemIds?: number[],
+  couponCode?: string,
+) {
   return apiRequest<CreatePaymentOrderResponse>('/payment/create-order', {
     method: 'POST',
-    body: JSON.stringify({ quoteId, selectedItemIds: selectedItemIds ?? null, couponCode: couponCode ?? null }),
+    body: JSON.stringify({
+      quoteId,
+      selectedItemIds: selectedItemIds ?? null,
+      couponCode: couponCode ?? null,
+    }),
   });
 }
 
@@ -2065,9 +2245,12 @@ export interface WorkshopOrderListResponse {
 }
 
 export async function getOrdersByWorkshopId(workshopOwnerId: number) {
-  return apiRequest<WorkshopOrderListResponse>(`/order/workshop/${workshopOwnerId}`, {
-    method: 'GET',
-  });
+  return apiRequest<WorkshopOrderListResponse>(
+    `/order/workshop/${workshopOwnerId}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 export async function getOrdersByVehicleId(vehicleId: number) {
@@ -2077,9 +2260,12 @@ export async function getOrdersByVehicleId(vehicleId: number) {
 }
 
 export async function getOrdersByVehicleVisitId(vehicleVisitId: number) {
-  return apiRequest<WorkshopOrderListResponse>(`/order/vehiclevisit/${vehicleVisitId}`, {
-    method: 'GET',
-  });
+  return apiRequest<WorkshopOrderListResponse>(
+    `/order/vehiclevisit/${vehicleVisitId}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 export interface OrderItemApiResponse {
@@ -2196,14 +2382,14 @@ export interface DisputeDetailResponse {
 export async function getDisputesByWorkshopOwner(workshopOwnerId: number) {
   return apiRequest<DisputeListItemResponse[]>(
     `/disputes/workshop-owner/${workshopOwnerId}`,
-    {method: 'GET'}
+    { method: 'GET' },
   );
 }
 
 export async function getDisputesByVehicleVisitId(vehicleVisitId: number) {
   return apiRequest<DisputeListItemResponse[]>(
     `/disputes/vehiclevisit/${vehicleVisitId}`,
-    {method: 'GET'}
+    { method: 'GET' },
   );
 }
 
@@ -2211,7 +2397,7 @@ export async function getDisputesByVehicleVisitId(vehicleVisitId: number) {
 export async function getDisputesByRaisedById(userId: number) {
   return apiRequest<DisputeListItemResponse[]>(
     `/disputes/raised-by/${userId}`,
-    {method: 'GET'}
+    { method: 'GET' },
   );
 }
 
@@ -2241,7 +2427,7 @@ export async function createDisputeWithFiles(
   image1?: RNFile,
   image2?: RNFile,
   image3?: RNFile,
-  raisedByStaffId?: number
+  raisedByStaffId?: number,
 ) {
   try {
     const token = await getAuthToken();
@@ -2296,7 +2482,7 @@ export async function createDisputeWithFiles(
     const response = await fetch(`${API_BASE_URL}/disputes/with-files`, {
       method: 'POST',
       headers: {
-        ...(token ? {Authorization: `Bearer ${token}`} : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         // Don't set Content-Type for FormData - let the browser set it with boundary
       },
       body: formData,
@@ -2311,10 +2497,10 @@ export async function createDisputeWithFiles(
       };
     }
 
-    return {success: true, data};
+    return { success: true, data };
   } catch (error) {
     logNetworkError('/disputes/with-files', 'POST', error);
-    return {success: false, error: 'Network error. Please try again.'};
+    return { success: false, error: 'Network error. Please try again.' };
   }
 }
 
@@ -2329,10 +2515,15 @@ export interface VersionCheckResponse {
   releaseNotes: string | null;
 }
 
-export async function checkAppVersion(platform: 'android' | 'ios', version: string) {
+export async function checkAppVersion(
+  platform: 'android' | 'ios',
+  version: string,
+) {
   return apiRequest<VersionCheckResponse>(
-    `/app/version-check?platform=${platform}&version=${encodeURIComponent(version)}`,
-    {method: 'GET'},
+    `/app/version-check?platform=${platform}&version=${encodeURIComponent(
+      version,
+    )}`,
+    { method: 'GET' },
   );
 }
 
@@ -2424,29 +2615,46 @@ export async function getProfile() {
 
 // Update authenticated workshop owner's profile
 export async function updateProfile(data: UpdateProfileData) {
-  return apiRequest<{ success: boolean; message: string }>('/workshop/profile', {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  });
+  return apiRequest<{ success: boolean; message: string }>(
+    '/workshop/profile',
+    {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    },
+  );
 }
 
 // Update dispute status (e.g. accept: Requested → Pending)
 export async function updateDisputeStatus(
   disputeId: number,
-  status: 'Requested' | 'Pending' | 'Acknowledged' | 'Investigating' | 'Resolved',
+  status:
+    | 'Requested'
+    | 'Pending'
+    | 'Acknowledged'
+    | 'Investigating'
+    | 'Resolved',
 ) {
-  return apiRequest<{ success: boolean; message: string }>(`/disputes/${disputeId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status }),
-  });
+  return apiRequest<{ success: boolean; message: string }>(
+    `/disputes/${disputeId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    },
+  );
 }
 
 // Accept a staff-raised dispute (owner only) — moves Requested → Pending
-export async function acceptDispute(disputeId: number, workshopOwnerId: number) {
-  return apiRequest<{ success: boolean; message: string }>(`/disputes/${disputeId}/accept`, {
-    method: 'POST',
-    body: JSON.stringify({ workshopOwnerId }),
-  });
+export async function acceptDispute(
+  disputeId: number,
+  workshopOwnerId: number,
+) {
+  return apiRequest<{ success: boolean; message: string }>(
+    `/disputes/${disputeId}/accept`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ workshopOwnerId }),
+    },
+  );
 }
 
 // Add a comment to a dispute
@@ -2457,8 +2665,162 @@ export async function addDisputeComment(
   senderName?: string,
   senderRole?: string,
 ) {
-  return apiRequest<{ success: boolean; message: string }>(`/disputes/${disputeId}/comments`, {
-    method: 'POST',
-    body: JSON.stringify({ message, isInternal, senderName, senderRole }),
-  });
+  return apiRequest<{ success: boolean; message: string }>(
+    `/disputes/${disputeId}/comments`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ message, isInternal, senderName, senderRole }),
+    },
+  );
+}
+
+// ==========================================
+// CATALOG API (read-only, owner + staff)
+// See docs/product-catalog-design.md, Phase 2
+// ==========================================
+
+export interface CatalogCategoryDto {
+  id: number;
+  name: string;
+  slug: string;
+  iconUrl: string | null;
+  itemCount: number;
+}
+
+export interface CatalogBrandDto {
+  id: number;
+  name: string;
+  logoUrl: string | null;
+  itemCount: number;
+}
+
+// One sellable item (the main product or one of its variations) as shown on a card
+export interface CatalogItemSummary {
+  variantId: number;
+  productId: number;
+  name: string;
+  sku: string;
+  brandName: string;
+  categoryName: string;
+  productType: 'after_market' | 'genuine_oem';
+  price: number;
+  mrp: number | null;
+  attrName: string | null;
+  attrValue: string | null;
+  imageUrl: string | null;
+  stock: number;
+  // Stock is 0: the part is ordered through an inquiry instead of the cart
+  isOnOrder: boolean;
+  isUniversal: boolean;
+  // null when no vehicle was supplied
+  fitsVehicle: boolean | null;
+  // Fits by model only, because the vehicle has no usable variant
+  verifyFit: boolean;
+}
+
+export interface CatalogItemPage {
+  items: CatalogItemSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface CatalogSibling {
+  variantId: number;
+  label: string;
+  attrValue: string | null;
+  price: number;
+  isOnOrder: boolean;
+  isDefault: boolean;
+}
+
+export interface CatalogCompatibleVehicle {
+  manufacturer: string;
+  baseModel: string;
+  // null = all variants
+  variant: string | null;
+}
+
+export interface CatalogItemDetail {
+  variantId: number;
+  productId: number;
+  name: string;
+  variationName: string | null;
+  isDefault: boolean;
+  sku: string;
+  attrName: string | null;
+  attrValue: string | null;
+  price: number;
+  mrp: number | null;
+  stock: number;
+  isOnOrder: boolean;
+  brandId: number;
+  brandName: string;
+  categoryId: number;
+  categoryName: string;
+  productType: 'after_market' | 'genuine_oem';
+  description: string | null;
+  images: string[];
+  specs: { key: string; value: string }[];
+  isUniversal: boolean;
+  compatibleVehicles: CatalogCompatibleVehicle[];
+  siblings: CatalogSibling[];
+  fitsVehicle: boolean | null;
+  verifyFit: boolean;
+}
+
+export interface CatalogProductQuery {
+  categoryId?: number;
+  brandIds?: number[];
+  q?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: 'newest' | 'price_asc' | 'price_desc';
+  // Only parts that fit this vehicle (plus universal parts) are returned
+  vehicleId?: number;
+  excludeProductId?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+function catalogQuery(
+  params: Record<string, string | number | undefined>,
+): string {
+  const parts = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== '')
+    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`);
+  return parts.length ? `?${parts.join('&')}` : '';
+}
+
+export async function getCatalogCategories() {
+  return apiRequest<CatalogCategoryDto[]>('/catalog/categories');
+}
+
+export async function getCatalogBrands(categoryId?: number) {
+  return apiRequest<CatalogBrandDto[]>(
+    `/catalog/brands${catalogQuery({ categoryId })}`,
+  );
+}
+
+export async function getCatalogProducts(q: CatalogProductQuery) {
+  return apiRequest<CatalogItemPage>(
+    `/catalog/products${catalogQuery({
+      categoryId: q.categoryId,
+      brandIds: q.brandIds?.length ? q.brandIds.join(',') : undefined,
+      q: q.q?.trim(),
+      minPrice: q.minPrice,
+      maxPrice: q.maxPrice,
+      sort: q.sort,
+      vehicleId: q.vehicleId,
+      excludeProductId: q.excludeProductId,
+      page: q.page,
+      pageSize: q.pageSize,
+    })}`,
+  );
+}
+
+export async function getCatalogProduct(variantId: number, vehicleId?: number) {
+  return apiRequest<CatalogItemDetail>(
+    `/catalog/products/${variantId}${catalogQuery({ vehicleId })}`,
+  );
 }

@@ -1,28 +1,15 @@
 import type React from 'react';
 import type { ImageSourcePropType } from 'react-native';
-import TataMotors from '../../assets/logos/tata-motors.svg';
-import Toyota from '../../assets/logos/toyota.svg';
-import Mahindra from '../../assets/logos/mahindra.svg';
-import Suzuki from '../../assets/logos/suzuki.svg';
-import Hyundai from '../../assets/logos/hyundai.svg';
-import ValvolineLogo from '../../assets/logos/volvoline-logo.png';
+import type { CatalogBrandDto } from '../../services/api';
 
 type SvgLogo = React.FC<{ width?: number; height?: number }>;
 
-export type SortOption =
-  | 'relevance'
-  | 'popularity'
-  | 'price_low_high'
-  | 'price_high_low'
-  | 'rating'
-  | 'newest';
+// Phase 2 filters: brand (from the catalog API), sort, price range.
+// Oil-grade and can-size filters are intentionally gone until specifications become filterable.
 
-export type FilterSectionKey =
-  | 'brands'
-  | 'oilGrade'
-  | 'sort'
-  | 'canSize'
-  | 'priceRange';
+export type SortOption = 'newest' | 'price_low_high' | 'price_high_low';
+
+export type FilterSectionKey = 'brands' | 'sort' | 'priceRange';
 
 export interface FilterOption {
   value: string;
@@ -39,104 +26,91 @@ export interface FilterSection {
 }
 
 export interface FilterSelections {
+  // Brand ids as strings
   brands: string[];
-  oilGrade: string[];
   sort: SortOption | null;
-  canSize: string[];
+  // At most one range is selected
   priceRange: string[];
 }
 
 export const EMPTY_FILTERS: FilterSelections = {
   brands: [],
-  oilGrade: [],
   sort: null,
-  canSize: [],
   priceRange: [],
 };
 
-const svg = (c: unknown) => c as SvgLogo;
-
-// Dummy options (to be replaced with API-driven facets)
-export const FILTER_SECTIONS: FilterSection[] = [
-  {
-    key: 'brands',
-    title: 'Brands',
-    multi: true,
-    options: [
-      { value: 'tata', label: 'Tata Motors', count: 3, logo: svg(TataMotors) },
-      {
-        value: 'valvoline',
-        label: 'Valvoline',
-        count: 12,
-        logo: ValvolineLogo,
-      },
-      { value: 'suzuki', label: 'Maruti Suzuki', count: 5, logo: svg(Suzuki) },
-      { value: 'hyundai', label: 'Hyundai', count: 1, logo: svg(Hyundai) },
-      { value: 'mahindra', label: 'Mahindra', count: 2, logo: svg(Mahindra) },
-      { value: 'toyota', label: 'Toyota', count: 4, logo: svg(Toyota) },
-    ],
-  },
-  {
-    key: 'oilGrade',
-    title: 'Oil Grade',
-    multi: true,
-    options: [
-      { value: '0W-20', label: '0W-20', count: 2 },
-      { value: '0W-30', label: '0W-30', count: 2 },
-      { value: '5W-20', label: '5W-20', count: 1 },
-      { value: '5W-30', label: '5W-30', count: 4 },
-      { value: '5W-40', label: '5W-40', count: 4 },
-      { value: '10W-40', label: '10W-40', count: 1 },
-      { value: '10W-30', label: '10W-30', count: 2 },
-      { value: '15W-40', label: '15W-40', count: 4 },
-    ],
-  },
-  {
-    key: 'sort',
-    title: 'Sort',
-    multi: false,
-    options: [
-      { value: 'relevance', label: 'Relevance' },
-      { value: 'popularity', label: 'Popularity' },
-      { value: 'price_low_high', label: 'Price: Low to High' },
-      { value: 'price_high_low', label: 'Price: High to Low' },
-      { value: 'rating', label: 'Customer Rating' },
-      { value: 'newest', label: 'Newest First' },
-    ],
-  },
-  {
-    key: 'canSize',
-    title: 'Can Size',
-    multi: true,
-    options: [
-      '500 ml',
-      '1 L',
-      '3 L',
-      '3.5 L',
-      '4 L',
-      '5 L',
-      '7 L',
-      '10 L',
-      '20 L',
-    ].map(v => ({
-      value: v,
-      label: v,
-    })),
-  },
-  {
-    key: 'priceRange',
-    title: 'Price Range',
-    multi: true,
-    options: [
-      'Under ₹500',
-      '₹500–₹999',
-      '₹1,000–₹1,499',
-      '₹1,500–₹1,999',
-      '₹2,000–₹2,999',
-      '₹3,000 and above',
-    ].map(v => ({ value: v, label: v })),
-  },
+const SORT_OPTIONS: FilterOption[] = [
+  { value: 'newest', label: 'Newest First' },
+  { value: 'price_low_high', label: 'Price: Low to High' },
+  { value: 'price_high_low', label: 'Price: High to Low' },
 ];
+
+interface PriceRange {
+  value: string;
+  label: string;
+  min?: number;
+  max?: number;
+}
+
+const PRICE_RANGES: PriceRange[] = [
+  { value: 'under_500', label: 'Under ₹500', max: 499.99 },
+  { value: '500_999', label: '₹500–₹999', min: 500, max: 999.99 },
+  { value: '1000_1499', label: '₹1,000–₹1,499', min: 1000, max: 1499.99 },
+  { value: '1500_1999', label: '₹1,500–₹1,999', min: 1500, max: 1999.99 },
+  { value: '2000_2999', label: '₹2,000–₹2,999', min: 2000, max: 2999.99 },
+  { value: '3000_up', label: '₹3,000 and above', min: 3000 },
+];
+
+/** Builds the filter sections; the brand options come from the catalog API. */
+export function buildFilterSections(
+  brands: CatalogBrandDto[],
+): FilterSection[] {
+  return [
+    {
+      key: 'brands',
+      title: 'Brands',
+      multi: true,
+      options: brands.map(b => ({
+        value: String(b.id),
+        label: b.name,
+        count: b.itemCount,
+        logo: b.logoUrl ? { uri: b.logoUrl } : undefined,
+      })),
+    },
+    { key: 'sort', title: 'Sort', multi: false, options: SORT_OPTIONS },
+    {
+      key: 'priceRange',
+      title: 'Price Range',
+      multi: false,
+      options: PRICE_RANGES.map(r => ({ value: r.value, label: r.label })),
+    },
+  ];
+}
+
+/** The API's min/max price for the selected price range. */
+export function priceBounds(selections: FilterSelections): {
+  minPrice?: number;
+  maxPrice?: number;
+} {
+  const range = PRICE_RANGES.find(r => r.value === selections.priceRange[0]);
+  return { minPrice: range?.min, maxPrice: range?.max };
+}
+
+/** The API's sort value for the selected sort option. */
+export function apiSort(
+  sort: SortOption | null,
+): 'newest' | 'price_asc' | 'price_desc' | undefined {
+  switch (sort) {
+    case 'newest':
+      return 'newest';
+    case 'price_low_high':
+      return 'price_asc';
+    case 'price_high_low':
+      return 'price_desc';
+    default:
+      return undefined;
+  }
+}
 
 export interface SelectedChip {
   sectionKey: FilterSectionKey;
@@ -147,9 +121,10 @@ export interface SelectedChip {
 
 export const getSelectedChips = (
   selections: FilterSelections,
+  sections: FilterSection[],
 ): SelectedChip[] => {
   const chips: SelectedChip[] = [];
-  FILTER_SECTIONS.forEach(section => {
+  sections.forEach(section => {
     const raw = selections[section.key];
     const values = Array.isArray(raw) ? raw : raw ? [raw] : [];
     values.forEach(value => {
@@ -166,8 +141,10 @@ export const getSelectedChips = (
   return chips;
 };
 
-export const countSelections = (selections: FilterSelections) =>
-  getSelectedChips(selections).length;
+export const countSelections = (
+  selections: FilterSelections,
+  sections: FilterSection[],
+) => getSelectedChips(selections, sections).length;
 
 export const removeSelection = (
   selections: FilterSelections,

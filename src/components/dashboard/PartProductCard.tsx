@@ -1,4 +1,5 @@
 import React from 'react';
+import ImagePlaceholder from '../catalog/ImagePlaceholder';
 import {
   View,
   Text,
@@ -23,6 +24,8 @@ export interface PartProduct {
   outOfStock?: boolean;
   images?: ImageSourcePropType[];
   compatibleVehicles?: string[];
+  // Catalog item: fits only by model because the vehicle has no usable variant
+  verifyFit?: boolean;
 }
 
 interface PartProductCardProps {
@@ -64,12 +67,14 @@ export default function PartProductCard({
       )}
       <View style={styles.imageWrap}>
         <View style={styles.imageBox}>
-          {imageSource && (
+          {imageSource ? (
             <Image
               source={imageSource}
               style={styles.image}
               resizeMode="contain"
             />
+          ) : (
+            <ImagePlaceholder size={44} label={null} />
           )}
         </View>
 
@@ -116,8 +121,13 @@ export default function PartProductCard({
         </Text>
         <View style={styles.priceRow}>
           <Text style={styles.price}>{formatPrice(product.price)}</Text>
-          <Text style={styles.mrp}>MRP{formatPrice(product.mrp)}</Text>
+          {product.mrp > product.price && (
+            <Text style={styles.mrp}>MRP{formatPrice(product.mrp)}</Text>
+          )}
         </View>
+        {!!product.verifyFit && (
+          <Text style={styles.verifyFit}>Verify fit</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -193,6 +203,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8a8a8e',
     textDecorationLine: 'line-through',
+  },
+  verifyFit: {
+    fontSize: 11,
+    color: '#b45309',
   },
   addBtn: {
     position: 'absolute',

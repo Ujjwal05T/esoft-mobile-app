@@ -15,10 +15,10 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { CloseCircleIcon } from './icons';
 import {
   EMPTY_FILTERS,
-  FILTER_SECTIONS,
   getSelectedChips,
   removeSelection,
   type FilterOption,
+  type FilterSection,
   type FilterSectionKey,
   type FilterSelections,
   type SortOption,
@@ -27,6 +27,7 @@ import {
 interface FiltersOverlayProps {
   isOpen: boolean;
   onClose: () => void;
+  sections: FilterSection[];
   selections: FilterSelections;
   onApply: (selections: FilterSelections) => void;
   initialSection?: FilterSectionKey;
@@ -94,6 +95,7 @@ function OptionLogo({
 export default function FiltersOverlay({
   isOpen,
   onClose,
+  sections,
   selections,
   onApply,
   initialSection = 'brands',
@@ -116,19 +118,21 @@ export default function FiltersOverlay({
 
   const visibleSections = useMemo(
     () =>
-      FILTER_SECTIONS.map(section => ({
-        ...section,
-        options: q
-          ? section.options.filter(o => o.label.toLowerCase().includes(q))
-          : section.options,
-      })).filter(section => !q || section.options.length > 0),
-    [q],
+      sections
+        .map(section => ({
+          ...section,
+          options: q
+            ? section.options.filter(o => o.label.toLowerCase().includes(q))
+            : section.options,
+        }))
+        .filter(section => !q || section.options.length > 0),
+    [q, sections],
   );
 
   const activeSection =
     visibleSections.find(s => s.key === activeKey) ?? visibleSections[0];
 
-  const chips = getSelectedChips(draft);
+  const chips = getSelectedChips(draft, sections);
 
   const isSelected = (key: FilterSectionKey, value: string) =>
     key === 'sort'
@@ -144,6 +148,10 @@ export default function FiltersOverlay({
         };
       }
       const current = prev[key] as string[];
+      // Price range is a single choice: picking one replaces the other
+      if (key === 'priceRange') {
+        return { ...prev, priceRange: current.includes(value) ? [] : [value] };
+      }
       return {
         ...prev,
         [key]: current.includes(value)

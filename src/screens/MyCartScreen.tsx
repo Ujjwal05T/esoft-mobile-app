@@ -109,7 +109,7 @@ export default function MyCartScreen() {
             {hasOutOfStock && (
               <View style={[styles.card, styles.outCard]}>
                 <Text style={[styles.cardTitle, styles.outTitle]}>
-                  Out of Stock ({outOfStockItems.length})
+                  On Order ({outOfStockItems.length})
                 </Text>
                 <View style={[styles.divider, styles.outDivider]} />
                 {outOfStockItems.map((item, i) => (

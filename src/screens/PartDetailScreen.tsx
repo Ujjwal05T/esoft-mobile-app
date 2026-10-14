@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import PartProductCard, {
 import RedHeader from '../components/catalog/RedHeader';
 import VehiclePicker from '../components/catalog/VehiclePicker';
 import { ChevronDown } from '../components/catalog/icons';
+import ImagePlaceholder from '../components/catalog/ImagePlaceholder';
 import PillButton from '../components/catalog/PillButton';
 import { getVehicleFullName } from '../components/catalog/SelectCarOverlay';
 import { formatPrice } from '../components/catalog/CartParts';
@@ -31,79 +32,18 @@ import { useTabBarHeight } from '../components/catalog/useTabBarHeight';
 import { useSendInquiry } from '../components/catalog/useSendInquiry';
 import AppAlert from '../components/overlays/AppAlert';
 import SearchIcon from '../assets/icons/search.svg';
-import OilFilterImg from '../assets/images/oil-filter.png';
+import {
+  describeCompatibleVehicle,
+  toPartProduct,
+} from '../components/catalog/catalogMapping';
+import {
+  getCatalogProduct,
+  getCatalogProducts,
+  type CatalogItemDetail,
+  type CatalogItemSummary,
+} from '../services/api';
 
 type Props = NativeStackScreenProps<CatalogStackParamList, 'PartDetail'>;
-
-// Dummy recommendations (to be replaced with API data)
-const RECOMMENDED: PartProduct[] = [
-  {
-    id: 'rec-1',
-    sku: 'TY-0000015',
-    name: 'Oil Filter Crysta',
-    brand: 'Toyota Genuine Parts',
-    price: 474,
-    mrp: 474,
-    image: OilFilterImg,
-    volume: '1 Pc',
-    category: 'Filters',
-  },
-  {
-    id: 'rec-2',
-    sku: 'TY-0000013',
-    name: 'Air Filter Crysta',
-    brand: 'Toyota Genuine Parts',
-    price: 1576,
-    mrp: 1578,
-    image: OilFilterImg,
-    volume: '1 Pc',
-    category: 'Filters',
-  },
-  {
-    id: 'rec-3',
-    sku: 'TY-0000021',
-    name: 'Cabin Filter Crysta',
-    brand: 'Toyota Genuine Parts',
-    price: 890,
-    mrp: 950,
-    image: OilFilterImg,
-    volume: '1 Pc',
-    category: 'Filters',
-  },
-  {
-    id: 'rec-4',
-    sku: 'TY-0000034',
-    name: 'Fuel Filter Crysta',
-    brand: 'Toyota Genuine Parts',
-    price: 1240,
-    mrp: 1350,
-    image: OilFilterImg,
-    volume: '1 Pc',
-    category: 'Filters',
-  },
-  {
-    id: 'rec-5',
-    sku: 'TY-0000047',
-    name: 'Spark Plug Set',
-    brand: 'Toyota Genuine Parts',
-    price: 2150,
-    mrp: 2400,
-    image: OilFilterImg,
-    volume: '1 Pc',
-    category: 'Filters',
-  },
-  {
-    id: 'rec-6',
-    sku: 'TY-0000052',
-    name: 'Engine Coolant 1L',
-    brand: 'Toyota Genuine Parts',
-    price: 420,
-    mrp: 480,
-    image: OilFilterImg,
-    volume: '1 Pc',
-    category: 'Filters',
-  },
-];
 
 const SCREEN_PADDING = 16;
 
@@ -111,19 +51,80 @@ export default function PartDetailScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<CatalogStackParamList>>();
   const { params } = useRoute<Props['route']>();
-  const { product, categoryTitle } = params;
+  const { product: initialProduct, categoryTitle } = params;
   const { width } = useWindowDimensions();
   const tabBarHeight = useTabBarHeight();
   const { vehicle, quantities, addItem, increment, decrement } = useCart();
   const sendInquiry = useSendInquiry();
+
+  // The sellable item on screen. Tapping a sibling variation switches it without leaving the screen.
+  const [activeId, setActiveId] = useState(Number(initialProduct.id));
+  const [detail, setDetail] = useState<CatalogItemDetail | null>(null);
+  const [related, setRelated] = useState<CatalogItemSummary[]>([]);
+
+  // Full detail (images, specifications, compatibility, siblings) from the catalog API
+  useEffect(() => {
+    let cancelled = false;
+    getCatalogProduct(activeId, vehicle?.id).then(res => {
+      if (cancelled || !res.success || !res.data) return;
+      setDetail(res.data);
+      setImageIndex(0);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeId, vehicle?.id]);
+
+  // More parts from the same category (filtered to the selected vehicle)
+  const detailProductId = detail?.productId;
+  const detailCategoryId = detail?.categoryId;
+  useEffect(() => {
+    if (!detailProductId || !detailCategoryId) return;
+    let cancelled = false;
+    getCatalogProducts({
+      categoryId: detailCategoryId,
+      vehicleId: vehicle?.id,
+      excludeProductId: detailProductId,
+      pageSize: 7,
+    }).then(res => {
+      if (!cancelled && res.success && res.data) setRelated(res.data.items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [detailProductId, detailCategoryId, vehicle?.id]);
+
+  // Until the detail arrives (or while switching), show what the card already knew
+  const ready = detail && detail.variantId === activeId ? detail : null;
+  const product: PartProduct = ready
+    ? {
+        id: String(ready.variantId),
+        sku: ready.sku,
+        name: ready.name,
+        brand: ready.brandName,
+        price: ready.price,
+        mrp: ready.mrp && ready.mrp > ready.price ? ready.mrp : ready.price,
+        imageUrl: ready.images[0],
+        badge: ready.isOnOrder ? 'On Order' : undefined,
+        outOfStock: ready.isOnOrder,
+        volume: ready.attrValue ?? undefined,
+        category: ready.categoryName,
+      }
+    : initialProduct;
+
+  const compatList: string[] = ready
+    ? ready.isUniversal
+      ? ['Fits all vehicles']
+      : ready.compatibleVehicles.map(describeCompatibleVehicle)
+    : [];
 
   const cartQty = quantities[product.id] ?? 0;
   const [imageIndex, setImageIndex] = useState(0);
   const [compatOpen, setCompatOpen] = useState(true);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
-  const images: ImageSourcePropType[] = product.images?.length
-    ? product.images
+  const images: ImageSourcePropType[] = ready?.images.length
+    ? ready.images.map(uri => ({ uri }))
     : product.image
     ? [product.image]
     : product.imageUrl
@@ -176,6 +177,11 @@ export default function PartDetailScreen() {
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={handleScrollEnd}
           >
+            {images.length === 0 && (
+              <ImagePlaceholder
+                style={{ width: carouselWidth, height: carouselWidth / 1.5 }}
+              />
+            )}
             {images.map((img, i) => (
               <View
                 key={i}
@@ -211,8 +217,54 @@ export default function PartDetailScreen() {
         <Text style={styles.brand}>{product.brand}</Text>
         <View style={styles.priceRow}>
           <Text style={styles.price}>{formatPrice(product.price)}</Text>
-          <Text style={styles.mrp}>MRP{formatPrice(product.mrp)}</Text>
+          {product.mrp > product.price && (
+            <Text style={styles.mrp}>MRP{formatPrice(product.mrp)}</Text>
+          )}
         </View>
+
+        {!!ready && ready.siblings.length > 1 && (
+          <View style={styles.variants}>
+            <Text style={styles.variantsLabel}>Also available in</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.variantsRow}
+            >
+              {ready.siblings.map(sibling => {
+                const active = sibling.variantId === activeId;
+                return (
+                  <TouchableOpacity
+                    key={sibling.variantId}
+                    activeOpacity={0.8}
+                    onPress={() => setActiveId(sibling.variantId)}
+                    style={[
+                      styles.variantChip,
+                      active && styles.variantChipActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.variantChipLabel,
+                        active && styles.variantChipLabelActive,
+                      ]}
+                    >
+                      {sibling.label}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.variantChipPrice,
+                        active && styles.variantChipLabelActive,
+                      ]}
+                    >
+                      {formatPrice(sibling.price)}
+                      {sibling.isOnOrder ? ' · On Order' : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         <View style={styles.meta}>
           <Text style={styles.metaText}>Part Number: {product.sku}</Text>
@@ -228,7 +280,13 @@ export default function PartDetailScreen() {
               activeOpacity={0.7}
               onPress={() => setCompatOpen(o => !o)}
             >
-              <Text style={styles.compatLabel}>Compatible with : </Text>
+              <Text style={styles.compatLabel}>
+                {ready?.fitsVehicle === false
+                  ? 'Not listed for : '
+                  : ready?.verifyFit
+                  ? 'Verify fit with : '
+                  : 'Compatible with : '}
+              </Text>
               <Text style={styles.compatVehicle} numberOfLines={1}>
                 {getVehicleFullName(vehicle)}
               </Text>
@@ -239,7 +297,22 @@ export default function PartDetailScreen() {
           )}
         </View>
 
-        {!!product.compatibleVehicles?.length && (
+        {!!ready?.description && (
+          <Text style={styles.description}>{ready.description}</Text>
+        )}
+
+        {!!ready && ready.specs.length > 0 && (
+          <View style={styles.specs}>
+            {ready.specs.map(spec => (
+              <View key={spec.key} style={styles.specRow}>
+                <Text style={styles.specKey}>{spec.key}</Text>
+                <Text style={styles.specValue}>{spec.value}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {compatList.length > 0 && (
           <View style={styles.accordion}>
             <TouchableOpacity
               style={styles.accordionHeader}
@@ -252,7 +325,7 @@ export default function PartDetailScreen() {
               </View>
             </TouchableOpacity>
             {compatOpen &&
-              product.compatibleVehicles.map(name => (
+              compatList.map(name => (
                 <View key={name} style={styles.accordionItem}>
                   <Text style={styles.accordionItemText}>{name}</Text>
                 </View>
@@ -260,28 +333,37 @@ export default function PartDetailScreen() {
           </View>
         )}
 
-        <View style={styles.recommended}>
-          <Text style={styles.recommendedTitle}>
-            Recommended with Engine Oil
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.recommendedRow}
-          >
-            {RECOMMENDED.map(rec => (
-              <View key={rec.id} style={styles.recommendedItem}>
-                <PartProductCard
-                  product={rec}
-                  quantity={quantities[rec.id] ?? 0}
-                  onAdd={() => addItem(rec)}
-                  onIncrement={increment}
-                  onDecrement={decrement}
-                />
-              </View>
-            ))}
-          </ScrollView>
-        </View>
+        {related.length > 0 && (
+          <View style={styles.recommended}>
+            <Text style={styles.recommendedTitle}>
+              More in {ready?.categoryName ?? categoryTitle}
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.recommendedRow}
+            >
+              {related.map(item => {
+                const rec = toPartProduct(item);
+                return (
+                  <View key={rec.id} style={styles.recommendedItem}>
+                    <PartProductCard
+                      product={rec}
+                      quantity={quantities[rec.id] ?? 0}
+                      onAdd={() => addItem(rec)}
+                      onIncrement={increment}
+                      onDecrement={decrement}
+                      onPress={() => {
+                        setRelated([]);
+                        setActiveId(item.variantId);
+                      }}
+                    />
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
       </ScrollView>
 
       <View style={[styles.bottomBar, { bottom: tabBarHeight }]}>
@@ -435,6 +517,45 @@ const styles = StyleSheet.create({
     borderBottomColor: '#d1d5db',
   },
   accordionItemText: { fontSize: 12, color: '#161a1d' },
+
+  variants: { marginTop: 14 },
+  variantsLabel: { fontSize: 12, color: '#9ca3af', marginBottom: 8 },
+  variantsRow: { gap: 8 },
+  variantChip: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#ffffff',
+  },
+  variantChipActive: { borderColor: '#e5383b', backgroundColor: '#e5383b' },
+  variantChipLabel: { fontSize: 13, fontWeight: '600', color: '#161a1d' },
+  variantChipLabelActive: { color: '#ffffff' },
+  variantChipPrice: { fontSize: 11, color: '#6b7280', marginTop: 2 },
+
+  description: {
+    marginTop: 14,
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#374151',
+  },
+  specs: {
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  specRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  specKey: { flex: 1, fontSize: 12, color: '#6b7280' },
+  specValue: { flex: 1.3, fontSize: 12, color: '#161a1d', fontWeight: '600' },
 
   recommended: {
     marginTop: 20,

@@ -21,7 +21,11 @@ export default function CatalogCartBar({
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { bottom }]}>
-      <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={styles.bar}>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={onPress}
+        style={styles.bar}
+      >
         <View style={styles.iconBadge}>
           <CartIcon width={16} height={16} color="#e5383b" />
         </View>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,23 +6,25 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
+import Svg, { Rect } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CatalogStackParamList } from '../navigation/CatalogStack';
 import { useCart } from '../context/CartContext';
 import RedHeader from '../components/catalog/RedHeader';
 import { useTabBarHeight } from '../components/catalog/useTabBarHeight';
-import PartProductCard, {
-  PartProduct,
-} from '../components/dashboard/PartProductCard';
+import PartProductCard from '../components/dashboard/PartProductCard';
 import VehiclePicker from '../components/catalog/VehiclePicker';
 import CatalogFilterBar from '../components/catalog/CatalogFilterBar';
 import FiltersOverlay from '../components/catalog/FiltersOverlay';
 import {
   EMPTY_FILTERS,
-  FILTER_SECTIONS,
+  apiSort,
+  buildFilterSections,
   countSelections,
+  priceBounds,
   type FilterSectionKey,
   type FilterSelections,
 } from '../components/catalog/filterConfig';
@@ -30,167 +32,53 @@ import CategorySidebar, {
   CatalogCategory,
 } from '../components/catalog/CategorySidebar';
 import CatalogCartBar from '../components/catalog/CatalogCartBar';
-import ComingSoonOverlay from '../components/catalog/ComingSoonOverlay';
+import { toPartProduct } from '../components/catalog/catalogMapping';
+import { getVehicleFullName } from '../components/catalog/SelectCarOverlay';
+import {
+  getCatalogBrands,
+  getCatalogCategories,
+  getCatalogProducts,
+  type CatalogBrandDto,
+  type CatalogCategoryDto,
+  type CatalogItemSummary,
+} from '../services/api';
 
 import CartIcon from '../assets/icons/cart.svg';
 import SearchIcon from '../assets/icons/search.svg';
-import OilImg from '../assets/images/oil_and_lubricant.png';
-import ShockIcon from '../assets/icons/shock-absorber.svg';
-import BodyIcon from '../assets/icons/body-parts.svg';
-import LightingIcon from '../assets/icons/lighting.svg';
-import BrakeIcon from '../assets/icons/brake-system.svg';
-import ClutchIcon from '../assets/icons/clutch-system.svg';
-import OilFilterImg from '../assets/images/oil-filter.png';
 
-type SvgIcon = React.FC<{ width?: number; height?: number; color?: string }>;
-
-// ── Dummy data (to be replaced with API responses) ────────────────────────────
-
-const CATEGORIES: CatalogCategory[] = [
-  { key: 'oil', label: 'Oil & Lubricant', image: OilImg },
-  { key: 'shock', label: 'Suspension', Icon: ShockIcon as unknown as SvgIcon },
-  { key: 'body', label: 'Body Parts', Icon: BodyIcon as unknown as SvgIcon },
-  {
-    key: 'lighting',
-    label: 'Lighting',
-    Icon: LightingIcon as unknown as SvgIcon,
-  },
-  {
-    key: 'brake',
-    label: 'Brake Systems',
-    Icon: BrakeIcon as unknown as SvgIcon,
-  },
-  {
-    key: 'clutch',
-    label: 'Clutch System',
-    Icon: ClutchIcon as unknown as SvgIcon,
-  },
-  { key: 'filter', label: 'Filters', image: OilFilterImg },
-  // Dummy categories for testing sidebar scrolling
-  {
-    key: 'battery',
-    label: 'Battery',
-    Icon: LightingIcon as unknown as SvgIcon,
-  },
-  {
-    key: 'tyres',
-    label: 'Tyres & Wheels',
-    Icon: ClutchIcon as unknown as SvgIcon,
-  },
-  {
-    key: 'engine',
-    label: 'Engine Parts',
-    Icon: ShockIcon as unknown as SvgIcon,
-  },
-  { key: 'wipers', label: 'Wipers', Icon: BodyIcon as unknown as SvgIcon },
-  {
-    key: 'electrical',
-    label: 'Electricals',
-    Icon: BrakeIcon as unknown as SvgIcon,
-  },
-  { key: 'ac', label: 'AC & Cooling', image: OilImg },
-];
-
-const COMPATIBLE_VEHICLES = [
-  'Toyota Innova Crysta 2.4 ZX MT DSL 2018',
-  'Toyota Innova Crysta 2.8 VX MT DSL 2018',
-  'Toyota Innova Crysta 2.8 VX MT DSL 2019',
-  'Toyota Innova Crysta 2.8 ZX MT DSL 2019',
-];
-
-const MOCK_PRODUCTS: PartProduct[] = [
-  {
-    id: '1',
-    sku: 'Val-0000001',
-    name: 'All Climate Advanced 5W30',
-    brand: 'Valvoline',
-    price: 1600,
-    mrp: 2100,
-    image: OilFilterImg,
-    volume: '3.5 Ltrs',
-    category: 'Oil & Lubricant',
-    images: [OilFilterImg, OilFilterImg, OilFilterImg],
-    compatibleVehicles: COMPATIBLE_VEHICLES,
-  },
-  {
-    id: '2',
-    sku: 'Val-0000002',
-    name: 'All Climate Dsl/Ptl 15W40',
-    brand: 'Valvoline',
-    price: 1050,
-    mrp: 1600,
-    image: OilFilterImg,
-    volume: '3.5 Ltrs',
-    category: 'Oil & Lubricant',
-    images: [OilFilterImg, OilFilterImg, OilFilterImg],
-    compatibleVehicles: COMPATIBLE_VEHICLES,
-  },
-  {
-    id: '3',
-    sku: 'Val-0000003',
-    name: 'All Climate Modern 5W30',
-    brand: 'Valvoline',
-    price: 1250,
-    mrp: 1800,
-    image: OilFilterImg,
-    volume: '3.5 Ltrs',
-    category: 'Oil & Lubricant',
-    images: [OilFilterImg, OilFilterImg, OilFilterImg],
-    compatibleVehicles: COMPATIBLE_VEHICLES,
-    badge: 'On Order',
-  },
-  {
-    id: '4',
-    sku: 'Val-0000004',
-    name: 'Synpower 5W40',
-    brand: 'Valvoline',
-    price: 1900,
-    mrp: 2500,
-    image: OilFilterImg,
-    volume: '3.5 Ltrs',
-    category: 'Oil & Lubricant',
-    images: [OilFilterImg, OilFilterImg, OilFilterImg],
-    compatibleVehicles: COMPATIBLE_VEHICLES,
-  },
-  {
-    id: '5',
-    sku: 'TM-0000001',
-    name: 'CI4+ 15W40 Diesel Engine Oil',
-    brand: 'TATA Motors Genuine Oil',
-    price: 900,
-    mrp: 1100,
-    image: OilFilterImg,
-    badge: 'Out of Stock',
-    outOfStock: true,
-    volume: '3.5 Ltrs',
-    category: 'Oil & Lubricant',
-    images: [OilFilterImg, OilFilterImg, OilFilterImg],
-    compatibleVehicles: COMPATIBLE_VEHICLES,
-  },
-  {
-    id: '6',
-    sku: 'TY-0000001',
-    name: '5W30 Toyota Value Semi Synthetic Engine Oil',
-    brand: 'Toyota Value',
-    price: 2190,
-    mrp: 2400,
-    image: OilFilterImg,
-    volume: '3.5 Ltrs',
-    category: 'Oil & Lubricant',
-    images: [OilFilterImg, OilFilterImg, OilFilterImg],
-    compatibleVehicles: COMPATIBLE_VEHICLES,
-  },
-];
-
-// While the catalog backend is not live, the whole screen is covered by a non-dismissible
-// "Coming Soon" overlay and its content is disabled. Set to false to restore the screen.
-const CATALOG_COMING_SOON = true;
+const ALL_KEY = 'all';
+const PAGE_SIZE = 20;
 
 // Cart badge shows the exact count up to this number, then "N+".
 const CART_BADGE_MAX = 3;
 
 // Chips shown in the filter bar; each opens the Filters sheet on the matching section.
-const CHIP_LABELS = ['Sort', 'Brands', 'Oil Grade', 'Can Size', 'Price Range'];
+const CHIP_LABELS = ['Sort', 'Brands', 'Price Range'];
+
+const AllPartsIcon = ({ width = 44, height = 44, color = '#e5383b' }) => (
+  <Svg width={width} height={height} viewBox="0 0 44 44" fill="none">
+    <Rect x={8} y={8} width={12} height={12} rx={3} fill={color} />
+    <Rect
+      x={24}
+      y={8}
+      width={12}
+      height={12}
+      rx={3}
+      fill={color}
+      opacity={0.6}
+    />
+    <Rect
+      x={8}
+      y={24}
+      width={12}
+      height={12}
+      rx={3}
+      fill={color}
+      opacity={0.6}
+    />
+    <Rect x={24} y={24} width={12} height={12} rx={3} fill={color} />
+  </Svg>
+);
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -201,214 +89,372 @@ export default function CatalogScreen() {
   const {
     quantities,
     count: cartCount,
+    vehicle,
+    setVehicle,
     addItem,
     increment,
     decrement,
   } = useCart();
 
+  // Bumped to reload everything (pull to refresh, retry)
+  const [reloadToken, setReloadToken] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const onRefresh = () => {
-    // No data source to refresh yet — just show the spinner briefly.
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 500);
-  };
 
-  const [selectedCategory, setSelectedCategory] = useState('oil');
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [query, setQuery] = useState('');
+  const [categories, setCategories] = useState<CatalogCategoryDto[]>([]);
+  const [brands, setBrands] = useState<CatalogBrandDto[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState(ALL_KEY);
   const [filters, setFilters] = useState<FilterSelections>(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filtersSection, setFiltersSection] =
     useState<FilterSectionKey>('brands');
-  const sortBy = filters.sort;
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+
+  const [list, setList] = useState<{
+    items: CatalogItemSummary[];
+    total: number;
+    page: number;
+  }>({ items: [], total: 0, page: 0 });
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(
+    'loading',
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // Ignores answers to requests that a newer filter change has already replaced
+  const requestId = useRef(0);
+
+  const categoryId =
+    selectedCategory === ALL_KEY ? undefined : Number(selectedCategory);
+  const trimmedQuery = debouncedQuery.trim();
+  const isSearching = trimmedQuery.length > 0;
+
   const openFilters = (section: FilterSectionKey) => {
     setFiltersSection(section);
     setFiltersOpen(true);
   };
 
-  const activeDropdowns = FILTER_SECTIONS.filter(section => {
-    const value = filters[section.key];
-    return Array.isArray(value) ? value.length > 0 : value !== null;
-  }).map(section => section.title);
+  // Debounce the search box so we do not call the API on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 350);
+    return () => clearTimeout(t);
+  }, [query]);
 
-  // Search looks across every category; every typed word must match somewhere.
-  const searchTerms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const isSearching = searchTerms.length > 0;
-  const matchesSearch = (p: PartProduct) => {
-    const haystack = [p.name, p.sku, p.brand, p.volume, p.category]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-    return searchTerms.every(term => haystack.includes(term));
+  // Categories for the sidebar
+  useEffect(() => {
+    let cancelled = false;
+    getCatalogCategories().then(res => {
+      if (cancelled || !res.success || !res.data) return;
+      const data = res.data;
+      setCategories(data);
+      // A category hidden since the last load must not stay selected
+      setSelectedCategory(prev =>
+        prev === ALL_KEY || data.some(c => String(c.id) === prev)
+          ? prev
+          : ALL_KEY,
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadToken]);
+
+  // Brand filter options (counts follow the selected category)
+  useEffect(() => {
+    let cancelled = false;
+    getCatalogBrands(categoryId).then(res => {
+      if (!cancelled && res.success && res.data) setBrands(res.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryId, reloadToken]);
+
+  const sections = useMemo(() => buildFilterSections(brands), [brands]);
+
+  const bounds = priceBounds(filters);
+  const buildQuery = (page: number) => ({
+    // Searching looks across every category
+    categoryId: isSearching ? undefined : categoryId,
+    brandIds: filters.brands.map(Number),
+    q: trimmedQuery,
+    minPrice: bounds.minPrice,
+    maxPrice: bounds.maxPrice,
+    sort: apiSort(filters.sort),
+    // With a vehicle selected, only parts that fit it are returned
+    vehicleId: vehicle?.id,
+    page,
+    pageSize: PAGE_SIZE,
+  });
+
+  // Reload the first page whenever any filter changes
+  const filterKey = JSON.stringify([
+    categoryId,
+    filters,
+    trimmedQuery,
+    vehicle?.id,
+    reloadToken,
+  ]);
+  useEffect(() => {
+    const id = ++requestId.current;
+    setStatus('loading');
+    setError(null);
+    getCatalogProducts(buildQuery(1)).then(res => {
+      if (id !== requestId.current) return;
+      setRefreshing(false);
+      if (res.success && res.data) {
+        setList({ items: res.data.items, total: res.data.total, page: 1 });
+        setStatus('ready');
+      } else {
+        setError(res.error ?? 'Could not load parts.');
+        setStatus('error');
+      }
+    });
+    // buildQuery is derived from filterKey's inputs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterKey]);
+
+  const loadMore = () => {
+    if (loadingMore || status !== 'ready' || list.items.length >= list.total) {
+      return;
+    }
+    const id = requestId.current;
+    setLoadingMore(true);
+    getCatalogProducts(buildQuery(list.page + 1))
+      .then(res => {
+        if (id !== requestId.current || !res.success || !res.data) return;
+        const next = res.data;
+        setList(prev => ({
+          items: [...prev.items, ...next.items],
+          total: next.total,
+          page: prev.page + 1,
+        }));
+      })
+      .finally(() => setLoadingMore(false));
   };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setReloadToken(t => t + 1);
+  };
+
   const closeSearch = () => {
     setSearchOpen(false);
     setQuery('');
+    setDebouncedQuery('');
   };
 
-  const categoryProducts = isSearching
-    ? MOCK_PRODUCTS.filter(matchesSearch)
-    : selectedCategory === 'oil'
-    ? MOCK_PRODUCTS
-    : [];
-  const products = sortBy
-    ? [...categoryProducts].sort((a, b) =>
-        sortBy === 'price_low_high' ? a.price - b.price : b.price - a.price,
-      )
-    : categoryProducts;
+  // The selected vehicle is a filter too, so it counts here and "Clear all" resets it
+  const appliedCount = countSelections(filters, sections) + (vehicle ? 1 : 0);
+  const hasActiveFilters = appliedCount > 0 || isSearching;
+  const clearAll = () => {
+    setFilters(EMPTY_FILTERS);
+    setVehicle(null);
+    closeSearch();
+  };
+
+  const activeDropdowns = sections
+    .filter(section => {
+      const value = filters[section.key];
+      return Array.isArray(value) ? value.length > 0 : value !== null;
+    })
+    .map(section => section.title);
+
+  const sidebarCategories: CatalogCategory[] = [
+    { key: ALL_KEY, label: 'All Parts', Icon: AllPartsIcon },
+    ...categories.map(c => ({
+      key: String(c.id),
+      label: c.name,
+      imageUrl: c.iconUrl,
+    })),
+  ];
+
+  const emptyMessage = isSearching
+    ? `No parts found for “${trimmedQuery}”`
+    : vehicle
+    ? `No parts found for ${getVehicleFullName(
+        vehicle,
+      )}. Try another vehicle or clear the filters.`
+    : 'No products in this category yet';
 
   return (
     <View style={styles.container}>
-      {/* Content stays visible behind the overlay, but cannot be touched or read by screen readers */}
-      <View
-        style={styles.content}
-        pointerEvents={CATALOG_COMING_SOON ? 'none' : 'auto'}
-        accessibilityElementsHidden={CATALOG_COMING_SOON}
-        importantForAccessibility={
-          CATALOG_COMING_SOON ? 'no-hide-descendants' : 'auto'
+      <RedHeader
+        title="Catalog"
+        onBack={() => (searchOpen ? closeSearch() : navigation.goBack())}
+        search={{
+          active: searchOpen,
+          value: query,
+          onChange: setQuery,
+          onClose: closeSearch,
+          placeholder: 'Search parts, brands or part numbers',
+        }}
+        right={
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.headerBtn}
+              onPress={() => setSearchOpen(true)}
+            >
+              <SearchIcon width={22} height={22} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.headerBtn}
+              onPress={() => navigation.navigate('MyCart')}
+            >
+              <CartIcon width={24} height={24} color="#ffffff" />
+              {cartCount > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>
+                    {cartCount > CART_BADGE_MAX
+                      ? `${CART_BADGE_MAX}+`
+                      : cartCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         }
-      >
-        <RedHeader
-          title="Catalog"
-          onBack={() => (searchOpen ? closeSearch() : navigation.goBack())}
-          search={{
-            active: searchOpen,
-            value: query,
-            onChange: setQuery,
-            onClose: closeSearch,
-            placeholder: 'Search parts, brands or part numbers',
-          }}
-          right={
-            <View style={styles.headerRight}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={styles.headerBtn}
-                onPress={() => setSearchOpen(true)}
-              >
-                <SearchIcon width={22} height={22} color="#ffffff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={styles.headerBtn}
-                onPress={() => navigation.navigate('MyCart')}
-              >
-                <CartIcon width={24} height={24} color="#ffffff" />
-                {cartCount > 0 && (
-                  <View style={styles.cartBadge}>
-                    <Text style={styles.cartBadgeText}>
-                      {cartCount > CART_BADGE_MAX
-                        ? `${CART_BADGE_MAX}+`
-                        : cartCount}
-                    </Text>
+      />
+
+      <View style={styles.body}>
+        <CategorySidebar
+          categories={sidebarCategories}
+          selectedKey={selectedCategory}
+          onSelect={setSelectedCategory}
+          bottomInset={tabBarHeight}
+        />
+
+        <View style={styles.main}>
+          <View style={styles.topControls}>
+            <VehiclePicker />
+            <CatalogFilterBar
+              appliedCount={appliedCount}
+              onOpenFilters={() => openFilters('brands')}
+              onClear={clearAll}
+              activeDropdowns={activeDropdowns}
+              dropdowns={CHIP_LABELS}
+              onPressDropdown={label => {
+                const section = sections.find(sec => sec.title === label);
+                if (section) openFilters(section.key);
+              }}
+            />
+          </View>
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.grid,
+              { paddingBottom: tabBarHeight + (cartCount > 0 ? 68 : 16) },
+            ]}
+            scrollEventThrottle={200}
+            onScroll={e => {
+              const { layoutMeasurement, contentOffset, contentSize } =
+                e.nativeEvent;
+              if (
+                layoutMeasurement.height + contentOffset.y >=
+                contentSize.height - 400
+              ) {
+                loadMore();
+              }
+            }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#e5383b']}
+                tintColor="#e5383b"
+              />
+            }
+          >
+            {status === 'loading' && list.items.length === 0 ? (
+              <View style={styles.center}>
+                <ActivityIndicator color="#e5383b" />
+              </View>
+            ) : status === 'error' ? (
+              <View style={styles.center}>
+                <Text style={styles.emptyText}>{error}</Text>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={styles.retryBtn}
+                  onPress={() => setReloadToken(t => t + 1)}
+                >
+                  <Text style={styles.retryText}>Try again</Text>
+                </TouchableOpacity>
+              </View>
+            ) : list.items.length === 0 ? (
+              <View style={styles.center}>
+                <Text style={styles.emptyText}>{emptyMessage}</Text>
+                {hasActiveFilters && (
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    style={styles.retryBtn}
+                    onPress={clearAll}
+                  >
+                    <Text style={styles.retryText}>Clear all filters</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <>
+                {isSearching && (
+                  <Text style={styles.resultsText}>
+                    {list.total} {list.total === 1 ? 'result' : 'results'} for “
+                    {trimmedQuery}”
+                  </Text>
+                )}
+                {list.items.map(item => {
+                  const product = toPartProduct(item);
+                  return (
+                    <View key={item.variantId} style={styles.gridItem}>
+                      <PartProductCard
+                        product={product}
+                        quantity={quantities[product.id] ?? 0}
+                        onAdd={() => addItem(product)}
+                        onIncrement={increment}
+                        onDecrement={decrement}
+                        onPress={p =>
+                          navigation.navigate('PartDetail', {
+                            product: p,
+                            categoryTitle: item.categoryName,
+                          })
+                        }
+                      />
+                    </View>
+                  );
+                })}
+                {loadingMore && (
+                  <View style={styles.footerLoader}>
+                    <ActivityIndicator color="#e5383b" />
                   </View>
                 )}
-              </TouchableOpacity>
-            </View>
-          }
-        />
-
-        <View style={styles.body}>
-          <CategorySidebar
-            categories={CATEGORIES}
-            selectedKey={selectedCategory}
-            onSelect={setSelectedCategory}
-            bottomInset={tabBarHeight}
-          />
-
-          <View style={styles.main}>
-            <View style={styles.topControls}>
-              <VehiclePicker />
-              <CatalogFilterBar
-                appliedCount={countSelections(filters)}
-                onOpenFilters={() => openFilters('brands')}
-                onClear={() => setFilters(EMPTY_FILTERS)}
-                activeDropdowns={activeDropdowns}
-                dropdowns={CHIP_LABELS}
-                onPressDropdown={label => {
-                  const section = FILTER_SECTIONS.find(
-                    sec => sec.title === label,
-                  );
-                  if (section) openFilters(section.key);
-                }}
-              />
-            </View>
-
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={[
-                styles.grid,
-                { paddingBottom: tabBarHeight + (cartCount > 0 ? 68 : 16) },
-              ]}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  colors={['#e5383b']}
-                  tintColor="#e5383b"
-                />
-              }
-            >
-              {isSearching && products.length > 0 && (
-                <Text style={styles.resultsText}>
-                  {products.length}{' '}
-                  {products.length === 1 ? 'result' : 'results'} for “
-                  {query.trim()}”
-                </Text>
-              )}
-              {products.length > 0 ? (
-                products.map(product => (
-                  <View key={product.id} style={styles.gridItem}>
-                    <PartProductCard
-                      product={product}
-                      quantity={quantities[product.id] ?? 0}
-                      onAdd={() => addItem(product)}
-                      onIncrement={increment}
-                      onDecrement={decrement}
-                      onPress={p =>
-                        navigation.navigate('PartDetail', {
-                          product: p,
-                          categoryTitle:
-                            CATEGORIES.find(c => c.key === selectedCategory)
-                              ?.label ?? 'Catalog',
-                        })
-                      }
-                    />
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.emptyText}>
-                  {isSearching
-                    ? `No parts found for “${query.trim()}”`
-                    : 'No products in this category yet'}
-                </Text>
-              )}
-            </ScrollView>
-          </View>
+              </>
+            )}
+          </ScrollView>
         </View>
-
-        <FiltersOverlay
-          isOpen={filtersOpen}
-          onClose={() => setFiltersOpen(false)}
-          selections={filters}
-          onApply={setFilters}
-          initialSection={filtersSection}
-        />
-
-        <CatalogCartBar
-          count={cartCount}
-          bottom={tabBarHeight - 3}
-          onPress={() => navigation.navigate('MyCart')}
-        />
       </View>
 
-      {CATALOG_COMING_SOON && <ComingSoonOverlay />}
+      <FiltersOverlay
+        isOpen={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        sections={sections}
+        selections={filters}
+        onApply={setFilters}
+        initialSection={filtersSection}
+      />
+
+      <CatalogCartBar
+        count={cartCount}
+        bottom={tabBarHeight - 3}
+        onPress={() => navigation.navigate('MyCart')}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
-  content: { flex: 1 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   headerBtn: { width: 32, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, flexDirection: 'row' },
@@ -422,6 +468,13 @@ const styles = StyleSheet.create({
     rowGap: 10,
   },
   gridItem: { width: '48.5%' },
+  center: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 40,
+    gap: 14,
+  },
+  footerLoader: { width: '100%', paddingVertical: 12 },
   resultsText: {
     width: '100%',
     fontSize: 13,
@@ -431,8 +484,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#99a2b6',
     paddingTop: 20,
+    paddingHorizontal: 12,
     alignSelf: 'center',
+    textAlign: 'center',
   },
+  retryBtn: {
+    borderWidth: 1,
+    borderColor: '#e5383b',
+    borderRadius: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+  },
+  retryText: { fontSize: 14, fontWeight: '600', color: '#e5383b' },
 
   cartBadge: {
     position: 'absolute',

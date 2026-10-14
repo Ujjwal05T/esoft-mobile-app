@@ -1,4 +1,5 @@
 import React from 'react';
+import ImagePlaceholder from './ImagePlaceholder';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import type { VehicleBasicInfo } from '../../services/api';
 import type { CartItem } from '../../context/CartContext';
@@ -25,8 +26,10 @@ export function PartRow({ item, onIncrement, onDecrement }: PartRowProps) {
   return (
     <View style={styles.partRow}>
       <View style={styles.partImageBox}>
-        {image && (
+        {image ? (
           <Image source={image} style={styles.partImage} resizeMode="contain" />
+        ) : (
+          <ImagePlaceholder size={36} label={null} />
         )}
       </View>
       <View style={styles.partInfo}>
@@ -34,7 +37,9 @@ export function PartRow({ item, onIncrement, onDecrement }: PartRowProps) {
         <Text style={styles.partBrand}>Brand: {product.brand}</Text>
         <View style={styles.priceRow}>
           <Text style={styles.price}>{formatPrice(product.price)}</Text>
-          <Text style={styles.mrp}>MRP{formatPrice(product.mrp)}</Text>
+          {product.mrp > product.price && (
+            <Text style={styles.mrp}>MRP{formatPrice(product.mrp)}</Text>
+          )}
         </View>
         <Text style={styles.partMeta}>Part Number: {product.sku}</Text>
         {!!product.volume && (
