@@ -9,14 +9,19 @@ import type { CartItem } from '../context/CartContext';
 import type { PartProduct } from '../components/dashboard/PartProductCard';
 import PartDetailScreen from '../screens/PartDetailScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
+import AddressesScreen from '../screens/AddressesScreen';
+import AddressFormScreen from '../screens/AddressFormScreen';
+import type { WorkshopAddress } from '../services/api';
 
 export type CatalogStackParamList = {
   CatalogHome: undefined;
   MyCart: undefined;
   PartDetail: { product: PartProduct; categoryTitle: string };
-  PlaceOrder: undefined;
+  PlaceOrder: { addressId?: number } | undefined;
+  Addresses: { select?: boolean; selectedId?: number } | undefined;
+  AddressForm: { address?: WorkshopAddress } | undefined;
   InquirySent: { inquiryId: string; raisedOn: string; items: CartItem[] };
-  Checkout: { orderId: string; estimatedDelivery: string; amountPaid: string };
+  Checkout: { orderId: number };
 };
 
 const Stack = createNativeStackNavigator<CatalogStackParamList>();
@@ -29,6 +34,8 @@ export default function CatalogStack() {
         <Stack.Screen name="PartDetail" component={PartDetailScreen} />
         <Stack.Screen name="MyCart" component={MyCartScreen} />
         <Stack.Screen name="PlaceOrder" component={PlaceOrderScreen} />
+        <Stack.Screen name="Addresses" component={AddressesScreen} />
+        <Stack.Screen name="AddressForm" component={AddressFormScreen} />
         <Stack.Screen name="InquirySent" component={InquirySentScreen} />
         <Stack.Screen name="Checkout" component={CheckoutScreen} />
       </Stack.Navigator>

@@ -21,6 +21,7 @@ import RefundPolicyScreen from '../screens/RefundPolicyScreen';
 import StaffProfileScreen from '../screens/StaffProfileScreen';
 import InquiryDetailScreen from '../screens/InquiryDetailScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
+import CatalogOrderDetailScreen from '../screens/CatalogOrderDetailScreen';
 import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
 
 export type RootStackParamList = {
@@ -34,6 +35,7 @@ export type RootStackParamList = {
   InquiryDetail: {inquiryId: number};
   QuoteDetail: {quoteId: number};
   OrderDetail: {orderId: number};
+  CatalogOrderDetail: {orderId: number};
   Payment: {quoteId: number; selectedItemIds: number[]};
   PaymentCallback: {
     status?: string;
@@ -124,6 +126,11 @@ const RootNavigator: React.FC = () => {
             <Stack.Screen
               name="OrderDetail"
               component={OrderDetailScreen}
+              options={{animation: 'slide_from_right', headerShown: false}}
+            />
+            <Stack.Screen
+              name="CatalogOrderDetail"
+              component={CatalogOrderDetailScreen}
               options={{animation: 'slide_from_right', headerShown: false}}
             />
             <Stack.Screen

@@ -179,6 +179,11 @@ export default function NotificationsScreen() {
         if (!isNaN(orderId)) navigation.navigate('OrderDetail', {orderId});
         break;
       }
+      case 'CatalogOrderDetail': {
+        const orderId = parseInt(item.data?.orderId as string, 10);
+        if (!isNaN(orderId)) navigation.navigate('CatalogOrderDetail', {orderId});
+        break;
+      }
     }
   };
 

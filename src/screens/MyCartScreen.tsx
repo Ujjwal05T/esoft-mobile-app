@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,7 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CatalogStackParamList } from '../navigation/CatalogStack';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -14,19 +14,40 @@ import { useCart } from '../context/CartContext';
 import RedHeader from '../components/catalog/RedHeader';
 import { PartRow, VehicleDetailsCard } from '../components/catalog/CartParts';
 import { useTabBarHeight } from '../components/catalog/useTabBarHeight';
-import { useSendInquiry } from '../components/catalog/useSendInquiry';
+import { useInquiryWithVehicle } from '../components/catalog/useInquiryWithVehicle';
 import AppAlert from '../components/overlays/AppAlert';
 
 export default function MyCartScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<CatalogStackParamList>>();
   const tabBarHeight = useTabBarHeight();
-  const { items, vehicle, increment, decrement } = useCart();
-  const sendInquiry = useSendInquiry();
+  const {
+    items,
+    loading,
+    vehicle,
+    increment,
+    decrement,
+    removeWhere,
+    refresh,
+  } = useCart();
+  const { send: sendInquiry, element: inquiryFlow } = useInquiryWithVehicle();
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
-  const availableItems = items.filter(i => !i.product.outOfStock);
-  const outOfStockItems = items.filter(i => i.product.outOfStock);
+  // Teammates share this cart, so pick up their changes whenever the screen opens
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
+
+  const unavailableItems = items.filter(i => i.unavailable);
+  const availableItems = items.filter(
+    i => !i.unavailable && !i.product.outOfStock,
+  );
+  const outOfStockItems = items.filter(
+    i => !i.unavailable && i.product.outOfStock,
+  );
+  const hasUnavailable = unavailableItems.length > 0;
 
   const hasAvailable = availableItems.length > 0;
   const hasOutOfStock = outOfStockItems.length > 0;
@@ -39,9 +60,19 @@ export default function MyCartScreen() {
       ?.navigate('VehicleDetail', { vehicleId: vehicle.id });
   };
 
+  const handlePlaceOrder = () => {
+    const tooMany = availableItems.find(i => i.exceedsStock);
+    if (tooMany) {
+      setAlertMessage(
+        `Only ${tooMany.stock} of "${tooMany.product.name}" left in stock. Please reduce the quantity.`,
+      );
+      return;
+    }
+    navigation.navigate('PlaceOrder');
+  };
+
   const handlePlaceInquiry = () => {
-    const error = sendInquiry();
-    if (error) setAlertMessage(error);
+    sendInquiry();
   };
 
   return (
@@ -50,7 +81,9 @@ export default function MyCartScreen() {
 
       {items.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>Your cart is empty</Text>
+          <Text style={styles.emptyTitle}>
+            {loading ? 'Loading your cart…' : 'Your cart is empty'}
+          </Text>
           <TouchableOpacity
             style={styles.primaryBtn}
             activeOpacity={0.85}
@@ -99,10 +132,27 @@ export default function MyCartScreen() {
                 <TouchableOpacity
                   style={[styles.ctaBtn, styles.stackedBtn]}
                   activeOpacity={0.85}
-                  onPress={() => navigation.navigate('PlaceOrder')}
+                  onPress={handlePlaceOrder}
                 >
                   <Text style={styles.ctaText}>Place Order</Text>
                 </TouchableOpacity>
+              </View>
+            )}
+
+            {hasUnavailable && (
+              <View style={[styles.card, styles.outCard]}>
+                <Text style={[styles.cardTitle, styles.outTitle]}>
+                  No Longer Available ({unavailableItems.length})
+                </Text>
+                <View style={[styles.divider, styles.outDivider]} />
+                {unavailableItems.map((item, i) => (
+                  <View key={item.product.id} style={i > 0 && styles.separator}>
+                    <PartRow
+                      item={item}
+                      onRemove={id => removeWhere(l => l.product.id === id)}
+                    />
+                  </View>
+                ))}
               </View>
             )}
 
@@ -143,6 +193,8 @@ export default function MyCartScreen() {
           </ScrollView>
         </>
       )}
+
+      {inquiryFlow}
 
       <AppAlert
         isOpen={!!alertMessage}

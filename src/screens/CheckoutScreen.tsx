@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -13,6 +13,9 @@ import RedHeader from '../components/catalog/RedHeader';
 import { useTabBarHeight } from '../components/catalog/useTabBarHeight';
 import SearchIcon from '../assets/icons/search.svg';
 import CartIcon from '../assets/icons/cart.svg';
+import { getCatalogOrder, type CatalogOrder } from '../services/api';
+import { formatPrice } from '../components/catalog/CartParts';
+import { formatAddress } from './AddressesScreen';
 
 type Props = NativeStackScreenProps<CatalogStackParamList, 'Checkout'>;
 
@@ -45,6 +48,29 @@ export default function CheckoutScreen() {
     useNavigation<NativeStackNavigationProp<CatalogStackParamList>>();
   const { params } = useRoute<Props['route']>();
   const tabBarHeight = useTabBarHeight();
+
+  const [order, setOrder] = useState<CatalogOrder | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    getCatalogOrder(params.orderId).then(res => {
+      if (cancelled) return;
+      if (res.success && res.data) setOrder(res.data);
+      else setFailed(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [params.orderId]);
+
+  // An admin sets the date in the portal; until then there is nothing to promise
+  const delivery = order?.estimatedDelivery
+    ? new Date(order.estimatedDelivery).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : 'Will be updated shortly';
 
   const goToCatalog = () => navigation.popToTop();
 
@@ -81,18 +107,34 @@ export default function CheckoutScreen() {
         <View style={styles.card}>
           <View style={styles.row}>
             <Text style={styles.label}>Order ID</Text>
-            <Text style={styles.value}>{params.orderId}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Est. Delivery</Text>
-            <Text style={[styles.value, styles.valueRed]}>
-              {params.estimatedDelivery}
+            <Text style={styles.value}>
+              {order ? order.orderNumber : failed ? 'Check My Orders' : '…'}
             </Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>Amount Paid</Text>
-            <Text style={styles.value}>{params.amountPaid}</Text>
+            <Text style={styles.label}>Est. Delivery</Text>
+            <Text style={[styles.value, styles.valueRed]}>{delivery}</Text>
           </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Amount Paid</Text>
+            <Text style={styles.value}>
+              {order ? formatPrice(order.totalAmount) : '…'}
+            </Text>
+          </View>
+          {order && (
+            <View style={styles.row}>
+              <Text style={styles.label}>Deliver To</Text>
+              <Text style={[styles.value, styles.valueWrap]}>
+                {order.contactName},{' '}
+                {formatAddress({
+                  ...order,
+                  id: 0,
+                  label: null,
+                  isDefault: false,
+                })}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -147,6 +189,7 @@ const styles = StyleSheet.create({
   },
   label: { fontSize: 12, color: '#6b7280' },
   value: { fontSize: 13, fontWeight: '700', color: '#161a1d' },
+  valueWrap: { flex: 1, textAlign: 'right', marginLeft: 16 },
   valueRed: { color: '#e5383b' },
   actions: { paddingHorizontal: 16, gap: 14, alignItems: 'center' },
   primaryBtn: {

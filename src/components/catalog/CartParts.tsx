@@ -10,16 +10,23 @@ import { getVehicleTitle } from './SelectCarOverlay';
 const DEFAULT_CAR_IMAGE =
   require('../../assets/images/default-car.png') as number;
 
-export const formatPrice = (value: number) =>
-  `₹${value.toLocaleString('en-IN')}`;
+// Tolerates a missing amount (an older API response) instead of crashing the screen
+export const formatPrice = (value: number | null | undefined) =>
+  `₹${(value ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
 interface PartRowProps {
   item: CartItem;
   onIncrement?: (productId: string) => void;
   onDecrement?: (productId: string) => void;
+  onRemove?: (productId: string) => void;
 }
 
-export function PartRow({ item, onIncrement, onDecrement }: PartRowProps) {
+export function PartRow({
+  item,
+  onIncrement,
+  onDecrement,
+  onRemove,
+}: PartRowProps) {
   const { product, quantity } = item;
   const image =
     product.image ?? (product.imageUrl ? { uri: product.imageUrl } : undefined);
@@ -48,7 +55,31 @@ export function PartRow({ item, onIncrement, onDecrement }: PartRowProps) {
         {!!product.category && (
           <Text style={styles.partMeta}>Category: {product.category}</Text>
         )}
-        {onIncrement && onDecrement ? (
+        {!!item.addedBy && (
+          <Text style={styles.partMeta}>
+            Added by {item.addedBy}
+            {item.updatedBy && item.updatedBy !== item.addedBy
+              ? ` · Changed by ${item.updatedBy}`
+              : ''}
+          </Text>
+        )}
+        {item.unavailable && (
+          <Text style={styles.warning}>No longer available</Text>
+        )}
+        {!item.unavailable && item.exceedsStock && (
+          <Text style={styles.warning}>
+            Only {item.stock} left in stock. Reduce the quantity.
+          </Text>
+        )}
+        {item.unavailable && onRemove ? (
+          <TouchableOpacity
+            style={styles.removeBtn}
+            activeOpacity={0.8}
+            onPress={() => onRemove(product.id)}
+          >
+            <Text style={styles.removeText}>Remove</Text>
+          </TouchableOpacity>
+        ) : onIncrement && onDecrement ? (
           <View style={styles.stepper}>
             <TouchableOpacity
               style={styles.stepperBtn}
@@ -124,6 +155,9 @@ export function VehicleDetailsCard({
 }
 
 const styles = StyleSheet.create({
+  warning: { fontSize: 12, color: '#e5383b', marginTop: 4 },
+  removeBtn: { alignSelf: 'flex-start', marginTop: 8 },
+  removeText: { fontSize: 14, fontWeight: '600', color: '#e5383b' },
   partRow: { flexDirection: 'row', gap: 12, paddingVertical: 8 },
   partImageBox: {
     width: 122,

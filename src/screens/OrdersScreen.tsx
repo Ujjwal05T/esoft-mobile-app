@@ -25,6 +25,7 @@ import {
   getStoredUser,
   getOrdersByWorkshopId,
   getOrderById,
+  getCatalogOrders,
   getActiveVehicleVisit,
   createInquiryWithMedia,
   createBulkInquiry,
@@ -37,6 +38,12 @@ import type {RootStackParamList} from '../navigation/RootNavigator';
 import {formatDateIST} from '../utils/dateUtils';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+// Orders from the two sources share one list: quote orders and catalog orders (parts bought in the catalog).
+// Catalog order ids are prefixed with "c" so they never clash with a quote order id.
+const CATALOG_PREFIX = 'c';
+
+type ListedOrder = Order & {sortTime: number};
 
 function mapStatus(backendStatus: string): OrderStatus {
   switch (backendStatus) {
@@ -57,9 +64,11 @@ export default function OrdersScreen() {
   const {t} = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<OrdersScreenNavigationProp>();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<ListedOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Set when only the catalog orders failed to load (quote orders still show)
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   // Overlay states
@@ -82,7 +91,10 @@ export default function OrdersScreen() {
         return;
       }
 
-      const res = await getOrdersByWorkshopId(user.workshopOwnerId ?? user.id);
+      const [res, catalogRes] = await Promise.all([
+        getOrdersByWorkshopId(user.workshopOwnerId ?? user.id),
+        getCatalogOrders(),
+      ]);
       if (!res.success || !res.data) {
         setError(res.error ?? 'Failed to load orders.');
         setIsLoading(false);
@@ -93,7 +105,7 @@ export default function OrdersScreen() {
         res.data.orders.map((o: WorkshopOrderListItem) => getOrderById(o.id)),
       );
 
-      const mapped: Order[] = res.data.orders.map(
+      const mapped: ListedOrder[] = res.data.orders.map(
         (o: WorkshopOrderListItem, idx: number) => {
           const detail = detailResults[idx];
           const items = detail.success && detail.data ? detail.data.items : [];
@@ -103,6 +115,7 @@ export default function OrdersScreen() {
               : 'Will be updated';
 
           return {
+            sortTime: new Date(o.createdAt).getTime(),
             id: String(o.id),
             vehicleName: o.vehicleName ?? o.orderNumber,
             plateNumber: o.plateNumber ?? '',
@@ -124,7 +137,44 @@ export default function OrdersScreen() {
         },
       );
 
-      setOrders(mapped);
+      // A failure to load catalog orders must not hide the quote orders, so it only drops that part
+      const catalogMapped: ListedOrder[] =
+        catalogRes.success && catalogRes.data
+          ? catalogRes.data.map(c => ({
+              sortTime: new Date(c.createdAt).getTime(),
+              id: `${CATALOG_PREFIX}${c.id}`,
+              vehicleName: 'Parts order',
+              plateNumber: 'Catalog order',
+              orderId: c.orderNumber,
+              placedDate: formatDateIST(c.createdAt),
+              // An admin sets the date; until then there is nothing to promise
+              deliveryDate: c.estimatedDelivery
+                ? formatDateIST(c.estimatedDelivery)
+                : 'Will be updated shortly',
+              // Already the final amount paid (coupon and GST included): shown on the detail screen
+              totalAmount: c.totalAmount,
+              couponCode: null,
+              discountAmount: 0,
+              status: mapStatus(c.status),
+              orderedParts: c.items.map(item => ({
+                id: String(item.variantId),
+                name: item.name,
+                brand: item.brandName,
+                imageUrl: item.imageUrl ?? undefined,
+                price: item.price,
+                quantity: item.quantity,
+              })),
+            }))
+          : [];
+
+      setCatalogError(
+        catalogRes.success
+          ? null
+          : catalogRes.error ?? 'Could not load catalog orders.',
+      );
+      setOrders(
+        [...mapped, ...catalogMapped].sort((a, b) => b.sortTime - a.sortTime),
+      );
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -141,6 +191,16 @@ export default function OrdersScreen() {
   useFocusEffect(useCallback(() => {
     fetchOrders();
   }, [fetchOrders]));
+
+  const openOrder = (orderId: string) => {
+    if (orderId.startsWith(CATALOG_PREFIX)) {
+      navigation.navigate('CatalogOrderDetail', {
+        orderId: parseInt(orderId.slice(CATALOG_PREFIX.length), 10),
+      });
+    } else {
+      navigation.navigate('OrderDetail', {orderId: parseInt(orderId, 10)});
+    }
+  };
 
   // ── FAB Handlers ─────────────────────────────────────────────────────────────
 
@@ -299,16 +359,26 @@ export default function OrdersScreen() {
           </View>
         )}
 
+        {/* ── Catalog orders failed (quote orders are still listed below) ─ */}
+        {!isLoading && error === null && catalogError !== null && (
+          <TouchableOpacity
+            style={styles.catalogNotice}
+            activeOpacity={0.8}
+            onPress={() => fetchOrders()}>
+            <Text style={styles.catalogNoticeText}>
+              Catalog orders could not be loaded. Tap to retry.
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* ── Orders List ───────────────────────────────────────────── */}
         {!isLoading && error === null && orders.length > 0 && orders.map(order => (
           <OrderCard
             key={order.id}
             order={order}
-            onTrackOrder={orderId =>
-              navigation.navigate('OrderDetail', {orderId: parseInt(orderId)})
-            }
+            onTrackOrder={openOrder}
             onDownloadInvoice={orderId => console.log('Invoice:', orderId)}
-            onViewOrder={orderId => navigation.navigate('OrderDetail', {orderId: parseInt(orderId)})}
+            onViewOrder={openOrder}
           />
         ))}
       </ScrollView>
@@ -413,6 +483,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   errorText: {fontSize: 14, color: '#e5383b', textAlign: 'center'},
+  catalogNotice: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#fff7e6',
+    borderWidth: 1,
+    borderColor: '#fde3a7',
+  },
+  catalogNoticeText: {fontSize: 13, color: '#92400e', textAlign: 'center'},
   retryBtn: {
     marginTop: 8,
     backgroundColor: '#e5383b',

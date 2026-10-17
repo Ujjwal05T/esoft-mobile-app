@@ -4,7 +4,7 @@ import { logNetworkError } from './errorLogging';
 // API Base URL
 // const API_BASE_URL = 'https://api.partsnow.in/api';
 // export const SERVER_ORIGIN = 'https://api.partsnow.in';
-const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';   //Cloudflared Tunnel That Points to localhost:5000
+const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api'; //Cloudflared Tunnel That Points to localhost:5000
 export const SERVER_ORIGIN = 'https://dotnet.ujjwaltamrakar.in';
 
 // ==========================================
@@ -1608,6 +1608,8 @@ export interface InquiryItemRequest {
   image1Url?: string;
   image2Url?: string;
   image3Url?: string;
+  // Set when the part comes from the parts catalog
+  productVariantId?: number;
 }
 
 export interface CreateInquiryRequest {
@@ -2094,6 +2096,9 @@ export interface Coupon {
   perWorkshopUsageLimit: number | null;
   isActive: boolean;
   firstOrderOnly: boolean;
+  // Which kind of order the coupon works on (missing from an older server: treat as both)
+  appliesToQuote?: boolean;
+  appliesToCatalog?: boolean;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -2823,4 +2828,260 @@ export async function getCatalogProduct(variantId: number, vehicleId?: number) {
   return apiRequest<CatalogItemDetail>(
     `/catalog/products/${variantId}${catalogQuery({ vehicleId })}`,
   );
+}
+
+// ───────────────────────── Shared cart and delivery addresses ─────────────────────────
+
+export interface CartLineDto {
+  variantId: number;
+  quantity: number;
+  // False when the part was deactivated or deleted after it was added
+  isAvailable: boolean;
+  isOnOrder: boolean;
+  // More than what is in stock now
+  exceedsStock: boolean;
+  item: CatalogItemSummary | null;
+  // Who put the part in the cart and who last changed it ('owner' or 'staff')
+  addedByName: string | null;
+  addedByRole: string | null;
+  updatedByName: string | null;
+  updatedByRole: string | null;
+  updatedAt: string;
+}
+
+export interface CartDto {
+  lines: CartLineDto[];
+  itemCount: number;
+  subtotal: number;
+}
+
+// The cart is shared by the workshop owner and all staff
+export async function getCart() {
+  return apiRequest<CartDto>('/cart');
+}
+
+// Quantity 0 removes the line. Returns the whole cart.
+export async function setCartItem(variantId: number, quantity: number) {
+  return apiRequest<CartDto>(`/cart/items/${variantId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ quantity }),
+  });
+}
+
+export async function removeCartItem(variantId: number) {
+  return apiRequest<CartDto>(`/cart/items/${variantId}`, { method: 'DELETE' });
+}
+
+export async function clearCart() {
+  return apiRequest<CartDto>('/cart', { method: 'DELETE' });
+}
+
+export interface WorkshopAddress {
+  id: number;
+  label: string | null;
+  contactName: string;
+  phone: string;
+  addressLine: string;
+  landmark: string | null;
+  city: string;
+  state: string | null;
+  pinCode: string;
+  isDefault: boolean;
+}
+
+export interface SaveWorkshopAddress {
+  label?: string;
+  contactName: string;
+  phone: string;
+  addressLine: string;
+  landmark?: string;
+  city: string;
+  state: string;
+  pinCode: string;
+  isDefault?: boolean;
+}
+
+export async function getAddresses() {
+  return apiRequest<WorkshopAddress[]>('/addresses');
+}
+
+export async function createAddress(address: SaveWorkshopAddress) {
+  return apiRequest<WorkshopAddress>('/addresses', {
+    method: 'POST',
+    body: JSON.stringify(address),
+  });
+}
+
+export async function updateAddress(id: number, address: SaveWorkshopAddress) {
+  return apiRequest<WorkshopAddress>(`/addresses/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(address),
+  });
+}
+
+export async function setDefaultAddress(id: number) {
+  return apiRequest<WorkshopAddress[]>(`/addresses/${id}/default`, {
+    method: 'PUT',
+  });
+}
+
+export async function deleteAddress(id: number) {
+  return apiRequest<WorkshopAddress[]>(`/addresses/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// ───────────────────────── Catalog checkout and orders ─────────────────────────
+
+export interface CheckoutIssue {
+  // no_address, address_incomplete, empty, unavailable, on_order, insufficient_stock, low_stock, may_not_fit
+  code: string;
+  variantId: number | null;
+  message: string;
+  // Blocking problems stop the payment; the rest are heads-ups
+  blocking: boolean;
+}
+
+export interface CheckoutLine {
+  variantId: number;
+  productId: number;
+  name: string;
+  sku: string;
+  brandName: string;
+  categoryName: string | null;
+  attrValue: string | null;
+  imageUrl: string | null;
+  price: number;
+  mrp: number | null;
+  quantity: number;
+  stock: number;
+  isLowStock: boolean;
+  lineTotal: number;
+}
+
+export interface CheckoutSummary {
+  lines: CheckoutLine[];
+  // Parts total before the coupon
+  subtotal: number;
+  // The coupon that was applied (null when none, or when the one entered is not valid)
+  couponCode: string | null;
+  discountAmount: number;
+  // Subtotal minus the discount: GST is charged on this
+  taxableAmount: number;
+  gstRate: number;
+  gstAmount: number;
+  shippingCharges: number;
+  // What the customer pays: taxable + GST + shipping
+  total: number;
+  address: WorkshopAddress | null;
+  issues: CheckoutIssue[];
+  canPay: boolean;
+}
+
+export interface CheckoutRequest {
+  addressId: number;
+  vehicleId?: number;
+  couponCode?: string;
+}
+
+export interface StartPaymentResponse {
+  razorpayOrderId: string;
+  // In paise
+  amount: number;
+  currency: string;
+  keyId: string;
+  paymentId: number;
+  summary: CheckoutSummary;
+}
+
+export interface CheckoutOutcome {
+  // confirmed: order created. refunded: stock ran out, money is being returned.
+  // refund_pending: stock ran out and the automatic refund failed (the team refunds it).
+  status: 'confirmed' | 'refunded' | 'refund_pending' | 'failed';
+  message: string;
+  orderId: number | null;
+  orderNumber: string | null;
+}
+
+export interface CatalogOrderItem {
+  variantId: number;
+  productId: number;
+  name: string;
+  sku: string;
+  brandName: string;
+  categoryName: string | null;
+  attrValue: string | null;
+  imageUrl: string | null;
+  price: number;
+  mrp: number | null;
+  quantity: number;
+  lineTotal: number;
+}
+
+export interface CatalogOrder {
+  id: number;
+  orderNumber: string;
+  status: string;
+  paymentStatus: string;
+  createdAt: string;
+  // Null until an admin sets it
+  estimatedDelivery: string | null;
+  deliveryPartnerName: string | null;
+  lrNumber: string | null;
+  dispatchDate: string | null;
+  contactName: string;
+  phone: string;
+  addressLine: string;
+  landmark: string | null;
+  city: string;
+  state: string | null;
+  pinCode: string;
+  subtotal: number;
+  couponCode: string | null;
+  discountAmount: number;
+  gstRate: number;
+  gstAmount: number;
+  shippingCharges: number;
+  totalAmount: number;
+  vehicleId: number | null;
+  placedByRole: string;
+  placedByName: string | null;
+  items: CatalogOrderItem[];
+}
+
+// Checks the cart and address and prices the order. Changes nothing.
+export async function validateCheckout(request: CheckoutRequest) {
+  return apiRequest<CheckoutSummary>('/catalog/checkout/validate', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+// Re-checks stock and creates the Razorpay order
+export async function startCheckout(request: CheckoutRequest) {
+  return apiRequest<StartPaymentResponse>('/catalog/checkout/start', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+// After the Razorpay sheet succeeds: creates the order (or refunds if stock ran out)
+export async function verifyCheckout(payment: {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+}) {
+  return apiRequest<CheckoutOutcome>('/catalog/checkout/verify', {
+    method: 'POST',
+    body: JSON.stringify(payment),
+  });
+}
+
+export async function getCatalogOrder(orderId: number) {
+  return apiRequest<CatalogOrder>(`/catalog/orders/${orderId}`);
+}
+
+// This workshop's catalog orders with their items, newest first
+export async function getCatalogOrders() {
+  return apiRequest<CatalogOrder[]>('/catalog/orders');
 }

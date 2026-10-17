@@ -59,12 +59,23 @@ const ArrowRightIcon = () => (
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-export function isAvailable(coupon: Coupon): boolean {
+// orderType: which kind of order the coupon is being used on (a coupon can be limited to one kind)
+export function isAvailable(
+  coupon: Coupon,
+  orderType: 'quote' | 'catalog' = 'quote',
+): boolean {
   if (!coupon.isActive) return false;
+  if (
+    orderType === 'catalog'
+      ? coupon.appliesToCatalog === false
+      : coupon.appliesToQuote === false
+  )
+    return false;
   const now = new Date();
   if (new Date(coupon.validFrom) > now) return false;
   if (coupon.validUntil && new Date(coupon.validUntil) < now) return false;
-  if (coupon.usageLimit != null && coupon.usageCount >= coupon.usageLimit) return false;
+  if (coupon.usageLimit != null && coupon.usageCount >= coupon.usageLimit)
+    return false;
   return true;
 }
 
@@ -77,7 +88,8 @@ export function discountLabel(coupon: Coupon): string {
 function expiryLabel(coupon: Coupon): string | null {
   if (!coupon.validUntil) return null;
   const days = Math.ceil(
-    (new Date(coupon.validUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    (new Date(coupon.validUntil).getTime() - Date.now()) /
+      (1000 * 60 * 60 * 24),
   );
   if (days <= 1) return 'Expires today';
   if (days <= 7) return `Expires in ${days}d`;
@@ -115,7 +127,7 @@ export default function CouponOverlay({
       try {
         const result = await getAvailableCoupons();
         if (result.success && result.data) {
-          setCoupons(result.data.filter(isAvailable));
+          setCoupons(result.data.filter(c => isAvailable(c, 'quote')));
         }
       } finally {
         setFetchLoading(false);
@@ -132,7 +144,11 @@ export default function CouponOverlay({
       else setErrorMap(prev => ({...prev, [trimmed]: ''}));
 
       try {
-        const result = await validateCoupon(trimmed, workshopOwnerId, orderAmount);
+        const result = await validateCoupon(
+          trimmed,
+          workshopOwnerId,
+          orderAmount,
+        );
         if (result.success && result.data) {
           if (result.data.isValid) {
             onCouponApplied(result.data);
@@ -167,14 +183,19 @@ export default function CouponOverlay({
       visible={isOpen}
       animationType="slide"
       transparent
-      onRequestClose={handleClose}>
+      onRequestClose={handleClose}
+    >
       <View style={s.overlay}>
         <View style={s.sheet}>
           {/* Drag Handle */}
           <View style={s.dragHandle} />
 
           {/* Close Button */}
-          <TouchableOpacity onPress={handleClose} activeOpacity={0.7} style={s.closeBtn}>
+          <TouchableOpacity
+            onPress={handleClose}
+            activeOpacity={0.7}
+            style={s.closeBtn}
+          >
             <CloseIcon />
           </TouchableOpacity>
 
@@ -189,7 +210,10 @@ export default function CouponOverlay({
                 placeholder={t('payment.promo_code_placeholder')}
                 placeholderTextColor="#c4c4c4"
                 value={manualCode}
-                onChangeText={text => {setManualCode(text); setManualError(null);}}
+                onChangeText={text => {
+                  setManualCode(text);
+                  setManualError(null);
+                }}
                 autoCapitalize="characters"
                 autoCorrect={false}
                 returnKeyType="done"
@@ -197,13 +221,20 @@ export default function CouponOverlay({
                 editable={applyingCode === null}
               />
               <TouchableOpacity
-                style={[s.arrowBtn, manualCode.trim() ? s.arrowBtnActive : s.arrowBtnInactive]}
+                style={[
+                  s.arrowBtn,
+                  manualCode.trim() ? s.arrowBtnActive : s.arrowBtnInactive,
+                ]}
                 onPress={() => applyCode(manualCode, true)}
                 disabled={!manualCode.trim() || applyingCode !== null}
-                activeOpacity={0.85}>
-                {applyingCode === manualCode.trim().toUpperCase() && manualCode.trim()
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <ArrowRightIcon />}
+                activeOpacity={0.85}
+              >
+                {applyingCode === manualCode.trim().toUpperCase() &&
+                manualCode.trim() ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <ArrowRightIcon />
+                )}
               </TouchableOpacity>
             </View>
             {manualError ? (
@@ -218,22 +249,28 @@ export default function CouponOverlay({
             style={s.scroll}
             contentContainerStyle={s.scrollContent}
             showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled">
-
+            keyboardShouldPersistTaps="handled"
+          >
             {fetchLoading ? (
               <View style={s.emptyState}>
                 <ActivityIndicator size="small" color="#e5383b" />
-                <Text style={s.emptySubtitle}>{t('payment.coupon_loading')}</Text>
+                <Text style={s.emptySubtitle}>
+                  {t('payment.coupon_loading')}
+                </Text>
               </View>
             ) : coupons.length === 0 ? null : (
               <>
-                <Text style={s.sectionLabel}>{t('payment.coupon_available_label')}</Text>
+                <Text style={s.sectionLabel}>
+                  {t('payment.coupon_available_label')}
+                </Text>
                 {coupons.map(coupon => {
                   const isApplying = applyingCode === coupon.code;
                   const err = errorMap[coupon.code];
                   const expiry = expiryLabel(coupon);
-                  const hasMeta = coupon.minOrderValue != null ||
-                    (coupon.maxDiscountAmount != null && coupon.discountType === 'percentage') ||
+                  const hasMeta =
+                    coupon.minOrderValue != null ||
+                    (coupon.maxDiscountAmount != null &&
+                      coupon.discountType === 'percentage') ||
                     !!expiry ||
                     coupon.firstOrderOnly;
 
@@ -243,7 +280,9 @@ export default function CouponOverlay({
                       <View style={s.couponTopRow}>
                         <Text style={s.couponCode}>{coupon.code}</Text>
                         <View style={s.discountBadge}>
-                          <Text style={s.discountBadgeText}>{discountLabel(coupon)}</Text>
+                          <Text style={s.discountBadgeText}>
+                            {discountLabel(coupon)}
+                          </Text>
                         </View>
                       </View>
 
@@ -257,14 +296,19 @@ export default function CouponOverlay({
                         <View style={s.metaRow}>
                           {coupon.minOrderValue != null && (
                             <View style={s.metaChip}>
-                              <Text style={s.metaChipText}>Min ₹{coupon.minOrderValue}</Text>
+                              <Text style={s.metaChipText}>
+                                Min ₹{coupon.minOrderValue}
+                              </Text>
                             </View>
                           )}
-                          {coupon.maxDiscountAmount != null && coupon.discountType === 'percentage' && (
-                            <View style={s.metaChip}>
-                              <Text style={s.metaChipText}>Upto ₹{coupon.maxDiscountAmount}</Text>
-                            </View>
-                          )}
+                          {coupon.maxDiscountAmount != null &&
+                            coupon.discountType === 'percentage' && (
+                              <View style={s.metaChip}>
+                                <Text style={s.metaChipText}>
+                                  Upto ₹{coupon.maxDiscountAmount}
+                                </Text>
+                              </View>
+                            )}
                           {coupon.firstOrderOnly && (
                             <View style={s.metaChip}>
                               <Text style={s.metaChipText}>First order</Text>
@@ -272,7 +316,11 @@ export default function CouponOverlay({
                           )}
                           {expiry && (
                             <View style={[s.metaChip, s.metaChipExpiry]}>
-                              <Text style={[s.metaChipText, s.metaChipExpiryText]}>{expiry}</Text>
+                              <Text
+                                style={[s.metaChipText, s.metaChipExpiryText]}
+                              >
+                                {expiry}
+                              </Text>
                             </View>
                           )}
                         </View>
@@ -288,10 +336,15 @@ export default function CouponOverlay({
                           style={s.applyRow}
                           onPress={() => applyCode(coupon.code)}
                           disabled={applyingCode !== null}
-                          activeOpacity={0.7}>
-                          {isApplying
-                            ? <ActivityIndicator size="small" color="#e5383b" />
-                            : <Text style={s.applyText}>{t('payment.coupon_apply')}</Text>}
+                          activeOpacity={0.7}
+                        >
+                          {isApplying ? (
+                            <ActivityIndicator size="small" color="#e5383b" />
+                          ) : (
+                            <Text style={s.applyText}>
+                              {t('payment.coupon_apply')}
+                            </Text>
+                          )}
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -394,7 +447,12 @@ const s = StyleSheet.create({
   arrowBtnInactive: {backgroundColor: '#828282'},
 
   hint: {fontSize: 12, color: '#b0b8c8', paddingHorizontal: 4},
-  errorHint: {fontSize: 12, color: '#e5383b', paddingHorizontal: 4, fontWeight: '500'},
+  errorHint: {
+    fontSize: 12,
+    color: '#e5383b',
+    paddingHorizontal: 4,
+    fontWeight: '500',
+  },
 
   // Section label
   sectionLabel: {
@@ -463,7 +521,12 @@ const s = StyleSheet.create({
   metaChipExpiryText: {color: '#d97706'},
 
   // Per-card error
-  couponError: {fontSize: 12, color: '#e5383b', marginBottom: 8, fontWeight: '500'},
+  couponError: {
+    fontSize: 12,
+    color: '#e5383b',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
 
   // Card footer (divider + apply button)
   cardFooter: {},

@@ -29,7 +29,7 @@ import PillButton from '../components/catalog/PillButton';
 import { getVehicleFullName } from '../components/catalog/SelectCarOverlay';
 import { formatPrice } from '../components/catalog/CartParts';
 import { useTabBarHeight } from '../components/catalog/useTabBarHeight';
-import { useSendInquiry } from '../components/catalog/useSendInquiry';
+import { useInquiryWithVehicle } from '../components/catalog/useInquiryWithVehicle';
 import AppAlert from '../components/overlays/AppAlert';
 import SearchIcon from '../assets/icons/search.svg';
 import {
@@ -55,7 +55,7 @@ export default function PartDetailScreen() {
   const { width } = useWindowDimensions();
   const tabBarHeight = useTabBarHeight();
   const { vehicle, quantities, addItem, increment, decrement } = useCart();
-  const sendInquiry = useSendInquiry();
+  const { send: sendInquiry, element: inquiryFlow } = useInquiryWithVehicle();
 
   // The sellable item on screen. Tapping a sibling variation switches it without leaving the screen.
   const [activeId, setActiveId] = useState(Number(initialProduct.id));
@@ -143,8 +143,7 @@ export default function PartDetailScreen() {
 
   const handleCta = () => {
     if (isInquiry) {
-      const error = sendInquiry([{ product, quantity: cartQty }]);
-      if (error) setAlertMessage(error);
+      sendInquiry([{ product, quantity: cartQty }]);
       return;
     }
     navigation.navigate('PlaceOrder');
@@ -423,6 +422,8 @@ export default function PartDetailScreen() {
           </>
         )}
       </View>
+
+      {inquiryFlow}
 
       <AppAlert
         isOpen={!!alertMessage}
