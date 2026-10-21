@@ -129,7 +129,7 @@ export default function PlaceOrderScreen() {
   // Available coupons for catalog orders
   useEffect(() => {
     let cancelled = false;
-    getAvailableCoupons().then(res => {
+    getAvailableCoupons('catalog').then(res => {
       if (cancelled) return;
       setCoupons(
         res.success && res.data

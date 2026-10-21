@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ScrollView,
   Text,
@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import Svg, { Path } from 'react-native-svg';
 
 type SvgIcon = React.FC<{ width?: number; height?: number; color?: string }>;
 
@@ -30,13 +31,49 @@ interface CategorySidebarProps {
 
 const ICON_SIZE = 44;
 
+// Shown for a category whose icon the admin has not added (or whose icon cannot be loaded):
+// a stack of layers on a soft red disc, so the tile never has an empty gap
+function CategoryPlaceholder() {
+  return (
+    <View style={placeholderStyles.circle}>
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path
+          d="M12 3l8 4.5-8 4.5-8-4.5L12 3z"
+          stroke="#e5383b"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <Path
+          d="M4 12l8 4.5 8-4.5"
+          stroke="#e5383b"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <Path
+          d="M4 16.5L12 21l8-4.5"
+          stroke="#e5383b"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    </View>
+  );
+}
+
 function CategoryGraphic({ category }: { category: CatalogCategory }) {
-  if (category.imageUrl) {
+  // An icon that fails to load (deleted file, bad link) falls back to the placeholder too
+  const [failed, setFailed] = useState(false);
+
+  if (category.imageUrl && !failed) {
     return (
       <Image
         source={{ uri: category.imageUrl }}
         style={{ width: ICON_SIZE, height: ICON_SIZE }}
         resizeMode="contain"
+        onError={() => setFailed(true)}
       />
     );
   }
@@ -53,14 +90,7 @@ function CategoryGraphic({ category }: { category: CatalogCategory }) {
   if (Icon) {
     return <Icon width={ICON_SIZE} height={ICON_SIZE} color="#e5383b" />;
   }
-  // No icon uploaded yet: show the category's first letter instead of an empty gap
-  return (
-    <View style={placeholderStyles.circle}>
-      <Text style={placeholderStyles.letter}>
-        {category.label.charAt(0).toUpperCase()}
-      </Text>
-    </View>
-  );
+  return <CategoryPlaceholder />;
 }
 
 export default function CategorySidebar({
@@ -152,5 +182,4 @@ const placeholderStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  letter: { fontSize: 20, fontWeight: '700', color: '#e5383b' },
 });

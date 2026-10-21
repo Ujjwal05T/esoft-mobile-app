@@ -1,5 +1,6 @@
 import * as Keychain from 'react-native-keychain';
 import { logNetworkError } from './errorLogging';
+import { emitSessionExpired } from './sessionEvents';
 
 // API Base URL
 // const API_BASE_URL = 'https://api.partsnow.in/api';
@@ -53,6 +54,23 @@ export async function setStoredUser(user: UserInfo): Promise<void> {
   });
 }
 
+// fetch wrapper: a 401 on a request that carried a bearer token means the JWT
+// expired/was rejected, so notify the UI (popup + redirect to login).
+async function fetchWithAuth(
+  input: RequestInfo,
+  init?: RequestInit,
+): Promise<Response> {
+  const response = await fetch(input, init);
+  if (response.status === 401) {
+    const headers = (init?.headers ?? {}) as Record<string, string>;
+    const auth = headers.Authorization ?? headers.authorization;
+    if (auth && auth.trim() !== 'Bearer') {
+      emitSessionExpired();
+    }
+  }
+  return response;
+}
+
 // Check if user is authenticated
 export async function isAuthenticated(): Promise<boolean> {
   return !!(await getAuthToken());
@@ -100,7 +118,7 @@ async function apiRequest<T>(
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
     });
@@ -109,9 +127,7 @@ async function apiRequest<T>(
 
     if (!response.ok) {
       // If unauthorized, clear token
-      if (response.status === 401) {
-        await removeAuthToken();
-      }
+      // 401 with a token is handled by fetchWithAuth (session-expired popup)
       return {
         success: false,
         error:
@@ -288,7 +304,7 @@ export async function uploadWorkshopDocuments(
     formData.append('workshopPhoto', workshopPhoto as unknown as Blob);
 
   try {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${API_BASE_URL}/admin/workshops/${workshopId}/documents`,
       {
         method: 'POST',
@@ -404,7 +420,7 @@ export async function uploadOwnerPhoto(email: string, file: RNFile) {
     const formData = new FormData();
     formData.append('file', file as unknown as Blob);
 
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${API_BASE_URL}/verification/photos/owner?email=${encodeURIComponent(
         email,
       )}`,
@@ -435,7 +451,7 @@ export async function uploadWorkshopPhoto(email: string, file: RNFile) {
     const formData = new FormData();
     formData.append('file', file as unknown as Blob);
 
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${API_BASE_URL}/verification/photos/workshop?email=${encodeURIComponent(
         email,
       )}`,
@@ -754,7 +770,7 @@ export async function createVehicleWithAudio(
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/vehicle/with-audio`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/vehicle/with-audio`, {
       method: 'POST',
       body: formData,
     });
@@ -799,7 +815,7 @@ export async function createVehicleWithMedia(
 
   try {
     const token = await getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/vehicle/with-media`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/vehicle/with-media`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
@@ -1023,7 +1039,7 @@ export async function gateInVehicleWithMedia(
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${API_BASE_URL}/vehiclevisit/gate-in/with-media`,
       {
         method: 'POST',
@@ -1322,7 +1338,7 @@ export async function createStaffWithPhoto(
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/staff/with-photo`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/staff/with-photo`, {
       method: 'POST',
       body: formData,
       headers,
@@ -1375,7 +1391,7 @@ export async function uploadStaffPhoto(id: number, photo: RNFile) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/staff/${id}/photo`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/staff/${id}/photo`, {
       method: 'POST',
       body: formData,
       headers,
@@ -1533,7 +1549,7 @@ export async function createJobCardWithMedia(
 
   try {
     const token = await getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/jobcard/with-media`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/jobcard/with-media`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token ?? ''}`,
@@ -1733,7 +1749,7 @@ export async function createInquiryWithMedia(
       }
     });
 
-    const response = await fetch(`${API_BASE_URL}/inquiry/with-media`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/inquiry/with-media`, {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -1791,7 +1807,7 @@ export async function createBulkInquiry(
         formData.append('audioDuration', data.audioDuration.toString());
     }
 
-    const response = await fetch(`${API_BASE_URL}/inquiry/bulk`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/inquiry/bulk`, {
       method: 'POST',
       headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: formData,
@@ -1817,7 +1833,7 @@ export async function updateBulkRequestText(
 ) {
   try {
     const token = await getAuthToken();
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${API_BASE_URL}/inquiry/${inquiryId}/request-text`,
       {
         method: 'PATCH',
@@ -1952,7 +1968,7 @@ export async function updateInquiryItemsWithFiles(
     formData.append('itemsJson', JSON.stringify(items));
     audioFiles.forEach(f => formData.append('audioFiles', f as any));
     imageFiles.forEach(f => formData.append('imageFiles', f as any));
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${API_BASE_URL}/inquiry/${inquiryId}/items/with-files`,
       {
         method: 'PUT',
@@ -2114,8 +2130,14 @@ export interface CouponValidationResponse {
 }
 
 // Get all active/valid coupons (for display in overlay)
-export async function getAvailableCoupons() {
-  return apiRequest<Coupon[]>('/coupon', { method: 'GET' });
+// orderType: which kind of order the coupons are for. The server defaults to quote orders, which is what
+// older app versions rely on.
+export async function getAvailableCoupons(
+  orderType: 'quote' | 'catalog' = 'quote',
+) {
+  return apiRequest<Coupon[]>(`/coupon?orderType=${orderType}`, {
+    method: 'GET',
+  });
 }
 
 // Validate a coupon code before payment
@@ -2484,7 +2506,7 @@ export async function createDisputeWithFiles(
       } as any);
     }
 
-    const response = await fetch(`${API_BASE_URL}/disputes/with-files`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/disputes/with-files`, {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

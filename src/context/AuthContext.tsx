@@ -1,4 +1,7 @@
-import React, {createContext, useContext, useState, useEffect} from 'react';
+import React, {createContext, useContext, useState, useEffect, useRef} from 'react';
+import {Alert} from 'react-native';
+import i18n from '../i18n';
+import {onSessionExpired} from '../services/sessionEvents';
 import {isAuthenticated as checkIsAuth, getStoredUser, removeFcmToken, removeAuthToken} from '../services/api';
 import type {UserInfo} from '../services/api';
 import type {UserRole} from '../components';
@@ -49,6 +52,38 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     })();
   }, []);
 
+  // JWT expired / rejected (401): show a popup, then sign out -> login screen
+  const sessionAlertShown = useRef(false);
+  const isAuthRef = useRef(false);
+  isAuthRef.current = isAuth;
+  const signOutRef = useRef<() => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    return onSessionExpired(() => {
+      if (!isAuthRef.current || sessionAlertShown.current) return;
+      sessionAlertShown.current = true;
+      Alert.alert(
+        i18n.t('auth.session_expired_title', {defaultValue: 'Session expired'}),
+        i18n.t('auth.session_expired_message', {
+          defaultValue: 'Your session has expired. Please log in again.',
+        }),
+        [
+          {
+            text: i18n.t('auth.login_again', {defaultValue: 'Log in again'}),
+            onPress: async () => {
+              try {
+                await signOutRef.current();
+              } finally {
+                sessionAlertShown.current = false;
+              }
+            },
+          },
+        ],
+        {cancelable: false},
+      );
+    });
+  }, []);
+
   // Listen for FCM token refresh
   useEffect(() => {
     if (isAuth) {
@@ -86,6 +121,8 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     setUserRole('staff');
     console.log('[NOTIF] AuthContext — signOut complete');
   };
+
+  signOutRef.current = signOut;
 
   return (
     <AuthContext.Provider value={{isAuth, userRole, authChecked, user, signIn, signOut}}>
