@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 
 import Svg, {Path, Circle} from 'react-native-svg';
@@ -113,7 +115,7 @@ interface ProfileData {
 export default function ProfileScreen() {
   const {t} = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const {user} = useAuth();
+  const {user, refreshUser} = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [personalInfoOpen, setPersonalInfoOpen] = useState(false);
   const [workshopDetailsOpen, setWorkshopDetailsOpen] = useState(false);
@@ -172,6 +174,8 @@ export default function ProfileScreen() {
       setIsEditing(false);
       // Refresh profile data
       fetchProfile();
+      // The sidebar shows the saved login copy of the name and e-mail: update it too
+      refreshUser().catch(() => {});
     } else {
       setAppAlert({type: 'error', message: response.error || t('profile.update_failed')});
     }
@@ -267,10 +271,17 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Content */}
+      {/* Content: lifted above the keyboard while a field is being edited */}
+      <KeyboardAvoidingView
+        style={styles.scrollView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isEditing && styles.scrollContentEditing,
+        ]}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -391,6 +402,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <ContactETNAOverlay
         isOpen={supportOpen}
@@ -475,6 +487,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 32,
+  },
+  // Room to scroll the last fields up above the keyboard
+  scrollContentEditing: {
+    paddingBottom: 160,
   },
   avatarSection: {
     alignItems: 'center',

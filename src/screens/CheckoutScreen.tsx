@@ -11,6 +11,7 @@ import type { CatalogStackParamList } from '../navigation/CatalogStack';
 import type { MainTabParamList } from '../navigation/TabNavigator';
 import RedHeader from '../components/catalog/RedHeader';
 import { useTabBarHeight } from '../components/catalog/useTabBarHeight';
+import { Skeleton } from '../components/catalog/Skeleton';
 import SearchIcon from '../assets/icons/search.svg';
 import CartIcon from '../assets/icons/cart.svg';
 import { getCatalogOrder, type CatalogOrder } from '../services/api';
@@ -72,6 +73,9 @@ export default function CheckoutScreen() {
       })
     : 'Will be updated shortly';
 
+  // The order details are still arriving: grey bars instead of values that would flash and change
+  const loadingOrder = !order && !failed;
+
   const goToCatalog = () => navigation.popToTop();
 
   const goToOrders = () => {
@@ -107,20 +111,41 @@ export default function CheckoutScreen() {
         <View style={styles.card}>
           <View style={styles.row}>
             <Text style={styles.label}>Order ID</Text>
-            <Text style={styles.value}>
-              {order ? order.orderNumber : failed ? 'Check My Orders' : '…'}
-            </Text>
+            {loadingOrder ? (
+              <Skeleton width={90} height={14} />
+            ) : (
+              <Text style={styles.value}>
+                {order ? order.orderNumber : 'Check My Orders'}
+              </Text>
+            )}
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Est. Delivery</Text>
-            <Text style={[styles.value, styles.valueRed]}>{delivery}</Text>
+            {loadingOrder ? (
+              <Skeleton width={110} height={14} />
+            ) : (
+              <Text style={[styles.value, styles.valueRed]}>{delivery}</Text>
+            )}
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Amount Paid</Text>
-            <Text style={styles.value}>
-              {order ? formatPrice(order.totalAmount) : '…'}
-            </Text>
+            {loadingOrder ? (
+              <Skeleton width={70} height={14} />
+            ) : (
+              <Text style={styles.value}>
+                {order ? formatPrice(order.totalAmount) : '—'}
+              </Text>
+            )}
           </View>
+          {loadingOrder && (
+            <View style={styles.row}>
+              <Text style={styles.label}>Deliver To</Text>
+              <View style={styles.skeletonAddress}>
+                <Skeleton width="100%" height={14} />
+                <Skeleton width="70%" height={14} />
+              </View>
+            </View>
+          )}
           {order && (
             <View style={styles.row}>
               <Text style={styles.label}>Deliver To</Text>
@@ -191,6 +216,7 @@ const styles = StyleSheet.create({
   value: { fontSize: 13, fontWeight: '700', color: '#161a1d' },
   valueWrap: { flex: 1, textAlign: 'right', marginLeft: 16 },
   valueRed: { color: '#e5383b' },
+  skeletonAddress: { flex: 1, marginLeft: 16, gap: 6, alignItems: 'flex-end' },
   actions: { paddingHorizontal: 16, gap: 14, alignItems: 'center' },
   primaryBtn: {
     width: '100%',

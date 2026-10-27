@@ -76,6 +76,7 @@ export default function OwnerDashboardScreen({navigation}: OwnerDashboardScreenP
       canAddVehicle: staffData.permissions.addVehicle,
       canRaiseDispute: staffData.permissions.raiseDispute,
       canCreateInquiry: staffData.permissions.createInquiry,
+      canOrderCatalogItems: staffData.permissions.orderCatalogItems,
     };
 
     let response;

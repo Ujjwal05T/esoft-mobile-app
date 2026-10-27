@@ -1,8 +1,8 @@
-import React, {createContext, useContext, useState, useEffect, useRef} from 'react';
+import React, {createContext, useContext, useState, useEffect, useRef, useCallback} from 'react';
 import {Alert} from 'react-native';
 import i18n from '../i18n';
 import {onSessionExpired} from '../services/sessionEvents';
-import {isAuthenticated as checkIsAuth, getStoredUser, removeFcmToken, removeAuthToken} from '../services/api';
+import {isAuthenticated as checkIsAuth, getStoredUser, setStoredUser, getProfile, getStaffProfile, removeFcmToken, removeAuthToken} from '../services/api';
 import type {UserInfo} from '../services/api';
 import type {UserRole} from '../components';
 import {registerFCMToken, unregisterFCMToken, onTokenRefresh} from '../services/notificationService';
@@ -14,6 +14,8 @@ interface AuthContextType {
   user: UserInfo | null;
   signIn: (user: UserInfo) => void;
   signOut: () => void;
+  // Re-reads the signed-in user's profile from the server and updates the saved copy (sidebar, headers)
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -23,6 +25,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   signIn: () => {},
   signOut: () => {},
+  refreshUser: async () => {},
 });
 
 export function AuthProvider({children}: {children: React.ReactNode}) {
@@ -30,6 +33,45 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   const [userRole, setUserRole] = useState<UserRole>('staff');
   const [authChecked, setAuthChecked] = useState(false);
   const [user, setUser] = useState<UserInfo | null>(null);
+  const userRef = useRef<UserInfo | null>(null);
+  userRef.current = user;
+
+  // The saved user is a copy made at login, so a profile edit (or one made by someone else) leaves it stale.
+  // This fetches the profile again and keeps the changes, in memory and in the keychain.
+  const refreshUser = useCallback(async () => {
+    const current = userRef.current;
+    if (!current) return;
+    let changes: Partial<UserInfo> | null = null;
+    if (current.role === 'owner') {
+      const res = await getProfile();
+      const p = res.success ? res.data?.data : undefined;
+      if (p) {
+        changes = {
+          name: p.personalInfo.ownerName,
+          email: p.personalInfo.email,
+          phoneNumber: p.personalInfo.contactNumber,
+          workshopName: p.workshopDetails.workshopName,
+        };
+      }
+    } else {
+      const res = await getStaffProfile();
+      if (res.success && res.data) {
+        changes = {
+          name: res.data.name,
+          email: res.data.email,
+          phoneNumber: res.data.phoneNumber,
+          city: res.data.city,
+        };
+      }
+    }
+    if (!changes) return;
+    const next = {...current, ...changes};
+    // Nothing to do (and no re-render) when the saved copy is already right
+    if (JSON.stringify(next) === JSON.stringify(current)) return;
+    userRef.current = next;
+    setUser(next);
+    await setStoredUser(next);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -45,12 +87,14 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
           console.log('[NOTIF] AuthContext — calling registerFCMToken on session restore');
           const ok = await registerFCMToken();
           console.log(`[NOTIF] AuthContext — registerFCMToken result: ${ok}`);
+          // Pick up profile changes made since the last login (not awaited: the app should open at once)
+          refreshUser().catch(() => {});
         }
       }
       setIsAuth(auth);
       setAuthChecked(true);
     })();
-  }, []);
+  }, [refreshUser]);
 
   // JWT expired / rejected (401): show a popup, then sign out -> login screen
   const sessionAlertShown = useRef(false);
@@ -125,7 +169,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   signOutRef.current = signOut;
 
   return (
-    <AuthContext.Provider value={{isAuth, userRole, authChecked, user, signIn, signOut}}>
+    <AuthContext.Provider value={{isAuth, userRole, authChecked, user, signIn, signOut, refreshUser}}>
       {children}
     </AuthContext.Provider>
   );

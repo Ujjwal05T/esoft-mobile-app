@@ -647,6 +647,7 @@ export default function NewJobCardOverlay({
             canAddVehicle: staffData.permissions.addVehicle,
             canRaiseDispute: staffData.permissions.raiseDispute,
             canCreateInquiry: staffData.permissions.createInquiry,
+            canOrderCatalogItems: staffData.permissions.orderCatalogItems,
           };
           let response;
           if (staffData.photoUri) {

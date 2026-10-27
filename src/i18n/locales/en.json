@@ -446,6 +446,7 @@
   "staff.perm_add_vehicle": "Add Vehicle",
   "staff.perm_raise_dispute": "Raise Dispute",
   "staff.perm_create_inquiry": "Create Inquiry",
+  "staff.perm_order_catalog_items": "Can order catalog items",
 
   "profile.loading": "Loading profile...",
   "profile.failed_to_load": "Failed to load profile",

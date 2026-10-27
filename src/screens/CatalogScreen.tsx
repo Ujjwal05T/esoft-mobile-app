@@ -4,7 +4,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
+  FlatList,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
@@ -31,6 +31,7 @@ import {
 import CategorySidebar, {
   CatalogCategory,
 } from '../components/catalog/CategorySidebar';
+import { ProductGridSkeleton } from '../components/catalog/Skeleton';
 import CatalogCartBar from '../components/catalog/CatalogCartBar';
 import { toPartProduct } from '../components/catalog/catalogMapping';
 import { getVehicleFullName } from '../components/catalog/SelectCarOverlay';
@@ -121,13 +122,25 @@ export default function CatalogScreen() {
   );
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
+  // Categories or brands failed to load (the product list may still be fine)
+  const [metaFailed, setMetaFailed] = useState(false);
+  // True until the first answer for the categories arrives (drives the sidebar skeleton)
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
   // Ignores answers to requests that a newer filter change has already replaced
   const requestId = useRef(0);
+  // Synchronous guard: state updates lag behind rapid onEndReached calls
+  const loadingMoreRef = useRef(false);
+  // A pull to refresh keeps the current items if it fails
+  const refreshingRef = useRef(false);
 
-  const categoryId =
-    selectedCategory === ALL_KEY ? undefined : Number(selectedCategory);
   const trimmedQuery = debouncedQuery.trim();
   const isSearching = trimmedQuery.length > 0;
+  // Searching looks across every category, so the category is ignored meanwhile
+  const categoryId =
+    isSearching || selectedCategory === ALL_KEY
+      ? undefined
+      : Number(selectedCategory);
 
   const openFilters = (section: FilterSectionKey) => {
     setFiltersSection(section);
@@ -144,8 +157,14 @@ export default function CatalogScreen() {
   useEffect(() => {
     let cancelled = false;
     getCatalogCategories().then(res => {
-      if (cancelled || !res.success || !res.data) return;
+      if (cancelled) return;
+      setCategoriesLoaded(true);
+      if (!res.success || !res.data) {
+        setMetaFailed(true);
+        return;
+      }
       const data = res.data;
+      setMetaFailed(false);
       setCategories(data);
       // A category hidden since the last load must not stay selected
       setSelectedCategory(prev =>
@@ -163,7 +182,9 @@ export default function CatalogScreen() {
   useEffect(() => {
     let cancelled = false;
     getCatalogBrands(categoryId).then(res => {
-      if (!cancelled && res.success && res.data) setBrands(res.data);
+      if (cancelled) return;
+      if (res.success && res.data) setBrands(res.data);
+      else setMetaFailed(true);
     });
     return () => {
       cancelled = true;
@@ -174,8 +195,7 @@ export default function CatalogScreen() {
 
   const bounds = priceBounds(filters);
   const buildQuery = (page: number) => ({
-    // Searching looks across every category
-    categoryId: isSearching ? undefined : categoryId,
+    categoryId,
     brandIds: filters.brands.map(Number),
     q: trimmedQuery,
     minPrice: bounds.minPrice,
@@ -199,13 +219,21 @@ export default function CatalogScreen() {
     const id = ++requestId.current;
     setStatus('loading');
     setError(null);
+    // An in-flight "load more" belongs to the old filters; let a new one start
+    loadingMoreRef.current = false;
+    setLoadingMore(false);
+    setLoadMoreFailed(false);
     getCatalogProducts(buildQuery(1)).then(res => {
       if (id !== requestId.current) return;
+      const wasRefresh = refreshingRef.current;
+      refreshingRef.current = false;
       setRefreshing(false);
       if (res.success && res.data) {
         setList({ items: res.data.items, total: res.data.total, page: 1 });
         setStatus('ready');
       } else {
+        // Items from other filters would be misleading; a refresh keeps its own
+        if (!wasRefresh) setList({ items: [], total: 0, page: 0 });
         setError(res.error ?? 'Could not load parts.');
         setStatus('error');
       }
@@ -215,25 +243,37 @@ export default function CatalogScreen() {
   }, [filterKey]);
 
   const loadMore = () => {
-    if (loadingMore || status !== 'ready' || list.items.length >= list.total) {
+    if (
+      loadingMoreRef.current ||
+      status !== 'ready' ||
+      list.items.length >= list.total
+    ) {
       return;
     }
     const id = requestId.current;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
-    getCatalogProducts(buildQuery(list.page + 1))
-      .then(res => {
-        if (id !== requestId.current || !res.success || !res.data) return;
-        const next = res.data;
-        setList(prev => ({
-          items: [...prev.items, ...next.items],
-          total: next.total,
-          page: prev.page + 1,
-        }));
-      })
-      .finally(() => setLoadingMore(false));
+    setLoadMoreFailed(false);
+    getCatalogProducts(buildQuery(list.page + 1)).then(res => {
+      // Stale: the filter effect already reset the loading state
+      if (id !== requestId.current) return;
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+      if (!res.success || !res.data) {
+        setLoadMoreFailed(true);
+        return;
+      }
+      const next = res.data;
+      setList(prev => ({
+        items: [...prev.items, ...next.items],
+        total: next.total,
+        page: prev.page + 1,
+      }));
+    });
   };
 
   const onRefresh = () => {
+    refreshingRef.current = true;
     setRefreshing(true);
     setReloadToken(t => t + 1);
   };
@@ -321,9 +361,13 @@ export default function CatalogScreen() {
       <View style={styles.body}>
         <CategorySidebar
           categories={sidebarCategories}
-          selectedKey={selectedCategory}
-          onSelect={setSelectedCategory}
+          selectedKey={isSearching ? ALL_KEY : selectedCategory}
+          onSelect={key => {
+            if (searchOpen) closeSearch();
+            setSelectedCategory(key);
+          }}
           bottomInset={tabBarHeight}
+          loading={!categoriesLoaded}
         />
 
         <View style={styles.main}>
@@ -342,96 +386,123 @@ export default function CatalogScreen() {
             />
           </View>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.grid,
-              { paddingBottom: tabBarHeight + (cartCount > 0 ? 68 : 16) },
-            ]}
-            scrollEventThrottle={200}
-            onScroll={e => {
-              const { layoutMeasurement, contentOffset, contentSize } =
-                e.nativeEvent;
-              if (
-                layoutMeasurement.height + contentOffset.y >=
-                contentSize.height - 400
-              ) {
-                loadMore();
+          {(metaFailed || (status === 'error' && list.items.length > 0)) && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.banner}
+              onPress={() => setReloadToken(t => t + 1)}
+            >
+              <Text style={styles.bannerText}>
+                {metaFailed
+                  ? 'Could not load categories or brands. Tap to retry'
+                  : `${error} Tap to retry`}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.listWrap}>
+            <FlatList
+              data={list.items}
+              keyExtractor={item => String(item.variantId)}
+              numColumns={2}
+              columnWrapperStyle={styles.row}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={[
+                styles.grid,
+                { paddingBottom: tabBarHeight + (cartCount > 0 ? 68 : 16) },
+              ]}
+              onEndReached={loadMore}
+              onEndReachedThreshold={0.5}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={['#e5383b']}
+                  tintColor="#e5383b"
+                />
               }
-            }}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={['#e5383b']}
-                tintColor="#e5383b"
-              />
-            }
-          >
-            {status === 'loading' && list.items.length === 0 ? (
-              <View style={styles.center}>
-                <ActivityIndicator color="#e5383b" />
-              </View>
-            ) : status === 'error' ? (
-              <View style={styles.center}>
-                <Text style={styles.emptyText}>{error}</Text>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  style={styles.retryBtn}
-                  onPress={() => setReloadToken(t => t + 1)}
-                >
-                  <Text style={styles.retryText}>Try again</Text>
-                </TouchableOpacity>
-              </View>
-            ) : list.items.length === 0 ? (
-              <View style={styles.center}>
-                <Text style={styles.emptyText}>{emptyMessage}</Text>
-                {hasActiveFilters && (
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    style={styles.retryBtn}
-                    onPress={clearAll}
-                  >
-                    <Text style={styles.retryText}>Clear all filters</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ) : (
-              <>
-                {isSearching && (
+              ListHeaderComponent={
+                isSearching && status === 'ready' && list.items.length > 0 ? (
                   <Text style={styles.resultsText}>
                     {list.total} {list.total === 1 ? 'result' : 'results'} for “
                     {trimmedQuery}”
                   </Text>
-                )}
-                {list.items.map(item => {
-                  const product = toPartProduct(item);
-                  return (
-                    <View key={item.variantId} style={styles.gridItem}>
-                      <PartProductCard
-                        product={product}
-                        quantity={quantities[product.id] ?? 0}
-                        onAdd={() => addItem(product)}
-                        onIncrement={increment}
-                        onDecrement={decrement}
-                        onPress={p =>
-                          navigation.navigate('PartDetail', {
-                            product: p,
-                            categoryTitle: item.categoryName,
-                          })
-                        }
-                      />
-                    </View>
-                  );
-                })}
-                {loadingMore && (
+                ) : null
+              }
+              ListEmptyComponent={
+                status === 'loading' ? (
+                  <ProductGridSkeleton count={8} />
+                ) : status === 'error' ? (
+                  <View style={styles.center}>
+                    <Text style={styles.emptyText}>{error}</Text>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.retryBtn}
+                      onPress={() => setReloadToken(t => t + 1)}
+                    >
+                      <Text style={styles.retryText}>Try again</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.center}>
+                    <Text style={styles.emptyText}>{emptyMessage}</Text>
+                    {hasActiveFilters && (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        style={styles.retryBtn}
+                        onPress={clearAll}
+                      >
+                        <Text style={styles.retryText}>Clear all filters</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )
+              }
+              ListFooterComponent={
+                loadingMore ? (
                   <View style={styles.footerLoader}>
                     <ActivityIndicator color="#e5383b" />
                   </View>
-                )}
-              </>
+                ) : loadMoreFailed ? (
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    style={styles.footerLoader}
+                    onPress={loadMore}
+                  >
+                    <Text style={styles.footerError}>
+                      Could not load more. Tap to retry
+                    </Text>
+                  </TouchableOpacity>
+                ) : null
+              }
+              renderItem={({ item }) => {
+                const product = toPartProduct(item);
+                return (
+                  <View style={styles.gridItem}>
+                    <PartProductCard
+                      product={product}
+                      quantity={quantities[product.id] ?? 0}
+                      onAdd={() => addItem(product)}
+                      onIncrement={increment}
+                      onDecrement={decrement}
+                      onPress={p =>
+                        navigation.navigate('PartDetail', {
+                          product: p,
+                          categoryTitle: item.categoryName,
+                        })
+                      }
+                    />
+                  </View>
+                );
+              }}
+            />
+            {/* Old results stay visible but dimmed while new ones load */}
+            {status === 'loading' && list.items.length > 0 && (
+              <View style={styles.loadingOverlay} pointerEvents="auto">
+                <ActivityIndicator color="#e5383b" />
+              </View>
             )}
-          </ScrollView>
+          </View>
         </View>
       </View>
 
@@ -461,12 +532,24 @@ const styles = StyleSheet.create({
   main: { flex: 1, paddingRight: 10 },
   topControls: { gap: 10, paddingTop: 10, paddingBottom: 10 },
 
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 10,
+  listWrap: { flex: 1 },
+  grid: { flexGrow: 1 },
+  row: { justifyContent: 'space-between', marginBottom: 10 },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    alignItems: 'center',
+    paddingTop: 40,
   },
+  banner: {
+    backgroundColor: '#fdecec',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 10,
+  },
+  bannerText: { fontSize: 12, color: '#e5383b' },
+  footerError: { fontSize: 13, color: '#e5383b', textAlign: 'center' },
   gridItem: { width: '48.5%' },
   center: {
     width: '100%',
@@ -474,7 +557,7 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     gap: 14,
   },
-  footerLoader: { width: '100%', paddingVertical: 12 },
+  footerLoader: { width: '100%', paddingVertical: 12, alignItems: 'center' },
   resultsText: {
     width: '100%',
     fontSize: 13,

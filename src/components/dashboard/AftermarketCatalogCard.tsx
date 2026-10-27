@@ -1,8 +1,8 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image, ImageSourcePropType} from 'react-native';
 import {useTranslation} from 'react-i18next';
-import Lumax from '../../assets/logos/lumax.svg';
-import Wai from '../../assets/logos/volvoline-logo.png';
+import Lumax from '../../assets/logos/lumax-seeklogo.svg';
+import Wai from '../../assets/logos/valvoline-seeklogo-3.svg';
 import Monroe from '../../assets/logos/monroe-logo.png';
 import Smic from '../../assets/logos/smic-logo.png';
 import Sofima from '../../assets/logos/sofima-logo.png';

@@ -309,12 +309,12 @@ export default function RefundPolicyScreen() {
         <View style={styles.contactBox}>
           <Text style={styles.contactText}>
             <Text style={styles.contactLabel}>
-              ESOFT AUTO PRIVATE LIMITED (Parts Now)
+              Parts Now
             </Text>
           </Text>
           <Text style={styles.contactText}>
             <Text style={styles.contactLabel}>Email: </Text>
-            anilshah@etnagroup.in
+            info@partsnow.in
           </Text>
           <Text style={styles.contactNote}>
             Please include your workshop name, order ID, and invoice number in

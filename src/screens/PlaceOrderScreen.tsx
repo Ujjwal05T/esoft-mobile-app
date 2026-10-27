@@ -29,10 +29,11 @@ import {
   CouponStrip,
 } from '../components/payment/CouponParts';
 import { showToast } from '../components/ui/Toast';
-import SearchIcon from '../assets/icons/search.svg';
 import {
   getAddresses,
   getAvailableCoupons,
+  getStaffProfile,
+  getStoredUser,
   startCheckout,
   validateCheckout,
   verifyCheckout,
@@ -70,6 +71,8 @@ export default function PlaceOrderScreen() {
   const [summary, setSummary] = useState<CheckoutSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
+  // Staff may fill the shared cart but only pay when the owner allows it (null = still checking)
+  const [mayOrder, setMayOrder] = useState<boolean | null>(null);
   // Coupons: the available ones (null until loaded), the applied code, and the chip being applied
   const [coupons, setCoupons] = useState<Coupon[] | null>(null);
   const [coupon, setCoupon] = useState<string | null>(null);
@@ -124,6 +127,29 @@ export default function PlaceOrderScreen() {
     useCallback(() => {
       load();
     }, [load]),
+  );
+
+  // Checked on every visit, so a change made by the owner is picked up
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        const user = await getStoredUser();
+        if (user?.role !== 'staff') {
+          if (!cancelled) setMayOrder(true);
+          return;
+        }
+        const profile = await getStaffProfile();
+        // If the check fails the server still refuses an unpermitted payment, so do not block here
+        const allowed = profile.success
+          ? !!profile.data?.permissions.orderCatalogItems
+          : true;
+        if (!cancelled) setMayOrder(allowed);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, []),
   );
 
   // Available coupons for catalog orders
@@ -279,11 +305,16 @@ export default function PlaceOrderScreen() {
       };
       try {
         paid = await RazorpayCheckout.open(options);
-      } catch {
+      } catch (e) {
+        // Razorpay hands back a code and a (sometimes JSON-looking) description; never show that raw
+        const rateLimited = /too many requests/i.test(
+          typeof e === 'string' ? e : JSON.stringify(e ?? ''),
+        );
         setAlert({
           type: 'info',
-          message:
-            'The payment was cancelled or did not go through. You have not been charged.',
+          message: rateLimited
+            ? 'Too many payment attempts in a short time. Please wait a minute and try again. You have not been charged.'
+            : 'The payment was cancelled or did not go through. You have not been charged.',
         });
         return;
       }
@@ -320,15 +351,11 @@ export default function PlaceOrderScreen() {
 
   const blocking = summary?.issues.filter(i => i.blocking) ?? [];
   const notes = summary?.issues.filter(i => !i.blocking) ?? [];
-  const canPay = !!summary && summary.canPay && !paying;
+  const canPay = !!summary && summary.canPay && !paying && mayOrder === true;
 
   return (
     <View style={styles.container}>
-      <RedHeader
-        title="Place Order"
-        onBack={() => navigation.goBack()}
-        right={<SearchIcon width={22} height={22} color="#ffffff" />}
-      />
+      <RedHeader title="Place Order" onBack={() => navigation.goBack()} />
 
       {loading ? (
         <View style={styles.center}>
@@ -484,12 +511,22 @@ export default function PlaceOrderScreen() {
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Shipping</Text>
-                  <Text style={styles.summaryValue}>
-                    {summary.shippingCharges > 0
-                      ? formatPrice(summary.shippingCharges)
-                      : 'Free'}
+                  <Text
+                    style={[
+                      styles.summaryValue,
+                      !!summary.shippingNote && styles.shippingOnYou,
+                    ]}
+                  >
+                    {summary.shippingNote
+                      ? 'On you'
+                      : formatPrice(summary.shippingCharges)}
                   </Text>
                 </View>
+                {!!summary.shippingNote && (
+                  <Text style={styles.shippingNote}>
+                    {summary.shippingNote}
+                  </Text>
+                )}
                 <View style={styles.divider} />
                 <View style={styles.summaryRow}>
                   <Text style={styles.totalLabel}>Total</Text>
@@ -515,6 +552,12 @@ export default function PlaceOrderScreen() {
           </ScrollView>
 
           <View style={[styles.footer, { bottom: tabBarHeight }]}>
+            {mayOrder === false && (
+              <Text style={styles.noPermission}>
+                You do not have permission to place catalog orders. Please ask
+                the owner to turn on “Can order catalog items” for you.
+              </Text>
+            )}
             <TouchableOpacity
               style={[styles.payBtn, !canPay && styles.payBtnDisabled]}
               activeOpacity={0.85}
@@ -643,5 +686,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   payBtnDisabled: { backgroundColor: '#f1a5a7' },
+  shippingOnYou: { color: '#b45309', fontWeight: '600' },
+  shippingNote: {
+    fontSize: 11,
+    color: '#92400e',
+    marginTop: -2,
+    marginBottom: 6,
+  },
+  noPermission: {
+    fontSize: 12,
+    color: '#92400e',
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 4,
+    padding: 8,
+    marginBottom: 10,
+  },
   payText: { fontSize: 16, fontWeight: '600', color: '#ffffff' },
 });

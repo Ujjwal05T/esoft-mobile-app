@@ -174,6 +174,7 @@ export default function StaffScreen() {
           addVehicle: staff.permissions.addVehicle,
           raiseDispute: staff.permissions.raiseDispute,
           createInquiry: staff.permissions.createInquiry,
+          orderCatalogItems: staff.permissions.orderCatalogItems ?? false,
         },
       });
       setShowEditOverlay(true);
@@ -209,6 +210,7 @@ export default function StaffScreen() {
       canAddVehicle: staffData.permissions.addVehicle,
       canRaiseDispute: staffData.permissions.raiseDispute,
       canCreateInquiry: staffData.permissions.createInquiry,
+      canOrderCatalogItems: staffData.permissions.orderCatalogItems,
     };
 
     let response;
@@ -250,6 +252,7 @@ export default function StaffScreen() {
       canAddVehicle: updatedStaff.permissions.addVehicle,
       canRaiseDispute: updatedStaff.permissions.raiseDispute,
       canCreateInquiry: updatedStaff.permissions.createInquiry,
+      canOrderCatalogItems: updatedStaff.permissions.orderCatalogItems,
     };
 
     const response = await updateStaff(parseInt(updatedStaff.id), updateData);

@@ -11,7 +11,7 @@ import PartDetailScreen from '../screens/PartDetailScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import AddressesScreen from '../screens/AddressesScreen';
 import AddressFormScreen from '../screens/AddressFormScreen';
-import type { WorkshopAddress } from '../services/api';
+import type { VehicleBasicInfo, WorkshopAddress } from '../services/api';
 
 export type CatalogStackParamList = {
   CatalogHome: undefined;
@@ -20,7 +20,12 @@ export type CatalogStackParamList = {
   PlaceOrder: { addressId?: number } | undefined;
   Addresses: { select?: boolean; selectedId?: number } | undefined;
   AddressForm: { address?: WorkshopAddress } | undefined;
-  InquirySent: { inquiryId: string; raisedOn: string; items: CartItem[] };
+  InquirySent: {
+    inquiryId: string;
+    raisedOn: string;
+    items: CartItem[];
+    vehicle: VehicleBasicInfo;
+  };
   Checkout: { orderId: number };
 };
 

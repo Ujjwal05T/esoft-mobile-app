@@ -241,21 +241,7 @@ export default function TermsAndConditionsScreen() {
         <View style={styles.contactBox}>
           <Text style={styles.contactText}>
             <Text style={styles.contactLabel}>Email: </Text>
-            esoftauto@gmail.com
-          </Text>
-          <Text style={styles.contactText}>
-            <Text style={styles.contactLabel}>Grievance Officer: </Text>
-            Anil Shah
-          </Text>
-          <Text style={styles.contactText}>
-            <Text style={styles.contactLabel}>Company: </Text>
-            ESOFT AUTO PRIVATE LIMITED
-          </Text>
-          <Text style={styles.contactText}>
-            <Text style={styles.contactLabel}>Address: </Text>
-            Plot no. 420, New Loha Mandi, Scheme no. 78, Phase 2, NIRANJANPUR,
-            DEWAS NAKA, INDORE, MADHYA PRADESH 452010, Indore, Madhya Pradesh,
-            India
+            info@partsnow.in
           </Text>
           <Text style={styles.contactNote}>
             We will endeavour to acknowledge and respond to your concerns within

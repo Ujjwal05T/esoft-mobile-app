@@ -1166,6 +1166,7 @@ export interface StaffPermissions {
   addVehicle: boolean;
   raiseDispute: boolean;
   createInquiry: boolean;
+  orderCatalogItems: boolean;
 }
 
 // Staff Response interface (for staff management by owner)
@@ -1215,6 +1216,7 @@ export interface CreateStaffData {
   canAddVehicle?: boolean;
   canRaiseDispute?: boolean;
   canCreateInquiry?: boolean;
+  canOrderCatalogItems?: boolean;
 }
 
 // Update Staff Data interface
@@ -1235,6 +1237,7 @@ export interface UpdateStaffData {
   canAddVehicle?: boolean;
   canRaiseDispute?: boolean;
   canCreateInquiry?: boolean;
+  canOrderCatalogItems?: boolean;
 }
 
 // Update Staff Permissions Data interface
@@ -1248,6 +1251,7 @@ export interface UpdateStaffPermissionsData {
   canAddVehicle: boolean;
   canRaiseDispute: boolean;
   canCreateInquiry: boolean;
+  canOrderCatalogItems?: boolean;
 }
 
 // Get all staff members
@@ -2095,6 +2099,9 @@ export interface VerifyPaymentResponse {
   paymentId: string;
   quoteId: number;
   status: string;
+  // The order this payment created
+  orderId?: number;
+  orderNumber?: string;
 }
 
 export interface Coupon {
@@ -2558,6 +2565,11 @@ export async function checkAppVersion(
 // PUSH NOTIFICATIONS (FCM)
 // ==========================================
 
+// Is the parts catalog open to customers? The backend can switch it off (Catalog__Enabled in .env)
+export async function getCatalogConfig() {
+  return apiRequest<{ enabled: boolean }>('/catalog/config', { method: 'GET' });
+}
+
 // Store FCM token in backend
 export async function setFcmToken(token: string, platform: string) {
   return apiRequest<{ message: string }>('/notification/register-token', {
@@ -2998,6 +3010,8 @@ export interface CheckoutSummary {
   address: WorkshopAddress | null;
   issues: CheckoutIssue[];
   canPay: boolean;
+  // Set when the order is below the free-shipping amount (the customer pays the shipping)
+  shippingNote?: string | null;
 }
 
 export interface CheckoutRequest {

@@ -30,15 +30,67 @@ type Route = NativeStackScreenProps<
   'AddressForm'
 >['route'];
 
+type FieldKey =
+  | 'contactName'
+  | 'phone'
+  | 'addressLine'
+  | 'city'
+  | 'state'
+  | 'pinCode';
+
+const NAME_RULE = /^[\p{L}][\p{L} .'-]*$/u;
+const PLACE_RULE = /^[\p{L}][\p{L} .'()-]*$/u;
+const PHONE_RULE = /^[6-9]\d{9}$/;
+const PIN_RULE = /^[1-9]\d{5}$/;
+
+// Saved numbers may carry a +91 or 0 prefix; reduce them to the 10-digit mobile number
+const normalizePhone = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+  if (digits.length === 11 && digits.startsWith('0')) return digits.slice(1);
+  return digits;
+};
+
+function validate(v: Record<FieldKey, string>) {
+  const errors: Partial<Record<FieldKey, string>> = {};
+  const name = v.contactName.trim();
+  if (!name) errors.contactName = 'Enter the contact name.';
+  else if (name.length < 2 || !NAME_RULE.test(name)) {
+    errors.contactName = 'Enter a valid name (letters only).';
+  }
+  if (!v.phone) errors.phone = 'Enter the phone number.';
+  else if (!PHONE_RULE.test(v.phone)) {
+    errors.phone = 'Enter a valid 10-digit mobile number.';
+  }
+  const address = v.addressLine.trim();
+  if (!address) errors.addressLine = 'Enter the address.';
+  else if (address.length < 5) errors.addressLine = 'Address is too short.';
+  for (const key of ['city', 'state'] as const) {
+    const text = v[key].trim();
+    const label = key === 'city' ? 'city' : 'state';
+    if (!text) errors[key] = `Enter the ${label}.`;
+    else if (text.length < 2 || !PLACE_RULE.test(text)) {
+      errors[key] = `Enter a valid ${label} (letters only).`;
+    }
+  }
+  if (!v.pinCode) errors.pinCode = 'Enter the PIN code.';
+  else if (!PIN_RULE.test(v.pinCode)) {
+    errors.pinCode = 'PIN code must be 6 digits and cannot start with 0.';
+  }
+  return errors;
+}
+
 function Field({
   label,
   value,
   onChangeText,
+  error,
   ...rest
 }: {
   label: string;
   value: string;
   onChangeText: (v: string) => void;
+  error?: string;
 } & React.ComponentProps<typeof TextInput>) {
   return (
     <View style={styles.field}>
@@ -47,9 +99,10 @@ function Field({
         value={value}
         onChangeText={onChangeText}
         placeholderTextColor="#9ca3af"
-        style={styles.input}
+        style={[styles.input, !!error && styles.inputError]}
         {...rest}
       />
+      {!!error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 }
@@ -63,7 +116,7 @@ export default function AddressFormScreen() {
 
   const [label, setLabel] = useState(existing?.label ?? '');
   const [contactName, setContactName] = useState(existing?.contactName ?? '');
-  const [phone, setPhone] = useState(existing?.phone ?? '');
+  const [phone, setPhone] = useState(normalizePhone(existing?.phone ?? ''));
   const [addressLine, setAddressLine] = useState(existing?.addressLine ?? '');
   const [landmark, setLandmark] = useState(existing?.landmark ?? '');
   const [city, setCity] = useState(existing?.city ?? '');
@@ -72,8 +125,28 @@ export default function AddressFormScreen() {
   const [isDefault, setIsDefault] = useState(existing?.isDefault ?? false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  // Errors show once a field was left, or for every field after a save attempt
+  const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>(
+    {},
+  );
+  const [submitted, setSubmitted] = useState(false);
+
+  const errors = validate({
+    contactName,
+    phone,
+    addressLine,
+    city,
+    state,
+    pinCode,
+  });
+  const errorFor = (key: FieldKey) =>
+    submitted || touched[key] ? errors[key] : undefined;
+  const touch = (key: FieldKey) => () =>
+    setTouched(prev => ({ ...prev, [key]: true }));
 
   const save = async () => {
+    setSubmitted(true);
+    if (Object.keys(errors).length > 0) return;
     const body: SaveWorkshopAddress = {
       label: label.trim() || undefined,
       contactName: contactName.trim(),
@@ -85,21 +158,6 @@ export default function AddressFormScreen() {
       pinCode: pinCode.trim(),
       isDefault,
     };
-    if (
-      !body.contactName ||
-      !body.phone ||
-      !body.addressLine ||
-      !body.city ||
-      !body.state ||
-      !body.pinCode
-    ) {
-      setMessage('Please fill in all the required fields.');
-      return;
-    }
-    if (!/^\d{6}$/.test(body.pinCode)) {
-      setMessage('PIN code must be 6 digits.');
-      return;
-    }
 
     setSaving(true);
     const res = existing
@@ -138,19 +196,27 @@ export default function AddressFormScreen() {
             label="Contact name *"
             value={contactName}
             onChangeText={setContactName}
+            onBlur={touch('contactName')}
+            error={errorFor('contactName')}
+            autoCapitalize="words"
             maxLength={150}
           />
           <Field
             label="Phone *"
             value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            maxLength={20}
+            onChangeText={v => setPhone(v.replace(/\D/g, ''))}
+            onBlur={touch('phone')}
+            error={errorFor('phone')}
+            keyboardType="number-pad"
+            placeholder="10-digit mobile number"
+            maxLength={10}
           />
           <Field
             label="Address *"
             value={addressLine}
             onChangeText={setAddressLine}
+            onBlur={touch('addressLine')}
+            error={errorFor('addressLine')}
             placeholder="House / building, street, area"
             multiline
             maxLength={300}
@@ -165,18 +231,26 @@ export default function AddressFormScreen() {
             label="City *"
             value={city}
             onChangeText={setCity}
+            onBlur={touch('city')}
+            error={errorFor('city')}
+            autoCapitalize="words"
             maxLength={100}
           />
           <Field
             label="State *"
             value={state}
             onChangeText={setState}
+            onBlur={touch('state')}
+            error={errorFor('state')}
+            autoCapitalize="words"
             maxLength={100}
           />
           <Field
             label="PIN code *"
             value={pinCode}
-            onChangeText={setPinCode}
+            onChangeText={v => setPinCode(v.replace(/\D/g, ''))}
+            onBlur={touch('pinCode')}
+            error={errorFor('pinCode')}
             keyboardType="number-pad"
             maxLength={6}
           />
@@ -234,6 +308,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#161a1d',
   },
+  inputError: { borderColor: '#e5383b' },
+  errorText: { fontSize: 12, color: '#e5383b' },
   defaultRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   check: {
     width: 20,

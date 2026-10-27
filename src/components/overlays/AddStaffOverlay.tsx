@@ -47,6 +47,7 @@ export interface StaffPermissions {
   addVehicle: boolean;
   raiseDispute: boolean;
   createInquiry: boolean;
+  orderCatalogItems: boolean;
 }
 
 const BackIcon = () => (
@@ -171,6 +172,7 @@ export default function AddStaffOverlay({
     addVehicle: false,
     raiseDispute: false,
     createInquiry: false,
+    orderCatalogItems: false,
   });
 
   const isFormValid = name.trim() !== '' && role.trim() !== '';
@@ -199,6 +201,7 @@ export default function AddStaffOverlay({
         addVehicle: false,
         raiseDispute: false,
         createInquiry: false,
+        orderCatalogItems: false,
       });
     }
   }, [isOpen]);
@@ -285,15 +288,7 @@ export default function AddStaffOverlay({
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.permissionsList}>
               {[
-                {key: 'vehicleApprovals', label: t('staff.perm_vehicle_approvals')},
-                {key: 'inquiryApprovals', label: t('staff.perm_inquiry_approvals')},
-                {key: 'generateEstimates', label: t('staff.perm_generate_estimates')},
-                {key: 'createJobCard', label: t('staff.perm_create_job_card')},
-                {key: 'disputeApprovals', label: t('staff.perm_dispute_approvals')},
-                {key: 'quoteApprovalsPayments', label: t('staff.perm_quote_approvals')},
-                {key: 'addVehicle', label: t('staff.perm_add_vehicle')},
-                {key: 'raiseDispute', label: t('staff.perm_raise_dispute')},
-                {key: 'createInquiry', label: t('staff.perm_create_inquiry')},
+                {key: 'orderCatalogItems', label: t('staff.perm_order_catalog_items')},
               ].map(({key, label}) => (
                 <View key={key} style={styles.permissionRow}>
                   <Text style={[styles.permissionLabel, permissions[key as keyof StaffPermissions] && styles.permissionActive]}>

@@ -116,18 +116,24 @@ export default function PartProductCard({
         <Text style={styles.name} numberOfLines={2}>
           {product.name}
         </Text>
-        <Text style={styles.brand} numberOfLines={1}>
-          {product.brand}
-        </Text>
+        <View style={styles.brandRow}>
+          <Text style={styles.brand} numberOfLines={1}>
+            {product.brand}
+          </Text>
+          {!!product.verifyFit && (
+            <Text style={styles.verifyFit} numberOfLines={1}>
+              Verify fit
+            </Text>
+          )}
+        </View>
         <View style={styles.priceRow}>
           <Text style={styles.price}>{formatPrice(product.price)}</Text>
           {product.mrp > product.price && (
-            <Text style={styles.mrp}>MRP{formatPrice(product.mrp)}</Text>
+            <Text style={styles.mrp} numberOfLines={1}>
+              MRP{formatPrice(product.mrp)}
+            </Text>
           )}
         </View>
-        {!!product.verifyFit && (
-          <Text style={styles.verifyFit}>Verify fit</Text>
-        )}
       </View>
     </TouchableOpacity>
   );
@@ -180,11 +186,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8a8a8e',
   },
+  // Always reserve two lines so one- and two-line names give equal card heights
   name: {
     fontSize: 15,
+    lineHeight: 20,
+    height: 40,
     color: '#000000',
   },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   brand: {
+    flexShrink: 1,
     fontSize: 12,
     color: '#8a8a8e',
   },
@@ -205,6 +220,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   verifyFit: {
+    flexShrink: 0,
     fontSize: 11,
     color: '#b45309',
   },

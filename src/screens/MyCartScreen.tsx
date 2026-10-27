@@ -9,27 +9,20 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CatalogStackParamList } from '../navigation/CatalogStack';
-import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useCart } from '../context/CartContext';
 import RedHeader from '../components/catalog/RedHeader';
-import { PartRow, VehicleDetailsCard } from '../components/catalog/CartParts';
+import { PartRow } from '../components/catalog/CartParts';
 import { useTabBarHeight } from '../components/catalog/useTabBarHeight';
 import { useInquiryWithVehicle } from '../components/catalog/useInquiryWithVehicle';
 import AppAlert from '../components/overlays/AppAlert';
+import { LineItemSkeleton, Skeleton } from '../components/catalog/Skeleton';
 
 export default function MyCartScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<CatalogStackParamList>>();
   const tabBarHeight = useTabBarHeight();
-  const {
-    items,
-    loading,
-    vehicle,
-    increment,
-    decrement,
-    removeWhere,
-    refresh,
-  } = useCart();
+  const { items, loading, increment, decrement, removeWhere, refresh } =
+    useCart();
   const { send: sendInquiry, element: inquiryFlow } = useInquiryWithVehicle();
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
@@ -52,14 +45,6 @@ export default function MyCartScreen() {
   const hasAvailable = availableItems.length > 0;
   const hasOutOfStock = outOfStockItems.length > 0;
 
-  const handleViewVehicle = () => {
-    if (!vehicle) return;
-    navigation
-      .getParent()
-      ?.getParent<NativeStackNavigationProp<RootStackParamList>>()
-      ?.navigate('VehicleDetail', { vehicleId: vehicle.id });
-  };
-
   const handlePlaceOrder = () => {
     const tooMany = availableItems.find(i => i.exceedsStock);
     if (tooMany) {
@@ -79,11 +64,19 @@ export default function MyCartScreen() {
     <View style={styles.container}>
       <RedHeader title="Cart" onBack={() => navigation.goBack()} />
 
-      {items.length === 0 ? (
+      {items.length === 0 && loading ? (
+        <View style={styles.content}>
+          <View style={styles.card}>
+            <Skeleton width="50%" height={14} />
+            <View style={styles.divider} />
+            <LineItemSkeleton />
+            <LineItemSkeleton />
+            <LineItemSkeleton />
+          </View>
+        </View>
+      ) : items.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>
-            {loading ? 'Loading your cart…' : 'Your cart is empty'}
-          </Text>
+          <Text style={styles.emptyTitle}>Your cart is empty</Text>
           <TouchableOpacity
             style={styles.primaryBtn}
             activeOpacity={0.85}
@@ -101,11 +94,6 @@ export default function MyCartScreen() {
               { paddingBottom: tabBarHeight + 16 },
             ]}
           >
-            <VehicleDetailsCard
-              vehicle={vehicle}
-              onViewDetails={handleViewVehicle}
-            />
-
             {hasAvailable && (
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>

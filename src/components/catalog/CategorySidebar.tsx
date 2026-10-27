@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
+import { Skeleton } from './Skeleton';
 
 type SvgIcon = React.FC<{ width?: number; height?: number; color?: string }>;
 
@@ -27,6 +28,8 @@ interface CategorySidebarProps {
   selectedKey: string;
   onSelect: (key: string) => void;
   bottomInset?: number;
+  // Categories are still being fetched: grey tiles follow the ones already known
+  loading?: boolean;
 }
 
 const ICON_SIZE = 44;
@@ -98,6 +101,7 @@ export default function CategorySidebar({
   selectedKey,
   onSelect,
   bottomInset = 0,
+  loading = false,
 }: CategorySidebarProps) {
   return (
     <ScrollView
@@ -141,6 +145,17 @@ export default function CategorySidebar({
           </TouchableOpacity>
         );
       })}
+      {loading &&
+        [0, 1, 2, 3].map(i => (
+          <View key={`sk${i}`} style={[styles.tile, styles.tileIdle]}>
+            <Skeleton
+              width={ICON_SIZE}
+              height={ICON_SIZE}
+              radius={ICON_SIZE / 2}
+            />
+            <Skeleton width="70%" height={10} />
+          </View>
+        ))}
     </ScrollView>
   );
 }

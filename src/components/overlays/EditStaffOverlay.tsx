@@ -50,6 +50,7 @@ export interface StaffPermissions {
   addVehicle: boolean;
   raiseDispute: boolean;
   createInquiry: boolean;
+  orderCatalogItems: boolean;
 }
 
 const BackIcon = () => (
@@ -98,6 +99,7 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
     addVehicle: false,
     raiseDispute: false,
     createInquiry: false,
+    orderCatalogItems: false,
   });
 
   const [showPermissions, setShowPermissions] = useState(false);
@@ -158,7 +160,8 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
     permissions.quoteApprovalsPayments !== staffData.permissions.quoteApprovalsPayments ||
     permissions.addVehicle !== staffData.permissions.addVehicle ||
     permissions.raiseDispute !== staffData.permissions.raiseDispute ||
-    permissions.createInquiry !== staffData.permissions.createInquiry
+    permissions.createInquiry !== staffData.permissions.createInquiry ||
+    permissions.orderCatalogItems !== staffData.permissions.orderCatalogItems
   );
 
   const hasChanges = staffData && (
@@ -253,15 +256,7 @@ export default function EditStaffOverlay({isOpen, onClose, onUpdate, onToggleAct
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.permissionsList}>
               {[
-                {key: 'vehicleApprovals', label: t('staff.perm_vehicle_approvals')},
-                {key: 'inquiryApprovals', label: t('staff.perm_inquiry_approvals')},
-                {key: 'generateEstimates', label: t('staff.perm_generate_estimates')},
-                {key: 'createJobCard', label: t('staff.perm_create_job_card')},
-                {key: 'disputeApprovals', label: t('staff.perm_dispute_approvals')},
-                {key: 'quoteApprovalsPayments', label: t('staff.perm_quote_approvals')},
-                {key: 'addVehicle', label: t('staff.perm_add_vehicle')},
-                {key: 'raiseDispute', label: t('staff.perm_raise_dispute')},
-                {key: 'createInquiry', label: t('staff.perm_create_inquiry')},
+                {key: 'orderCatalogItems', label: t('staff.perm_order_catalog_items')},
               ].map(({key, label}) => (
                 <View key={key} style={styles.permissionRow}>
                   <Text style={[styles.permissionLabel, permissions[key as keyof StaffPermissions] && styles.permissionActive]}>

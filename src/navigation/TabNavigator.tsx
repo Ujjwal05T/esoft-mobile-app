@@ -10,7 +10,7 @@ import {
   OwnerDashboardScreen,
   OrdersScreen,
 } from '../screens';
-import CatalogStack from './CatalogStack';
+import CatalogGate from './CatalogGate';
 import HomeIcon from '../assets/icons/home.svg';
 import VehicleIcon from '../assets/icons/vehicle.svg';
 import OrderIcon from '../assets/icons/order.svg';
@@ -115,7 +115,7 @@ const TabNavigator: React.FC = () => {
       <Tab.Screen name="Vehicle" component={VehicleScreen} />
       <Tab.Screen name="Orders" component={OrdersScreen} />
       <Tab.Screen name="Inquiry" component={InquiryScreen} />
-      <Tab.Screen name="Catalog" component={CatalogStack} />
+      <Tab.Screen name="Catalog" component={CatalogGate} />
     </Tab.Navigator>
   );
 };

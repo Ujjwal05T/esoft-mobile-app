@@ -94,7 +94,7 @@ const BackIcon = () => (
 export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
   const navigation = useNavigation<any>();
   const {t} = useTranslation();
-  const {user, signOut, userRole} = useAuth();
+  const {user, signOut, userRole, refreshUser} = useAuth();
   const translateX = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const [showContactOverlay, setShowContactOverlay] = useState(false);
@@ -102,6 +102,8 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
 
   useEffect(() => {
     if (isOpen) {
+      // The name and e-mail shown here come from the saved login copy: bring them up to date
+      refreshUser().catch(() => {});
       Animated.parallel([
         Animated.timing(translateX, {
           toValue: 0,
@@ -128,7 +130,7 @@ export default function MobileSidebar({isOpen, onClose}: MobileSidebarProps) {
         }),
       ]).start();
     }
-  }, [isOpen, translateX, backdropOpacity]);
+  }, [isOpen, translateX, backdropOpacity, refreshUser]);
 
   const navigate = (screen: string) => {
     navigation.navigate(screen);

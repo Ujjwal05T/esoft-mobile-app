@@ -113,6 +113,10 @@ const styles = StyleSheet.create({
     height: 36,
     marginLeft: 8,
     paddingHorizontal: 12,
+    // Android adds its own vertical padding and font padding, which crops the text
+    paddingVertical: 0,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
     borderRadius: 8,
     backgroundColor: 'rgba(255,255,255,0.2)',
     fontSize: 15,

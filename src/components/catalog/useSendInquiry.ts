@@ -33,18 +33,13 @@ const JOB_CATEGORY = 'Default';
 export function useSendInquiry() {
   const navigation =
     useNavigation<NativeStackNavigationProp<CatalogStackParamList>>();
-  const { items, vehicle, removeWhere } = useCart();
+  const { items, removeWhere } = useCart();
 
-  // With no items given it sends the cart's on-order parts.
-  // `vehicleOverride` is for a vehicle picked a moment ago, before the cart has re-rendered with it.
+  // With no items given it sends the cart's on-order parts, linked to the vehicle chosen for the inquiry.
   return async (
-    itemsOverride?: CartItem[],
-    vehicleOverride?: VehicleBasicInfo,
+    itemsOverride: CartItem[] | undefined,
+    inquiryVehicle: VehicleBasicInfo,
   ): Promise<string | null> => {
-    const inquiryVehicle = vehicleOverride ?? vehicle;
-    if (!inquiryVehicle) {
-      return 'Please select a vehicle before sending an inquiry.';
-    }
     const toSend =
       itemsOverride ??
       items.filter(i => i.product.outOfStock && !i.unavailable);
@@ -89,6 +84,7 @@ export function useSendInquiry() {
         MONTHS[placed.getMonth()]
       } ${placed.getFullYear()}`,
       items: toSend,
+      vehicle: inquiryVehicle,
     });
     return null;
   };

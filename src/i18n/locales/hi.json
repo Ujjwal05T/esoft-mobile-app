@@ -444,6 +444,7 @@
   "staff.perm_add_vehicle": "वाहन जोड़ें",
   "staff.perm_raise_dispute": "विवाद दर्ज करें",
   "staff.perm_create_inquiry": "पूछताछ बनाएं",
+  "staff.perm_order_catalog_items": "कैटलॉग आइटम ऑर्डर कर सकते हैं",
 
   "profile.loading": "प्रोफ़ाइल लोड हो रही है...",
   "profile.failed_to_load": "प्रोफ़ाइल लोड करने में विफल",

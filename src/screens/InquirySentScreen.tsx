@@ -14,7 +14,6 @@ import type {
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CatalogStackParamList } from '../navigation/CatalogStack';
 import type { MainTabParamList } from '../navigation/TabNavigator';
-import { useCart } from '../context/CartContext';
 import RedHeader from '../components/catalog/RedHeader';
 import { PartRow, VehicleDetailsCard } from '../components/catalog/CartParts';
 import { useTabBarHeight } from '../components/catalog/useTabBarHeight';
@@ -27,7 +26,6 @@ export default function InquirySentScreen() {
     useNavigation<NativeStackNavigationProp<CatalogStackParamList>>();
   const { params } = useRoute<Props['route']>();
   const tabBarHeight = useTabBarHeight();
-  const { vehicle } = useCart();
 
   const goToCatalog = () => navigation.popToTop();
 
@@ -55,7 +53,7 @@ export default function InquirySentScreen() {
       >
         <View style={styles.sentCard}>
           <View style={styles.sentHeader}>
-            <Text style={styles.sentTitle}>Inquiry Sent to ETNA</Text>
+            <Text style={styles.sentTitle}>Inquiry Sent to Parts Now</Text>
             <View style={styles.pendingPill}>
               <Text style={styles.pendingText}>Pending</Text>
             </View>
@@ -79,25 +77,16 @@ export default function InquirySentScreen() {
           </View>
         </View>
 
-        <VehicleDetailsCard vehicle={vehicle} />
+        <VehicleDetailsCard vehicle={params.vehicle} />
 
         <View style={styles.outCard}>
-          <Text style={styles.outTitle}>
-            On Order ({params.items.length})
-          </Text>
+          <Text style={styles.outTitle}>On Order ({params.items.length})</Text>
           <View style={styles.outDivider} />
           {params.items.map((item, i) => (
             <View key={item.product.id} style={i > 0 && styles.separator}>
               <PartRow item={item} />
             </View>
           ))}
-          <View style={styles.outDivider} />
-          {/* Inquiry is already raised, so the action is shown but disabled */}
-          <View style={[styles.outlineBtn, styles.disabled]}>
-            <Text style={styles.outlineBtnText}>
-              Send Inquiry for Availability
-            </Text>
-          </View>
         </View>
 
         <TouchableOpacity
@@ -168,17 +157,6 @@ const styles = StyleSheet.create({
   outTitle: { fontSize: 14, fontWeight: '600', color: '#e5383b' },
   outDivider: { height: 1, backgroundColor: '#f3c9c5', marginVertical: 8 },
   separator: { borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  outlineBtn: {
-    height: 40,
-    borderWidth: 1,
-    borderColor: '#e5383b',
-    borderRadius: 4,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  disabled: { opacity: 0.5 },
-  outlineBtnText: { fontSize: 14, color: '#e5383b' },
   primaryBtn: {
     height: 46,
     borderRadius: 4,

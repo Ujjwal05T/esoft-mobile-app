@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Svg, {Path, Circle} from 'react-native-svg';
 import {useTranslation} from 'react-i18next';
@@ -22,6 +24,7 @@ import {
 } from '../services/api';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import ContactETNAOverlay from '../components/overlays/ContactETNAOverlay';
+import {useAuth} from '../context/AuthContext';
 
 const LanguageIcon = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -102,6 +105,7 @@ interface EditableProfile {
 
 export default function StaffProfileScreen() {
   const {t} = useTranslation();
+  const {refreshUser} = useAuth();
   const navigation = useNavigation();
   const [profile, setProfile] = useState<WorkshopStaffResponse | null>(null);
   const [editableProfile, setEditableProfile] = useState<EditableProfile>({
@@ -164,6 +168,8 @@ export default function StaffProfileScreen() {
       });
       setAppAlert({type: 'success', message: t('profile.update_success')});
       setIsEditing(false);
+      // The sidebar shows the saved login copy of the name and e-mail: update it too
+      refreshUser().catch(() => {});
     } else {
       setAppAlert({type: 'error', message: response.error || t('profile.update_failed')});
     }
@@ -240,9 +246,17 @@ export default function StaffProfileScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Lifted above the keyboard while a field is being edited */}
+      <KeyboardAvoidingView
+        style={styles.scrollView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isEditing && styles.scrollContentEditing,
+        ]}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -336,6 +350,7 @@ export default function StaffProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <ContactETNAOverlay
         isOpen={supportOpen}
@@ -393,6 +408,8 @@ const styles = StyleSheet.create({
   headerTitle: {fontSize: 20, fontWeight: '600', color: '#e5383b'},
   scrollView: {flex: 1},
   scrollContent: {paddingHorizontal: 16, paddingBottom: 32},
+  // Room to scroll the last fields up above the keyboard
+  scrollContentEditing: {paddingBottom: 160},
   avatarSection: {alignItems: 'center', paddingVertical: 32},
   avatarBox: {
     width: 108,

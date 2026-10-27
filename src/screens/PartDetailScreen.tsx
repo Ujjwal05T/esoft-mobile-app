@@ -25,6 +25,7 @@ import RedHeader from '../components/catalog/RedHeader';
 import VehiclePicker from '../components/catalog/VehiclePicker';
 import { ChevronDown } from '../components/catalog/icons';
 import ImagePlaceholder from '../components/catalog/ImagePlaceholder';
+import { ProductCardSkeleton, Skeleton } from '../components/catalog/Skeleton';
 import PillButton from '../components/catalog/PillButton';
 import { getVehicleFullName } from '../components/catalog/SelectCarOverlay';
 import { formatPrice } from '../components/catalog/CartParts';
@@ -61,12 +62,19 @@ export default function PartDetailScreen() {
   const [activeId, setActiveId] = useState(Number(initialProduct.id));
   const [detail, setDetail] = useState<CatalogItemDetail | null>(null);
   const [related, setRelated] = useState<CatalogItemSummary[]>([]);
+  // Which item the detail / related parts last failed or finished for (drives the skeletons)
+  const [failedId, setFailedId] = useState<number | null>(null);
+  const [relatedFor, setRelatedFor] = useState<number | null>(null);
 
   // Full detail (images, specifications, compatibility, siblings) from the catalog API
   useEffect(() => {
     let cancelled = false;
     getCatalogProduct(activeId, vehicle?.id).then(res => {
-      if (cancelled || !res.success || !res.data) return;
+      if (cancelled) return;
+      if (!res.success || !res.data) {
+        setFailedId(activeId);
+        return;
+      }
       setDetail(res.data);
       setImageIndex(0);
     });
@@ -87,7 +95,9 @@ export default function PartDetailScreen() {
       excludeProductId: detailProductId,
       pageSize: 7,
     }).then(res => {
-      if (!cancelled && res.success && res.data) setRelated(res.data.items);
+      if (cancelled) return;
+      if (res.success && res.data) setRelated(res.data.items);
+      setRelatedFor(detailProductId);
     });
     return () => {
       cancelled = true;
@@ -96,6 +106,9 @@ export default function PartDetailScreen() {
 
   // Until the detail arrives (or while switching), show what the card already knew
   const ready = detail && detail.variantId === activeId ? detail : null;
+  const detailLoading = !ready && failedId !== activeId;
+  const relatedLoading =
+    failedId !== activeId && (!ready || relatedFor !== ready.productId);
   const product: PartProduct = ready
     ? {
         id: String(ready.variantId),
@@ -176,11 +189,18 @@ export default function PartDetailScreen() {
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={handleScrollEnd}
           >
-            {images.length === 0 && (
-              <ImagePlaceholder
-                style={{ width: carouselWidth, height: carouselWidth / 1.5 }}
-              />
-            )}
+            {images.length === 0 &&
+              (detailLoading ? (
+                <Skeleton
+                  width={carouselWidth}
+                  height={carouselWidth / 1.5}
+                  radius={10}
+                />
+              ) : (
+                <ImagePlaceholder
+                  style={{ width: carouselWidth, height: carouselWidth / 1.5 }}
+                />
+              ))}
             {images.map((img, i) => (
               <View
                 key={i}
@@ -296,6 +316,23 @@ export default function PartDetailScreen() {
           )}
         </View>
 
+        {detailLoading && (
+          <View style={styles.detailSkeleton}>
+            <Skeleton width="95%" height={12} />
+            <Skeleton width="80%" height={12} />
+            <Skeleton width="60%" height={12} />
+            <View style={styles.detailSkeletonSpecs}>
+              {[0, 1, 2].map(i => (
+                <View key={i} style={styles.specRow}>
+                  <Skeleton width="30%" height={12} />
+                  <Skeleton width="35%" height={12} />
+                </View>
+              ))}
+            </View>
+            <Skeleton height={44} radius={8} />
+          </View>
+        )}
+
         {!!ready?.description && (
           <Text style={styles.description}>{ready.description}</Text>
         )}
@@ -332,7 +369,25 @@ export default function PartDetailScreen() {
           </View>
         )}
 
-        {related.length > 0 && (
+        {relatedLoading && (
+          <View style={styles.recommended}>
+            <Skeleton
+              width="45%"
+              height={16}
+              style={styles.relatedTitleSkeleton}
+            />
+            <View style={styles.relatedSkeletonRow}>
+              <View style={styles.recommendedItem}>
+                <ProductCardSkeleton />
+              </View>
+              <View style={styles.recommendedItem}>
+                <ProductCardSkeleton />
+              </View>
+            </View>
+          </View>
+        )}
+
+        {!relatedLoading && related.length > 0 && (
           <View style={styles.recommended}>
             <Text style={styles.recommendedTitle}>
               More in {ready?.categoryName ?? categoryTitle}
@@ -572,6 +627,15 @@ const styles = StyleSheet.create({
   },
   recommendedRow: { gap: 12 },
   recommendedItem: { width: 170 },
+  relatedTitleSkeleton: { marginBottom: 12 },
+  relatedSkeletonRow: { flexDirection: 'row', gap: 12 },
+  detailSkeleton: { marginTop: 14, gap: 10 },
+  detailSkeletonSpecs: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    marginTop: 4,
+  },
 
   bottomBar: {
     position: 'absolute',

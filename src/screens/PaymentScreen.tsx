@@ -96,6 +96,21 @@ const animateLayout = () => {
 export default function PaymentScreen() {
   const {t} = useTranslation();
   const navigation = useNavigation<PaymentNavProp>();
+
+  // After the order is placed, drop the quote and payment screens from the history: Back from the order
+  // goes to the Orders tab, never to a payment screen for something that is already paid.
+  const showPlacedOrder = useCallback(
+    (orderId?: number) => {
+      navigation.reset({
+        index: orderId ? 1 : 0,
+        routes: [
+          {name: 'MainTabs', params: {screen: 'Orders'}},
+          ...(orderId ? [{name: 'OrderDetail' as const, params: {orderId}}] : []),
+        ],
+      });
+    },
+    [navigation],
+  );
   const route = useRoute<PaymentRouteProp>();
   const {quoteId, selectedItemIds} = route.params;
   const {user} = useAuth();
@@ -363,8 +378,7 @@ export default function PaymentScreen() {
           setAppAlert({
             type: 'success',
             message: t('payment.success'),
-            onDone: () =>
-              navigation.navigate('QuoteDetail', {quoteId: quote.id}),
+            onDone: () => showPlacedOrder(verifyResult.data?.orderId),
           });
         } else {
           console.error('[Payment] Verification failed:', verifyResult);
@@ -407,7 +421,7 @@ export default function PaymentScreen() {
         setSelectedMethod(null);
       }
     },
-    [quote, paymentLoading, navigation, appliedCoupon],
+    [quote, paymentLoading, navigation, appliedCoupon, showPlacedOrder],
   );
 
   const handleCod = useCallback(
@@ -427,8 +441,7 @@ export default function PaymentScreen() {
           setAppAlert({
             type: 'success',
             message: t('payment.cod_success'),
-            onDone: () =>
-              navigation.navigate('QuoteDetail', {quoteId: quote.id}),
+            onDone: () => showPlacedOrder(result.data?.orderId),
           });
         } else {
           setAppAlert({type: 'error', message: t('payment.cod_failed')});
@@ -445,7 +458,7 @@ export default function PaymentScreen() {
       paymentLoading,
       selectedItemIds,
       appliedCoupon,
-      navigation,
+      showPlacedOrder,
       t,
     ],
   );

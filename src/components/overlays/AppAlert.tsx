@@ -38,7 +38,7 @@ interface AppAlertProps {
 const TYPE_CONFIG: Record<AlertType, {color: string; defaultTitleKey: string}> = {
   success: {color: '#22c55e', defaultTitleKey: 'common.success'},
   error:   {color: '#e5383b', defaultTitleKey: 'common.error'},
-  confirm: {color: '#f59e0b', defaultTitleKey: 'common.confirm'},
+  confirm: {color: '#e5383b', defaultTitleKey: 'common.confirm'},
   warning: {color: '#f97316', defaultTitleKey: 'common.warning'},
   info:    {color: '#3b82f6', defaultTitleKey: 'common.info'},
 };
