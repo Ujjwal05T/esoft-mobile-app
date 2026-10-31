@@ -1,7 +1,7 @@
 import React from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import type {BottomTabBarProps} from '@react-navigation/bottom-tabs';
-import {View, Text, TouchableOpacity, StyleSheet, useWindowDimensions, Platform} from 'react-native';
+import {View, Text, TouchableOpacity, StyleSheet, useWindowDimensions} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
 import {
@@ -11,6 +11,7 @@ import {
   OrdersScreen,
 } from '../screens';
 import CatalogGate from './CatalogGate';
+import {getTabBarBottom} from '../components/catalog/useTabBarHeight';
 import HomeIcon from '../assets/icons/home.svg';
 import VehicleIcon from '../assets/icons/vehicle.svg';
 import OrderIcon from '../assets/icons/order.svg';
@@ -53,7 +54,7 @@ function TabBar({state, navigation}: BottomTabBarProps) {
     <View
       style={[
         styles.wrapper,
-        {bottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 12)-10},
+        {bottom: getTabBarBottom(insets.bottom)},
       ]}>
       <View style={styles.tabsRow}>
         {state.routes.map((route, index) => {

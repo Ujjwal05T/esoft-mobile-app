@@ -6,7 +6,7 @@ import {formatPlateNumber} from '../../utils/formatPlate';
 import {useTranslation} from 'react-i18next';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const DEFAULT_CAR_IMAGE = require('../../assets/images/default-car.png') as number;
+const DEFAULT_CAR_IMAGE = require('../../assets/images/universal-car-image.png') as number;
 
 interface VehicleCardProps {
   plateNumber: string;

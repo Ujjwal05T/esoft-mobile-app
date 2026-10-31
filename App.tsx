@@ -53,7 +53,7 @@ function App(): React.JSX.Element {
         require('./src/assets/logos/parts_now.png'),
         require('./src/assets/images/car-silhouette.png'),
         require('./src/assets/images/car-suv.png'),
-        require('./src/assets/images/default-car.png'),
+        require('./src/assets/images/universal-car-image.png'),
         require('./src/assets/images/event-car.png'),
         require('./src/assets/images/oil-filter.png'),
         require('./src/assets/images/rc-card.png'),

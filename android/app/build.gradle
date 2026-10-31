@@ -89,8 +89,8 @@ android {
         applicationId "com.esoft.partsnow"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 48
-        versionName "1.5.3"
+        versionCode 52
+        versionName "1.5.5"
         ndk {
             abiFilters "arm64-v8a"
         }
@@ -120,8 +120,10 @@ android {
         }
         release {
         signingConfig signingConfigs.release
-        minifyEnabled false
-        shrinkResources false
+        // R8: shrinks and obfuscates the Java/Kotlin code. The app bundle then carries the mapping file Play Console
+        // uses to read crashes and ANRs. Keep rules for libraries that need them are in proguard-rules.pro.
+        minifyEnabled enableProguardInReleaseBuilds
+        shrinkResources enableProguardInReleaseBuilds
         proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
     }
     }

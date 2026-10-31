@@ -1,6 +1,6 @@
 {
   "name": "esoft",
-  "version": "0.0.1",
+  "version": "1.5.5",
   "private": true,
   "scripts": {
     "android": "react-native run-android",

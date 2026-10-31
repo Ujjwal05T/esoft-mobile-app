@@ -288,6 +288,7 @@ export default function AddStaffOverlay({
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.permissionsList}>
               {[
+                {key: 'quoteApprovalsPayments', label: t('staff.perm_quote_approvals')},
                 {key: 'orderCatalogItems', label: t('staff.perm_order_catalog_items')},
               ].map(({key, label}) => (
                 <View key={key} style={styles.permissionRow}>

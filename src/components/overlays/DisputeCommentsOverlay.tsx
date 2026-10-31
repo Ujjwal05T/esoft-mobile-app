@@ -11,7 +11,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
-  Dimensions,
   Image,
 } from 'react-native';
 import SheetModal from '../ui/SheetModal';
@@ -29,7 +28,6 @@ import {
 import {useAuth} from '../../context/AuthContext';
 import {formatTimeIST} from '../../utils/dateUtils';
 
-const SCREEN_H = Dimensions.get('screen').height;
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -528,7 +526,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingTop: 12,
-    maxHeight: SCREEN_H * 0.92,
+    maxHeight: '92%',
   },
   handle: {
     width: 172,

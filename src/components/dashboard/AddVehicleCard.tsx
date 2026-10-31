@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import ArrowDiagonalIcon from '../../assets/icons/arrow-diagonal.svg';
@@ -11,8 +11,15 @@ interface AddVehicleCardProps {
 
 export default function AddVehicleCard({onPress}: AddVehicleCardProps) {
   const {t} = useTranslation();
+  const [cardWidth, setCardWidth] = useState(REF_WIDTH);
+  // Scale the artwork with the card width so it stays between title and arrow.
+  const scale = Math.min(1.3, Math.max(0.8, cardWidth / REF_WIDTH));
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      style={styles.card}
+      onLayout={e => setCardWidth(e.nativeEvent.layout.width)}>
       <LinearGradient
         colors={['#e5383b', '#bb282b']}
         start={{x: 0, y: 0}}
@@ -21,7 +28,15 @@ export default function AddVehicleCard({onPress}: AddVehicleCardProps) {
         {/* Background car silhouette */}
         <Image
           source={require('../../assets/images/car-silhouette.png')}
-          style={styles.carSilhouette}
+          style={[
+            styles.carSilhouette,
+            {
+              left: 81 * scale,
+              top: CAR_CENTER_Y - 0.626 * 298 * scale,
+              width: 510 * scale,
+              height: 298 * scale,
+            },
+          ]}
           resizeMode="contain"
         />
 
@@ -36,6 +51,10 @@ export default function AddVehicleCard({onPress}: AddVehicleCardProps) {
     </TouchableOpacity>
   );
 }
+
+// Card width the artwork offsets below were tuned against.
+const REF_WIDTH = 361;
+const CAR_CENTER_Y = 69;
 
 const styles = StyleSheet.create({
   card: {
@@ -52,10 +71,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     // Anchored from the left (not the right) so its position doesn't shift
     // with the card's width — see AddVehicleCard note below.
-    left: 60,
-    top: -150,
-    width: 600,
-    height: 350,
   },
   title: {
     position: 'absolute',

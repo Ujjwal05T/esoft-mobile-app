@@ -7,7 +7,6 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
-  Dimensions,
 } from 'react-native';
 import SheetModal from '../ui/SheetModal';
 import Svg, {Path} from 'react-native-svg';
@@ -19,7 +18,6 @@ import {
   type CouponValidationResponse,
 } from '../../services/api';
 
-const SCREEN_H = Dimensions.get('screen').height;
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -371,7 +369,7 @@ const s = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    maxHeight: SCREEN_H * 0.65,
+    maxHeight: '65%',
     paddingBottom: 40,
     paddingTop: 16,
     paddingHorizontal: 18,

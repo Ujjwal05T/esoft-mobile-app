@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   ScrollView,
   FlatList,
-  Dimensions,
 } from 'react-native';
 import SheetModal from '../ui/SheetModal';
 import Svg, {Path} from 'react-native-svg';
@@ -20,7 +19,6 @@ import {
   type VehicleVisitResponse,
 } from '../../services/api';
 
-const SCREEN_H = Dimensions.get('screen').height;
 
 export interface VehicleInfo {
   plateNumber: string;
@@ -301,7 +299,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    maxHeight: SCREEN_H * 0.85,
+    maxHeight: '85%',
     paddingBottom: 40,
     paddingTop: 16,
     paddingHorizontal: 18,

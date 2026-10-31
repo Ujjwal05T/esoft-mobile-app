@@ -89,6 +89,8 @@
   "vehicle.manual_error": "चेसिस नंबर दर्ज करें, या वाहन नंबर + ब्रांड/मॉडल/वर्ष/वेरिएंट भरें",
   "vehicle.loading_brands": "ब्रांड लोड हो रहे हैं...",
   "vehicle.loading_models": "मॉडल लोड हो रहे हैं...",
+  "vehicle.brand_other": "अन्य",
+  "vehicle.model_any": "कोई भी / सभी",
   "vehicle.loading_years": "वर्ष लोड हो रहे हैं...",
   "vehicle.loading_variants": "वेरिएंट लोड हो रहे हैं...",
   "vehicle.add_vehicle_details": "वाहन विवरण जोड़ें",

@@ -77,6 +77,11 @@ const BRAND_LOGOS: Record<string, React.ComponentType<any>> = {
   'HYUNDAI': Hyundai,
 };
 
+// Sentinel values saved in Vehicles.Brand / Vehicles.Model for vehicles outside Car_Master_Data
+const OTHER_BRAND = 'OTHER';
+const ANY_MODEL = 'ANY';
+const ANY_MODEL_OPTION: CarModelOption = {model: ANY_MODEL, imageUrl: null};
+
 function BrandPicker({
   brands,
   selected,
@@ -96,7 +101,8 @@ function BrandPicker({
     setOpen(false);
   };
 
-  const sorted = brands.filter(b => !!BRAND_LOGOS[b]);
+  const sorted = [...brands.filter(b => !!BRAND_LOGOS[b]), OTHER_BRAND];
+  const brandLabel = (b: string) => (b === OTHER_BRAND ? t('vehicle.brand_other') : b);
 
   return (
     <View style={bpStyles.wrap}>
@@ -112,7 +118,7 @@ function BrandPicker({
           <ActivityIndicator size="small" color="#e5383b" style={{marginRight: 4}} />
         ) : null}
         <Text style={[bpStyles.headerText, !selected && bpStyles.headerPlaceholder]}>
-          {loading ? t('vehicle.loading_brands') : selected || t('vehicle.brand')}
+          {loading ? t('vehicle.loading_brands') : selected ? brandLabel(selected) : t('vehicle.brand')}
         </Text>
         <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
           <Path
@@ -152,7 +158,7 @@ function BrandPicker({
                         <Text
                           style={[bpStyles.tileText, isSelected && bpStyles.tileTextSelected]}
                           numberOfLines={2}>
-                          {brand}
+                          {brandLabel(brand)}
                         </Text>
                       )}
                     </TouchableOpacity>
@@ -233,7 +239,7 @@ const bpStyles = StyleSheet.create({
   tileTextSelected: {color: '#e5383b'},
 });
 
-const DEFAULT_CAR_FALLBACK = require('../../assets/images/default-car.png') as number;
+const DEFAULT_CAR_FALLBACK = require('../../assets/images/universal-car-image.png') as number;
 
 function ModelTileImage({uri}: {uri: string | null}) {
   const [errored, setErrored] = useState(false);
@@ -270,6 +276,8 @@ function ModelPicker({
     setOpen(false);
   };
 
+  const modelLabel = (m: string) => (m === ANY_MODEL ? t('vehicle.model_any') : m);
+
   return (
     <View style={mpStyles.wrap}>
       {selected ? <Text style={mpStyles.floatLabel}>{t('vehicle.model')}</Text> : null}
@@ -281,7 +289,7 @@ function ModelPicker({
           <ActivityIndicator size="small" color="#e5383b" style={{marginRight: 4}} />
         ) : null}
         <Text style={[mpStyles.headerText, !selected && mpStyles.headerPlaceholder]}>
-          {loading ? t('vehicle.loading_models') : selected || t('vehicle.model')}
+          {loading ? t('vehicle.loading_models') : selected ? modelLabel(selected) : t('vehicle.model')}
         </Text>
         <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
           <Path
@@ -308,7 +316,7 @@ function ModelPicker({
                       style={[mpStyles.tile, isSelected && mpStyles.tileSelected]}>
                       <ModelTileImage uri={m.imageUrl} />
                       <Text style={[mpStyles.tileLabel, isSelected && mpStyles.tileLabelSelected]} numberOfLines={1}>
-                        {m.model}
+                        {modelLabel(m.model)}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -620,9 +628,13 @@ export default function AddVehicleOverlay({
     setVariantOptions([]);
     setSelectedModelImageUrl(null);
     if (!selectedBrand) return;
+    if (selectedBrand === OTHER_BRAND) {
+      setModelOptions([ANY_MODEL_OPTION]);
+      return;
+    }
     setLoadingModels(true);
     getCarModels(selectedBrand)
-      .then(r => { if (r.success && r.data) setModelOptions(r.data); })
+      .then(r => { if (r.success && r.data) setModelOptions([ANY_MODEL_OPTION, ...r.data]); })
       .finally(() => setLoadingModels(false));
   }, [selectedBrand]);
 
@@ -631,6 +643,7 @@ export default function AddVehicleOverlay({
     setYearOptions([]);
     setVariantOptions([]);
     if (!selectedBrand || !selectedModel) return;
+    if (selectedBrand === OTHER_BRAND || selectedModel === ANY_MODEL) return;
     setLoadingYears(true);
     getCarYears(selectedBrand, selectedModel)
       .then(r => { if (r.success && r.data) setYearOptions(r.data); })
@@ -641,6 +654,7 @@ export default function AddVehicleOverlay({
   useEffect(() => {
     setVariantOptions([]);
     if (!selectedBrand || !selectedModel || !selectedYear) return;
+    if (selectedBrand === OTHER_BRAND || selectedModel === ANY_MODEL) return;
     setLoadingVariants(true);
     getCarVariants(selectedBrand, selectedModel, selectedYear)
       .then(r => { if (r.success && r.data) setVariantOptions(r.data); })
@@ -1828,7 +1842,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     paddingHorizontal: 18,
     paddingBottom: 32,
-    maxHeight: SCREEN_H * 0.9,
+    maxHeight: '90%',
   },
   handle: {
     width: 172,
@@ -1905,11 +1919,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   redCardTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    lineHeight: 32,
+    lineHeight: 28,
     marginBottom: 12,
+    // Forces a two-line title ("Add Vehicle / Manually") so it stays left of the image.
+    maxWidth: 140,
   },
   diagonalArrow: {},
   redCardEmoji: {fontSize: 64, opacity: 0.9},

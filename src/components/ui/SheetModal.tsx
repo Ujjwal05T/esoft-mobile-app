@@ -1,5 +1,5 @@
-import React, {useEffect, useState} from 'react';
-import {Keyboard, Modal, ModalProps, Platform, StyleSheet, View} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {Animated, Easing, Keyboard, Modal, ModalProps, Platform, StyleSheet, View} from 'react-native';
 import {SafeAreaProvider, useSafeAreaInsets} from 'react-native-safe-area-context';
 
 // Drop-in replacement for <Modal> for bottom-sheet overlays.
@@ -9,6 +9,10 @@ import {SafeAreaProvider, useSafeAreaInsets} from 'react-native-safe-area-contex
 // system bars, the sheet's own layout is kept inside the safe area exactly where it was, and the
 // strip under the navigation bar is filled white so the sheet visually reaches the screen edge.
 // iOS and non-Android platforms render a plain Modal.
+//
+// Keyboard: neither a window under the system bars (Android) nor an iOS Modal is resized when the
+// keyboard opens, so the keyboard would cover the sheet. The sheet's container is therefore
+// shortened by the keyboard height on both platforms, which lifts the sheet above the keyboard.
 
 // Flip to false to go back to the stock Android behaviour.
 const EXTEND_UNDER_NAV_BAR = true;
@@ -32,25 +36,60 @@ function InsetProbe({onChange}: {onChange: (insets: Insets) => void}) {
 
 export default function SheetModal({children, ...props}: ModalProps) {
   const [insets, setInsets] = useState<Insets>({top: 0, bottom: 0});
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // iOS follows the keyboard with an Animated value; LayoutAnimation crashes Fabric when the
+  // sheet is unmounted while a keyboard event is still animating.
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
   const enabled = Platform.OS === 'android' && EXTEND_UNDER_NAV_BAR;
+  const isIos = Platform.OS === 'ios';
+  const visible = props.visible;
 
   useEffect(() => {
-    if (!enabled) return;
-    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    // Android's window is only resized by the system when it is not extended under the bars
+    if (!enabled && !isIos) return;
+    // Every overlay keeps a SheetModal mounted, so only the one on screen follows the keyboard
+    if (!visible) {
+      keyboardOffset.setValue(0);
+      setKeyboardHeight(0);
+      return;
+    }
+    // iOS reports the keyboard before it animates, so the sheet can follow it
+    const showEvent = isIos ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = isIos ? 'keyboardWillHide' : 'keyboardDidHide';
+    const moveTo = (height: number, duration?: number) => {
+      if (!isIos) {
+        setKeyboardHeight(height);
+        return;
+      }
+      Animated.timing(keyboardOffset, {
+        toValue: height,
+        duration: duration || 250,
+        easing: Easing.bezier(0.17, 0.59, 0.4, 0.77),
+        useNativeDriver: false,
+      }).start();
+    };
+    const show = Keyboard.addListener(showEvent, e => moveTo(e.endCoordinates.height, e.duration));
+    const hide = Keyboard.addListener(hideEvent, e => moveTo(0, e.duration));
     return () => {
       show.remove();
       hide.remove();
+      keyboardOffset.stopAnimation();
     };
-  }, [enabled]);
+  }, [enabled, isIos, keyboardOffset, visible]);
 
   if (!enabled) {
-    return <Modal {...props}>{children}</Modal>;
+    if (!isIos) {
+      return <Modal {...props}>{children}</Modal>;
+    }
+    return (
+      <Modal {...props}>
+        <Animated.View style={[styles.content, {top: 0, bottom: keyboardOffset}]}>{children}</Animated.View>
+      </Modal>
+    );
   }
 
-  // With the keyboard open the window already ends above it, so no navigation-bar strip is needed
-  const bottom = keyboardVisible ? 0 : insets.bottom;
+  // With the keyboard open the sheet ends at its top edge, so no navigation-bar strip is needed
+  const bottom = keyboardHeight > 0 ? keyboardHeight : insets.bottom;
 
   return (
     <Modal statusBarTranslucent navigationBarTranslucent {...props}>
@@ -58,7 +97,7 @@ export default function SheetModal({children, ...props}: ModalProps) {
         <InsetProbe onChange={setInsets} />
       </SafeAreaProvider>
       <View style={[styles.content, {top: insets.top, bottom}]}>{children}</View>
-      {bottom > 0 && <View pointerEvents="none" style={[styles.strip, {height: bottom}]} />}
+      {keyboardHeight === 0 && bottom > 0 && <View pointerEvents="none" style={[styles.strip, {height: bottom}]} />}
     </Modal>
   );
 }

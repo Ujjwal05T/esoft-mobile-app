@@ -18,7 +18,7 @@ import { getCurrentVehicles, type VehicleBasicInfo } from '../../services/api';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const DEFAULT_CAR_IMAGE =
-  require('../../assets/images/default-car.png') as number;
+  require('../../assets/images/universal-car-image.png') as number;
 
 export const getVehicleTitle = (v: VehicleBasicInfo) =>
   [v.brand, v.model].filter(Boolean).join(' ') || v.plateNumber;

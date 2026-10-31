@@ -38,6 +38,7 @@ const PERMISSION_LABELS: {key: keyof StaffPermissions; label: string}[] = [
   {key: 'addVehicle', label: 'Add Vehicle'},
   {key: 'raiseDispute', label: 'Raise Dispute'},
   {key: 'createInquiry', label: 'Create Inquiry'},
+  {key: 'orderCatalogItems', label: 'Can order catalog items'},
 ];
 
 export default function ViewStaffOverlay({

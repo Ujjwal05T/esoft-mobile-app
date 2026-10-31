@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import {
   View,
@@ -640,12 +640,16 @@ export default function InquiryScreen() {
     return result;
   };
 
-  const handleRequestPartSubmit = async (parts: any[]) => {
+  // The success alert is held until the request-part sheet has closed: presenting a Modal over a
+  // sheet that is then dismissed leaves an invisible modal on iOS and freezes the screen.
+  const pendingInquiryAlert = useRef<string | null>(null);
+
+  const handleRequestPartSubmit = async (parts: any[]): Promise<boolean> => {
     try {
       const user = await getStoredUser();
       if (!user || !selectedVehicle) {
         setAppAlert({type: 'error', message: 'User or vehicle not found. Please try again.'});
-        return;
+        return false;
       }
 
       // Collect all audio and image files from parts
@@ -695,14 +699,26 @@ export default function InquiryScreen() {
       );
 
       if (result.success) {
-        setAppAlert({type: 'success', message: `Inquiry created successfully!\n\nInquiry Number: ${result.data?.inquiryNumber || 'N/A'}`, onDone: () => { setShowRequestPart(false); fetchInquiries(); }});
-      } else {
-        setAppAlert({type: 'error', message: result.error || 'Failed to create inquiry'});
+        pendingInquiryAlert.current = `Inquiry created successfully!\n\nInquiry Number: ${result.data?.inquiryNumber || 'N/A'}`;
+        fetchInquiries();
+        return true;
       }
+      setAppAlert({type: 'error', message: result.error || 'Failed to create inquiry'});
+      return false;
     } catch (error) {
       console.error('Error creating inquiry:', error);
       setAppAlert({type: 'error', message: 'An error occurred while creating the inquiry'});
+      return false;
     }
+  };
+
+  const handleRequestPartClose = () => {
+    setShowRequestPart(false);
+    const message = pendingInquiryAlert.current;
+    if (!message) return;
+    pendingInquiryAlert.current = null;
+    // Wait for the sheet's dismiss animation (~0.5s) before presenting the alert
+    setTimeout(() => setAppAlert({type: 'success', message}), 700);
   };
 
   const handleDisputeConfirm = async (formData: any) => {
@@ -1113,7 +1129,7 @@ export default function InquiryScreen() {
       {selectedVehicle && (
         <RequestPartOverlay
           isOpen={showRequestPart}
-          onClose={() => setShowRequestPart(false)}
+          onClose={handleRequestPartClose}
           onSubmit={handleRequestPartSubmit}
           onBulkSubmit={handleBulkRequestSubmit}
         />

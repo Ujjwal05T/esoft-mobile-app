@@ -7,6 +7,7 @@ import {
   Animated,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
+import {useFabBottom} from '../catalog/useTabBarHeight';
 
 interface NavigationOption {
   label: string;
@@ -27,6 +28,7 @@ export default function FloatingActionButton({
 }: FloatingActionButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const rotation = useRef(new Animated.Value(0)).current;
+  const fabBottom = useFabBottom();
 
   const toggle = () => {
     const toValue = isOpen ? 0 : 1;
@@ -68,7 +70,7 @@ export default function FloatingActionButton({
         />
       )}
 
-      <View style={[styles.container, style]}>
+      <View style={[styles.container, {bottom: fabBottom}, style]}>
         {/* Options Menu */}
         {isOpen && navigationOptions.length > 0 && (
           <View style={styles.options}>

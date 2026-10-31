@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     paddingHorizontal: 16,
     paddingBottom: 32,
-    maxHeight: SCREEN_H * 0.9,
+    maxHeight: '90%',
     overflow: 'hidden',
   },
   handle: {

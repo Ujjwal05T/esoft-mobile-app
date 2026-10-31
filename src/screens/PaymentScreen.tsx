@@ -51,6 +51,7 @@ import RazorpayCheckout, {type RazorpayOptions} from 'react-native-razorpay';
 import creditCardImg from '../assets/icons/Credit-Card.png';
 import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import {formatDateIST} from '../utils/dateUtils';
+import {useStaffPermission} from '../hooks/useStaffPermission';
 
 type PaymentRouteProp = RouteProp<RootStackParamList, 'Payment'>;
 type PaymentNavProp = NativeStackNavigationProp<RootStackParamList, 'Payment'>;
@@ -123,6 +124,9 @@ export default function PaymentScreen() {
   const [codSheetOpen, setCodSheetOpen] = useState(false);
   const [linkLoading, setLinkLoading] = useState(false);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
+  // Staff need the owner's "Quote Approvals/Payments" permission to pay. null until checked
+  const mayPay = useStaffPermission('quoteApprovalsPayments');
+  const payBlocked = mayPay !== true;
 
   // Coupon state
   const [couponOverlayOpen, setCouponOverlayOpen] = useState(false);
@@ -293,7 +297,7 @@ export default function PaymentScreen() {
 
   const handlePay = useCallback(
     async (method: string) => {
-      if (!quote || paymentLoading) return;
+      if (!quote || paymentLoading || payBlocked) return;
 
       if (!RazorpayCheckout) {
         console.error('[Payment] RazorpayCheckout module not found');
@@ -421,12 +425,12 @@ export default function PaymentScreen() {
         setSelectedMethod(null);
       }
     },
-    [quote, paymentLoading, navigation, appliedCoupon, showPlacedOrder],
+    [quote, paymentLoading, payBlocked, navigation, appliedCoupon, showPlacedOrder],
   );
 
   const handleCod = useCallback(
     async (idempotencyKey: string) => {
-      if (!quote || codLoading || paymentLoading) return;
+      if (!quote || codLoading || paymentLoading || payBlocked) return;
       try {
         setCodLoading(true);
         const result = await placeCodOrder({
@@ -456,6 +460,7 @@ export default function PaymentScreen() {
       quote,
       codLoading,
       paymentLoading,
+      payBlocked,
       selectedItemIds,
       appliedCoupon,
       showPlacedOrder,
@@ -464,7 +469,9 @@ export default function PaymentScreen() {
   );
 
   const handleShareLink = useCallback(async () => {
-    if (!quote || paymentLoading || codLoading || linkLoading) return;
+    if (!quote || paymentLoading || codLoading || linkLoading || payBlocked) {
+      return;
+    }
     try {
       setLinkLoading(true);
 
@@ -515,6 +522,7 @@ export default function PaymentScreen() {
     paymentLoading,
     codLoading,
     linkLoading,
+    payBlocked,
     selectedItemIds,
     appliedCoupon,
     payableTotal,
@@ -679,7 +687,17 @@ export default function PaymentScreen() {
             onApply={handleApplyCouponChip}
           />
 
-          <View style={styles.methodList}>
+          {mayPay === false && (
+            <Text style={styles.noPermission}>
+              You do not have permission to pay for quotes. Please ask the owner
+              to turn on “Quote Approvals/Payments” for you.
+            </Text>
+          )}
+
+          <View
+            style={[styles.methodList, payBlocked && styles.methodItemDisabled]}
+            pointerEvents={payBlocked ? 'none' : 'auto'}
+          >
             {/* ── Credit / Debit Card ── */}
             <TouchableOpacity
               onPress={() => handlePay('card')}
@@ -984,6 +1002,16 @@ const styles = StyleSheet.create({
     letterSpacing: -0.01,
   },
   methodList: {gap: 8},
+  noPermission: {
+    fontSize: 12,
+    color: '#92400e',
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 4,
+    padding: 8,
+    marginTop: 10,
+  },
 
   methodItem: {
     backgroundColor: '#f3f3f3',

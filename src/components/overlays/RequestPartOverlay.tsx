@@ -68,7 +68,8 @@ const createEmptyPart = (): PartItem => ({
 interface RequestPartOverlayProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit?: (parts: PartItem[]) => void;
+  // Resolve to false when the request failed, so the success state is not shown
+  onSubmit?: (parts: PartItem[]) => void | boolean | Promise<void | boolean>;
   // When provided, a "Bulk Request" option is shown (text / photo-or-PDF / voice note, itemised later by an admin)
   onBulkSubmit?: (data: BulkRequestData) => Promise<{success: boolean; error?: string; data?: InquiryResponse}>;
 }
@@ -423,7 +424,9 @@ export default function RequestPartOverlay({
   };
 
   /* Validation + submit */
-  const handleSendRequest = () => {
+  const submittingRef = useRef(false);
+  const handleSendRequest = async () => {
+    if (submittingRef.current) return;
     let valid = true;
 
     setParts(prev =>
@@ -441,8 +444,13 @@ export default function RequestPartOverlay({
       }),
     );
     if (valid) {
-      onSubmit?.(parts.map(p => ({...p, remark: p.remark.trim() || 'No remark'})));
-      setShowSuccess(true);
+      submittingRef.current = true;
+      try {
+        const ok = await onSubmit?.(parts.map(p => ({...p, remark: p.remark.trim() || 'No remark'})));
+        if (ok !== false) setShowSuccess(true);
+      } finally {
+        submittingRef.current = false;
+      }
     }
   };
 

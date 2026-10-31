@@ -8,7 +8,7 @@ import { getVehicleTitle } from './SelectCarOverlay';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const DEFAULT_CAR_IMAGE =
-  require('../../assets/images/default-car.png') as number;
+  require('../../assets/images/universal-car-image.png') as number;
 
 // Tolerates a missing amount (an older API response) instead of crashing the screen
 export const formatPrice = (value: number | null | undefined) =>

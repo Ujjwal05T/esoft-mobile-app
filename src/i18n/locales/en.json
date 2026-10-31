@@ -90,6 +90,8 @@
   "vehicle.manual_error": "Enter chassis number, or fill in vehicle number + brand/model/year/variant",
   "vehicle.loading_brands": "Loading brands...",
   "vehicle.loading_models": "Loading models...",
+  "vehicle.brand_other": "Other",
+  "vehicle.model_any": "Any / All",
   "vehicle.loading_years": "Loading years...",
   "vehicle.loading_variants": "Loading variants...",
   "vehicle.add_vehicle_details": "Add Vehicle Details",
