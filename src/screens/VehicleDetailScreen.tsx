@@ -37,7 +37,7 @@ import {
   getInquiriesByVehicleVisitId,
   getQuotesByVehicleVisitId,
   getOrdersByVehicleVisitId,
-  getOrderById,
+  getOrderDetailsForList,
   createDisputeWithFiles,
   acceptDispute,
   getDisputesByVehicleVisitId,
@@ -458,9 +458,7 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     try {
       const listRes = await getOrdersByVehicleVisitId(activeVisit.id);
       if (listRes.success && listRes.data) {
-        const detailResults = await Promise.all(
-          listRes.data.orders.map((o: WorkshopOrderListItem) => getOrderById(o.id)),
-        );
+        const detailResults = await getOrderDetailsForList(listRes.data.orders);
         const mapped: Order[] = listRes.data.orders.map(
           (o: WorkshopOrderListItem, idx: number) => {
             const detail = detailResults[idx];
@@ -525,26 +523,40 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
     setRefreshing(false);
   }, [fetchVehicle, fetchJobsAndVisit, fetchInquiries, fetchQuotes, fetchOrders, fetchDisputes, activeVisit]);
 
+  // The workshop address is only used by the estimation overlay, so it is fetched when that opens.
+  const workshopAddressRequested = useRef(false);
+  const loadWorkshopAddress = useCallback(() => {
+    if (workshopAddressRequested.current) return;
+    workshopAddressRequested.current = true;
+    getProfile()
+      .then(r => setWorkshopAddress(r.data?.data?.workshopDetails?.address))
+      .catch(() => {
+        workshopAddressRequested.current = false;
+      });
+  }, []);
+
+  // Vehicle and jobs/visit depend only on vehicleId, so they load in parallel.
   useEffect(() => {
     fetchVehicle();
+    fetchJobsAndVisit();
     getStoredUser().then(u => setWorkshopName(u?.workshopName));
-    getProfile().then(r => setWorkshopAddress(r.data?.data?.workshopDetails?.address)).catch(() => {});
-  }, [fetchVehicle]);
+  }, [fetchVehicle, fetchJobsAndVisit]);
 
-  useEffect(() => {
-    if (vehicle) {
-      fetchJobsAndVisit();
-    }
-  }, [vehicle, fetchJobsAndVisit]);
-
+  // These only need the visit id.
   useEffect(() => {
     if (activeVisit) {
-      fetchInquiries();
       fetchQuotes();
       fetchOrders();
       fetchDisputes();
     }
-  }, [activeVisit, fetchInquiries, fetchQuotes, fetchOrders, fetchDisputes]);
+  }, [activeVisit, fetchQuotes, fetchOrders, fetchDisputes]);
+
+  // Inquiries are mapped against the vehicle, so they wait for both.
+  useEffect(() => {
+    if (activeVisit && vehicle) {
+      fetchInquiries();
+    }
+  }, [activeVisit, vehicle, fetchInquiries]);
 
   const toggleSection = (key: SectionKey) => {
     setExpandedSections(prev => ({...prev, [key]: !prev[key]}));
@@ -1094,7 +1106,10 @@ export default function VehicleDetailScreen({navigation, route}: Props) {
           {label: t('vehicle.gate_out'), onPress: () => setShowGateOut(true)},
           {
             label: t('vehicle.generate_estimate'),
-            onPress: () => setShowEstimation(true),
+            onPress: () => {
+              loadWorkshopAddress();
+              setShowEstimation(true);
+            },
             disabled: jobCards.length === 0,
           },
           {label: t('vehicle.create_new_job'), onPress: () => setShowNewJob(true)},

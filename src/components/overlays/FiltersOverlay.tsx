@@ -283,6 +283,7 @@ export default function FiltersOverlay({
             insuranceProvider: null,
             rcCardFrontUrl: null,
             rcCardBackUrl: null,
+            chassisImageUrl: null,
             imageUrl: foundVisit.vehicle.imageUrl,
             odometerReading: null,
             observations: null,

@@ -1,4 +1,5 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useCallback, useRef} from 'react';
+import {isFresh} from '../services/dataFreshness';
 import {useTranslation} from 'react-i18next';
 import {
   View,
@@ -24,7 +25,7 @@ import AppAlert, {AlertState} from '../components/overlays/AppAlert';
 import {
   getStoredUser,
   getOrdersByWorkshopId,
-  getOrderById,
+  getOrderDetailsForList,
   getCatalogOrders,
   getActiveVehicleVisit,
   createInquiryWithMedia,
@@ -81,7 +82,11 @@ export default function OrdersScreen() {
   const [activeVisitId, setActiveVisitId] = useState<number | undefined>(undefined);
   const [appAlert, setAppAlert] = useState<AlertState | null>(null);
 
+  // Start time of the last successful load; see services/dataFreshness.
+  const fetchedAtRef = useRef(0);
+
   const fetchOrders = useCallback(async (isRefresh = false) => {
+    const startedAt = Date.now();
     if (!isRefresh) setIsLoading(true);
     setError(null);
     try {
@@ -101,9 +106,7 @@ export default function OrdersScreen() {
         return;
       }
 
-      const detailResults = await Promise.all(
-        res.data.orders.map((o: WorkshopOrderListItem) => getOrderById(o.id)),
-      );
+      const detailResults = await getOrderDetailsForList(res.data.orders);
 
       const mapped: ListedOrder[] = res.data.orders.map(
         (o: WorkshopOrderListItem, idx: number) => {
@@ -175,6 +178,7 @@ export default function OrdersScreen() {
       setOrders(
         [...mapped, ...catalogMapped].sort((a, b) => b.sortTime - a.sortTime),
       );
+      fetchedAtRef.current = startedAt;
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -189,6 +193,7 @@ export default function OrdersScreen() {
   }, [fetchOrders]);
 
   useFocusEffect(useCallback(() => {
+    if (isFresh(fetchedAtRef.current)) return;
     fetchOrders();
   }, [fetchOrders]));
 

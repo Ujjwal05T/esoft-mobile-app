@@ -1,4 +1,5 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useCallback, useRef} from 'react';
+import {isFresh} from '../services/dataFreshness';
 import {useTranslation} from 'react-i18next';
 import {
   View,
@@ -18,7 +19,7 @@ import {RootStackParamList} from '../navigation/RootNavigator';
 import AddVehicleOverlay from '../components/overlays/AddVehicleOverlay';
 import FloatingActionButton from '../components/dashboard/FloatingActionButton';
 import FiltersOverlay, {FilterData} from '../components/overlays/FiltersOverlay';
-import {getCurrentVehicles, getVehicles, type VehicleVisitResponse, type VehicleResponse} from '../services/api';
+import {getCurrentVehicles, type VehicleVisitResponse} from '../services/api';
 import Header from '../components/dashboard/Header';
 
 interface DisplayVehicle {
@@ -135,13 +136,10 @@ export default function VehicleScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {t} = useTranslation();
-  const [activeTab, setActiveTab] = useState<'all' | 'requested'>('all');
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [vehicles, setVehicles] = useState<DisplayVehicle[]>([]);
-  const [requestedVehicles, setRequestedVehicles] = useState<DisplayVehicle[]>([]);
   const [filteredVehicles, setFilteredVehicles] = useState<DisplayVehicle[]>([]);
-  const [filteredRequestedVehicles, setFilteredRequestedVehicles] = useState<DisplayVehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -156,6 +154,10 @@ export default function VehicleScreen() {
     addedBy: '',
     sortBy: null,
   });
+  // Read through a ref so a filter change re-filters local state without changing fetchVehicles,
+  // which would retrigger the focus effect and refetch from the network.
+  const activeFiltersRef = useRef(activeFilters);
+  activeFiltersRef.current = activeFilters;
 
   const applyFilters = useCallback((vehicleList: DisplayVehicle[], filters: FilterData) => {
     let filtered = [...vehicleList];
@@ -217,14 +219,15 @@ export default function VehicleScreen() {
     return filtered;
   }, []);
 
+  // Start time of the last successful load; see services/dataFreshness.
+  const fetchedAtRef = useRef(0);
+
   const fetchVehicles = useCallback(async () => {
+    const startedAt = Date.now();
     setIsLoading(true);
     setError(null);
     try {
-      const [currentResult, allResult] = await Promise.all([
-        getCurrentVehicles(),
-        getVehicles(),
-      ]);
+      const currentResult = await getCurrentVehicles();
 
       if (currentResult.success && currentResult.data) {
         const gatedIn: DisplayVehicle[] = currentResult.data.visits.map(
@@ -243,45 +246,27 @@ export default function VehicleScreen() {
           }),
         );
         setVehicles(gatedIn);
-        setFilteredVehicles(applyFilters(gatedIn, activeFilters));
+        setFilteredVehicles(applyFilters(gatedIn, activeFiltersRef.current));
+        fetchedAtRef.current = startedAt;
       } else {
         setError(currentResult.error ?? 'Failed to load vehicles.');
-      }
-
-      if (allResult.success && allResult.data) {
-        const requested: DisplayVehicle[] = allResult.data.vehicles
-          .filter((v: VehicleResponse) => v.status === 'Requested')
-          .map((v: VehicleResponse) => ({
-            id: String(v.id),
-            vehicleId: String(v.id),
-            plateNumber: v.plateNumber,
-            year: v.year ?? undefined,
-            make: v.brand ?? 'Unknown',
-            model: v.model ?? 'Unknown',
-            specs: v.specs ?? v.variant ?? undefined,
-            services: [],
-            additionalServices: 0,
-            createdAt: v.createdAt,
-            imageUrl: v.imageUrl ?? undefined,
-          }));
-        setRequestedVehicles(requested);
-        setFilteredRequestedVehicles(applyFilters(requested, activeFilters));
       }
     } catch {
       setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  }, [activeFilters, applyFilters]);
+  }, [applyFilters]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchVehicles()]);
+    await fetchVehicles();
     setRefreshing(false);
   }, [fetchVehicles]);
 
   useFocusEffect(
     useCallback(() => {
+      if (isFresh(fetchedAtRef.current)) return;
       fetchVehicles();
     }, [fetchVehicles]),
   );
@@ -289,11 +274,10 @@ export default function VehicleScreen() {
   const handleApplyFilters = (filters: FilterData) => {
     setActiveFilters(filters);
     setFilteredVehicles(applyFilters(vehicles, filters));
-    setFilteredRequestedVehicles(applyFilters(requestedVehicles, filters));
     setShowFilters(false);
   };
 
-  const displayVehicles = activeTab === 'all' ? filteredVehicles : filteredRequestedVehicles;
+  const displayVehicles = filteredVehicles;
   const filterCount = countActiveFilters(activeFilters);
 
   return (
@@ -304,22 +288,11 @@ export default function VehicleScreen() {
       {/* ── Tab Toggle + Filter ───────────────────────────────────────── */}
       <View style={styles.filterRow}>
         <View style={styles.tabToggle}>
-          <TouchableOpacity
-            style={[styles.tabBtn, activeTab === 'all' && styles.tabBtnActive]}
-            onPress={() => setActiveTab('all')}
-            activeOpacity={0.8}>
-            <Text style={[styles.tabBtnText, activeTab === 'all' && styles.tabBtnTextActive]}>
+          <View style={[styles.tabBtn, styles.tabBtnActive]}>
+            <Text style={[styles.tabBtnText, styles.tabBtnTextActive]}>
               {t('screen.all')} ({filteredVehicles.length})
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabBtn, activeTab === 'requested' && styles.tabBtnActive]}
-            onPress={() => setActiveTab('requested')}
-            activeOpacity={0.8}>
-            <Text style={[styles.tabBtnText, activeTab === 'requested' && styles.tabBtnTextActive]}>
-              {t('screen.requested')} ({filteredRequestedVehicles.length})
-            </Text>
-          </TouchableOpacity>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -364,16 +337,12 @@ export default function VehicleScreen() {
           <Text style={styles.emptyTitle}>
             {filterCount > 0
               ? t('screen.no_vehicles_filters')
-              : activeTab === 'all'
-              ? t('screen.no_vehicles_workshop')
-              : t('screen.no_vehicles_requested')}
+              : t('screen.no_vehicles_workshop')}
           </Text>
           <Text style={styles.emptySubtitle}>
             {filterCount > 0
               ? t('screen.try_adjusting_filters')
-              : activeTab === 'all'
-              ? t('screen.gate_in_to_see')
-              : t('screen.staff_added_appear')}
+              : t('screen.gate_in_to_see')}
           </Text>
           {filterCount > 0 && (
             <TouchableOpacity
@@ -421,7 +390,6 @@ export default function VehicleScreen() {
                 services={vehicle.services ?? []}
                 additionalServices={vehicle.additionalServices ?? 0}
                 addedBy={vehicle.addedBy}
-                variant={activeTab === 'requested' ? 'scan' : 'default'}
                 imageUrl={vehicle.imageUrl}
               />
             </TouchableOpacity>

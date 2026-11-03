@@ -135,6 +135,7 @@ export default function VehicleSelectionOverlay({
       insuranceProvider: null,
       rcCardFrontUrl: null,
       rcCardBackUrl: null,
+      chassisImageUrl: null,
       imageUrl: v.imageUrl,
       odometerReading: null,
       observations: null,

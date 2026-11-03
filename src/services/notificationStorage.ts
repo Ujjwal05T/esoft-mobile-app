@@ -127,7 +127,7 @@ async function updateUnreadCount(): Promise<void> {
 
 // Subscribe to unread count changes
 export function subscribeToUnreadCount(callback: (count: number) => void): () => void {
-  let interval: NodeJS.Timeout;
+  let interval: ReturnType<typeof setInterval>;
 
   const checkCount = async () => {
     const count = await getUnreadCount();

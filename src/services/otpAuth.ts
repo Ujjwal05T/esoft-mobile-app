@@ -1,169 +1,51 @@
 // OTP Authentication Functions
 
-import { getAuthToken, setAuthToken, setStoredUser, removeAuthToken } from './api';
+import { apiRequest, setAuthToken, setStoredUser, type UserInfo } from './api';
 
-const API_BASE_URL = 'https://api.partsnow.in/api';
-// const API_BASE_URL = 'https://dotnet.ujjwaltamrakar.in/api';
-
-export interface LoginResponse {
-  success: boolean;
-  message: string;
+interface VerifyOtpResponse {
   token?: string;
-  expiresAt?: string;
-  user?: {
-    id: number;
-    name: string;
-    email?: string;
-    phoneNumber: string;
-    role: 'owner' | 'staff';
-    workshopName?: string;
-    city?: string;
-  };
+  user?: UserInfo;
 }
 
-// Send OTP to mobile number
-export async function sendOtp(phoneNumber: string) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ phoneNumber }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: data.message || 'Failed to send OTP',
-      };
-    }
-
-    return {
-      success: true,
-      data,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: 'Network error. Please try again.',
-    };
-  }
+// These run before there is a session, so they never send a bearer token.
+function sendOtp(path: string, body: object) {
+  return apiRequest<unknown>(
+    path,
+    { method: 'POST', body: JSON.stringify(body) },
+    { skipAuth: true, fallbackError: 'Failed to send OTP' },
+  );
 }
 
-// Verify OTP and login
-export async function verifyOtp(phoneNumber: string, otp: string) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ phoneNumber, otp }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: data.message || 'Invalid OTP',
-      };
-    }
-
-    // If login successful, store token and user info
-    if (data.token && data.user) {
-      await setAuthToken(data.token);
-      await setStoredUser(data.user);
-    }
-
-    return {
-      success: true,
-      data,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: 'Network error. Please try again.',
-    };
+// Verifies the OTP and, on success, stores the token and user so the app is signed in.
+async function verifyOtp(path: string, body: object) {
+  const result = await apiRequest<VerifyOtpResponse>(
+    path,
+    { method: 'POST', body: JSON.stringify(body) },
+    { skipAuth: true, fallbackError: 'Invalid OTP' },
+  );
+  if (result.success && result.data?.token && result.data.user) {
+    await setAuthToken(result.data.token);
+    await setStoredUser(result.data.user);
   }
+  return result;
 }
 
 // Send OTP to email
-export async function sendOtpByEmail(email: string) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/send-otp-email`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email}),
-    });
-    const data = await response.json();
-    if (!response.ok) return {success: false, error: data.message || 'Failed to send OTP'};
-    return {success: true, data};
-  } catch {
-    return {success: false, error: 'Network error. Please try again.'};
-  }
+export function sendOtpByEmail(email: string) {
+  return sendOtp('/auth/send-otp-email', { email });
 }
 
 // Verify email OTP and login
-export async function verifyOtpByEmail(email: string, otp: string) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/verify-otp-email`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email, otp}),
-    });
-    const data = await response.json();
-    if (!response.ok) return {success: false, error: data.message || 'Invalid OTP'};
-    if (data.token && data.user) {
-      await setAuthToken(data.token);
-      await setStoredUser(data.user);
-    }
-    return {success: true, data};
-  } catch {
-    return {success: false, error: 'Network error. Please try again.'};
-  }
+export function verifyOtpByEmail(email: string, otp: string) {
+  return verifyOtp('/auth/verify-otp-email', { email, otp });
 }
 
-// Send OTP to phone via WhatsApp (Interakt)
-export async function sendOtpByWhatsApp(phoneNumber: string) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({phoneNumber}),
-    });
-    const data = await response.json();
-    if (!response.ok) return {success: false, error: data.message || 'Failed to send OTP'};
-    return {success: true, data};
-  } catch {
-    return {success: false, error: 'Network error. Please try again.'};
-  }
+// Send OTP to phone via WhatsApp
+export function sendOtpByWhatsApp(phoneNumber: string) {
+  return sendOtp('/auth/send-otp', { phoneNumber });
 }
 
-// Verify phone OTP and login (shared with sendOtpByWhatsApp flow)
-export async function verifyOtpByPhone(phoneNumber: string, otp: string) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({phoneNumber, otp}),
-    });
-    const data = await response.json();
-    if (!response.ok) return {success: false, error: data.message || 'Invalid OTP'};
-    if (data.token && data.user) {
-      await setAuthToken(data.token);
-      await setStoredUser(data.user);
-    }
-    return {success: true, data};
-  } catch {
-    return {success: false, error: 'Network error. Please try again.'};
-  }
-}
-
-// Logout - navigation handled by the screen/navigator
-export async function logout() {
-  await removeAuthToken();
+// Verify phone OTP and login
+export function verifyOtpByPhone(phoneNumber: string, otp: string) {
+  return verifyOtp('/auth/verify-otp', { phoneNumber, otp });
 }

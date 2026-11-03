@@ -2,6 +2,7 @@ import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messag
 import { Platform, PermissionsAndroid } from 'react-native';
 import { setFcmToken } from './api';
 import { saveNotification } from './notificationStorage';
+import { markDataChanged } from './dataFreshness';
 
 const TAG = '[NOTIF]';
 
@@ -153,6 +154,8 @@ export async function setBadgeCount(count: number): Promise<void> {
 
 // Handle and save notification
 export async function handleNotification(remoteMessage: FirebaseMessagingTypes.RemoteMessage): Promise<void> {
+  // A push usually means server-side data changed (new quote, order update), so cached screens are stale.
+  markDataChanged();
   console.log(`${TAG} handleNotification — messageId: ${remoteMessage.messageId}`);
   console.log(`${TAG} handleNotification — notification payload:`, JSON.stringify(remoteMessage.notification));
   console.log(`${TAG} handleNotification — data payload:`, JSON.stringify(remoteMessage.data));

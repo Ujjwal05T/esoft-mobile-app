@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useCallback, useRef} from 'react';
+import {isFresh} from '../services/dataFreshness';
 import {useTranslation} from 'react-i18next';
 import {
   View,
@@ -41,7 +42,7 @@ import {
   getQuotesByWorkshopOwnerId,
   getDisputesByWorkshopOwner,
   getOrdersByVehicleId,
-  getOrderById,
+  getOrderDetailsForList,
   createInquiry,
   createInquiryWithMedia,
   createBulkInquiry,
@@ -268,6 +269,17 @@ export default function InquiryScreen() {
     sortBy: null,
   });
 
+  // Fetchers read filters/tab from refs so they stay stable: a filter change re-filters local state
+  // and must not retrigger the focus effect (which would refetch from the network).
+  const activeFiltersRef = useRef(activeFilters);
+  activeFiltersRef.current = activeFilters;
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+  // Start time of each tab's last successful load; see services/dataFreshness. A tab is only
+  // refetched when it is stale, so switching tabs or coming back to the screen is usually free.
+  const fetchedAtRef = useRef<Record<ActiveTab, number>>({inquiries: 0, quotes: 0, disputes: 0});
+  const isFocusedRef = useRef(false);
+
   // Overlay states
   const [showVehicleTypeSelection, setShowVehicleTypeSelection] = useState(false);
   const [addVehicleForOrderParts, setAddVehicleForOrderParts] = useState(false);
@@ -375,6 +387,7 @@ export default function InquiryScreen() {
   // ── Data Fetching ───────────────────────────────────────────────────────────
 
   const fetchInquiries = useCallback(async () => {
+    const startedAt = Date.now();
     setLoadingInquiries(true);
     try {
       const user = await getStoredUser();
@@ -383,16 +396,18 @@ export default function InquiryScreen() {
       if (res.success && res.data) {
         const mapped = res.data.inquiries.map(mapApiInquiry);
         setInquiries(mapped);
-        setFilteredInquiries(applyInquiryFilters(mapped, activeFilters));
+        setFilteredInquiries(applyInquiryFilters(mapped, activeFiltersRef.current));
+        fetchedAtRef.current.inquiries = startedAt;
       }
     } catch (e) {
       console.error('Failed to fetch inquiries:', e);
     } finally {
       setLoadingInquiries(false);
     }
-  }, [activeFilters, applyInquiryFilters]);
+  }, [applyInquiryFilters]);
 
   const fetchQuotes = useCallback(async () => {
+    const startedAt = Date.now();
     setLoadingQuotes(true);
     try {
       const user = await getStoredUser();
@@ -401,16 +416,18 @@ export default function InquiryScreen() {
       if (res.success && res.data) {
         const mapped = res.data.quotes.map(mapApiQuote);
         setQuotes(mapped);
-        setFilteredQuotes(applyQuoteFilters(mapped, activeFilters));
+        setFilteredQuotes(applyQuoteFilters(mapped, activeFiltersRef.current));
+        fetchedAtRef.current.quotes = startedAt;
       }
     } catch (e) {
       console.error('Failed to fetch quotes:', e);
     } finally {
       setLoadingQuotes(false);
     }
-  }, [activeFilters, applyQuoteFilters]);
+  }, [applyQuoteFilters]);
 
   const fetchDisputes = useCallback(async () => {
+    const startedAt = Date.now();
     setLoadingDisputes(true);
     try {
       const user = await getStoredUser();
@@ -419,14 +436,15 @@ export default function InquiryScreen() {
       if (res.success && res.data) {
         const mapped = res.data.map(mapApiDispute);
         setDisputes(mapped);
-        setFilteredDisputes(applyDisputeFilters(mapped, activeFilters));
+        setFilteredDisputes(applyDisputeFilters(mapped, activeFiltersRef.current));
+        fetchedAtRef.current.disputes = startedAt;
       }
     } catch (e) {
       console.error('Failed to fetch disputes:', e);
     } finally {
       setLoadingDisputes(false);
     }
-  }, [activeFilters, applyDisputeFilters]);
+  }, [applyDisputeFilters]);
 
   const handleAcceptDispute = (dispute: DisputeWithDate) => {
     if (!dispute.numericId) return;
@@ -466,17 +484,32 @@ export default function InquiryScreen() {
     }
   };
 
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await Promise.all([fetchInquiries(), fetchQuotes(), fetchDisputes()]);
-    setRefreshing(false);
+  // Fetch only the tab being shown; the other tabs load the first time they are opened.
+  const fetchTab = useCallback(async (tab: ActiveTab) => {
+    if (tab === 'quotes') await fetchQuotes();
+    else if (tab === 'disputes') await fetchDisputes();
+    else await fetchInquiries();
   }, [fetchInquiries, fetchQuotes, fetchDisputes]);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    fetchedAtRef.current = {inquiries: 0, quotes: 0, disputes: 0};
+    await fetchTab(activeTabRef.current);
+    setRefreshing(false);
+  }, [fetchTab]);
+
   useFocusEffect(useCallback(() => {
-    fetchInquiries();
-    fetchQuotes();
-    fetchDisputes();
-  }, [fetchInquiries, fetchQuotes, fetchDisputes]));
+    isFocusedRef.current = true;
+    const tab = activeTabRef.current;
+    if (!isFresh(fetchedAtRef.current[tab])) fetchTab(tab);
+    return () => { isFocusedRef.current = false; };
+  }, [fetchTab]));
+
+  useEffect(() => {
+    if (isFocusedRef.current && !isFresh(fetchedAtRef.current[activeTab])) {
+      fetchTab(activeTab);
+    }
+  }, [activeTab, fetchTab]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -590,9 +623,7 @@ export default function InquiryScreen() {
       try {
         const listRes = await getOrdersByVehicleId(vehicle.id);
         if (listRes.success && listRes.data) {
-          const detailResults = await Promise.all(
-            listRes.data.orders.map((o: WorkshopOrderListItem) => getOrderById(o.id)),
-          );
+          const detailResults = await getOrderDetailsForList(listRes.data.orders);
 
           const ordersWithParts = listRes.data.orders.map(
             (o: WorkshopOrderListItem, idx: number) => {

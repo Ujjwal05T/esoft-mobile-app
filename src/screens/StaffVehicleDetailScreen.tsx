@@ -34,7 +34,7 @@ import {
   getInquiriesByVehicleVisitId,
   getOrdersByVehicleVisitId,
   getDisputesByVehicleVisitId,
-  getOrderById,
+  getOrderDetailsForList,
   createDisputeWithFiles,
   getStoredUser,
   createInquiry,
@@ -400,9 +400,7 @@ export default function StaffVehicleDetailScreen({navigation, route}: Props) {
     try {
       const listRes = await getOrdersByVehicleVisitId(visitId);
       if (listRes.success && listRes.data) {
-        const detailResults = await Promise.all(
-          listRes.data.orders.map((o: WorkshopOrderListItem) => getOrderById(o.id)),
-        );
+        const detailResults = await getOrderDetailsForList(listRes.data.orders);
         const mapped: Order[] = listRes.data.orders.map(
           (o: WorkshopOrderListItem, idx: number) => {
             const detail = detailResults[idx];
